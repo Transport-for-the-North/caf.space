@@ -20,6 +20,5 @@ import pytest
 
 # # # TESTS # # #
 class TestFunctionName:
-
     def test_something(self):
         assert True
