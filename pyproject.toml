@@ -39,7 +39,7 @@ allow_redefinition = true
 
 [[tool.mypy.overrides]]
 module = [
-  "caf.{package_name}._version",
+  "caf.space._version",
 ]
 ignore_errors = true
 
@@ -48,7 +48,7 @@ convention = "numpy"
 match = '(?!_test)(?!test_)(?!__init__).*\.py'
 
 [tool.pytest.ini_options]
-addopts = "--cov=caf.{package_name} --cov-report=xml"
+addopts = "--cov=caf.space --cov-report=xml"
 
 [tool.coverage.run]
 omit = ["*/_version.py"]
