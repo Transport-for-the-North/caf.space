@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools", "versioneer-518"]
+build-backend = "setuptools.build_meta"
+
+[tool.black]
+line-length = 95
+target-version = ['py39']
+extend-exclude = '''
+(
+  _version\.py
+  | versioneer\.py
+)
+'''
+
+[tool.pylint.messages_control]
+disable = [
+    "line-too-long",    # Compatibility with black
+    "too-many-lines",
+    "use-dict-literal",
+    "use-list-literal",
+]
+
+# Pylint settings
+[tool.pylint.basic]
+good-names = ["df", "fn", "ca", "tp", "to", "x", "i", "f", "q"]
+
+[tool.pylint.main]
+ignore = ["__init__.py", "_version.py", "versioneer.py"]
+
+[tool.pylint.design]
+max-args = 10
+max-attributes = 15
+max-statements = 100
+
+[tool.mypy]
+mypy_path = "src"
+ignore_missing_imports = true
+allow_redefinition = true
+
+[[tool.mypy.overrides]]
+module = [
+  "caf.{package_name}._version",
+]
+ignore_errors = true
+
+[tool.pydocstyle]
+convention = "numpy"
+match = '(?!_test)(?!test_)(?!__init__).*\.py'
+
+[tool.pytest.ini_options]
+addopts = "--cov=caf.{package_name} --cov-report=xml"
+
+[tool.coverage.run]
+omit = ["*/_version.py"]
