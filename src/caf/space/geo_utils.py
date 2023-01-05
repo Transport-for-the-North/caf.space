@@ -8,7 +8,7 @@ LOG = logging.getLogger(__name__)
 
 
 ##### FUNCTIONS #####
-def var_apply(area_correspondence_path, weighting_data, weighting_var_col, zone_name: str, lower_name: str):
+def var_apply(area_correspondence_path: str, weighting_data: str, weighting_var_col: str, zone_name: str, lower_name: str) -> pd.DataFrame:
     """
     Joins chosen method variable to lower zoning shapefile.
 
@@ -58,13 +58,13 @@ def var_apply(area_correspondence_path, weighting_data, weighting_var_col, zone_
 def zone_split(
     area_correspondence_path1: str,
     area_correspondence_path2: str,
-    weighting_data,
+    weighting_data: pd.DataFrame,
     weighting_zone_col: str,
     weighting_var_col: str,
     zone_1_name: str,
     zone_2_name: str,
     lower_zoning_name: str
-):
+) -> pd.DataFrame:
     """ Joins chosen method variable to Zone to Lower Weighted correspondence table on
         a standard code using var_apply function then calculates weighted
         translation between Zone 1 and Zone 2.

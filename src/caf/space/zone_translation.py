@@ -5,7 +5,7 @@ import csv
 import sys
 import pandas as pd
 
-from space import geo_utils as nf, zone_correspondence as zc, inputs as si
+from caf.space import geo_utils as nf, zone_correspondence as zc, inputs as si
 
 ##### CONSTANTS #####
 LOG = logging.getLogger(__name__)
@@ -21,7 +21,7 @@ class ZoneTranslation:
             if params.existing_translation is not None:
                 self.zone_translation = pd.read_csv(params.existing_translation)
             else:
-                self.zone_translation, final_zone_corr_path = zc.main_zone_correspondence(
+                self.zone_translation, _ = zc.main_zone_correspondence(
                     self.params
                 )
         else:

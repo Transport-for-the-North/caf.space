@@ -13,6 +13,7 @@ import configparser
 import dataclasses
 from pathlib import Path
 from typing import Any, Dict, Union
+from caf.space import config_base
 
 # Third party imports
 
@@ -32,10 +33,10 @@ class ShapefileInfo:
     def __post_init__(self) -> None:
         self.name = str(self.name)
         self.shapefile = Path(self.shapefile)
-        if not self.shapefile.is_file():
-            raise FileNotFoundError(
-                f"cannot find {self.name} shapefile: {self.shapefile}"
-            )
+        # if not self.shapefile.is_file():
+        #     raise FileNotFoundError(
+        #         f"cannot find {self.name} shapefile: {self.shapefile}"
+        #     )
 
 @dataclasses.dataclass
 class ZoneSystemInfo(ShapefileInfo):
@@ -66,11 +67,11 @@ class ZoneSystemInfo(ShapefileInfo):
         if self.lower_translation is None:
             return
         self.lower_translation = Path(self.lower_translation)
-        if not self.lower_translation.is_file():
-            raise FileNotFoundError(
-                f"cannot find {self.name} lower "
-                f"translation file: {self.lower_translation}"
-            )
+        # if not self.lower_translation.is_file():
+        #     raise FileNotFoundError(
+        #         f"cannot find {self.name} lower "
+        #         f"translation file: {self.lower_translation}"
+        #     )
 
 @dataclasses.dataclass
 class LowerZoneSystemInfo(ShapefileInfo):
@@ -82,10 +83,14 @@ class LowerZoneSystemInfo(ShapefileInfo):
         Name of the zone system.
     shapefile : Path
         Path to the shapefile.
+    id_col : str
+        The name of the column in the shapefile you want to use as ID
     weight_data : Path
         Path to weighting data.
     data_col: str
         Name of the column containing weighting data.
+    weight_id_col: str
+        The name of the column in the weighting data you want to use as ID
 
     Raises
     ------
@@ -103,13 +108,13 @@ class LowerZoneSystemInfo(ShapefileInfo):
         if self.weight_data is None:
             return
         self.weight_data = Path(self.weight_data)
-        if not self.weight_data.is_file():
-            raise FileNotFoundError(
-                f"cannot find {self.name} weight data: {self.weight_data}"
-            )
+        # if not self.weight_data.is_file():
+        #     raise FileNotFoundError(
+        #         f"cannot find {self.name} weight data: {self.weight_data}"
+        #     )
 
-@dataclasses.dataclass()
-class ZoningTranslationInputs:
+
+class ZoningTranslationInputs(config_base.BaseConfig):
     """Class for storing and reading input parameters for `ZoneTranslation`.
 
     Attributes
@@ -151,7 +156,7 @@ class ZoningTranslationInputs:
     point_zones_path: Path = None
     rounding: bool = True
     filter_slithers: bool = True
-    lower_zoning: LowerZoneSystemInfo = None
+    lower_zoning: LowerZoneSystemInfo
 
     _CONFIG_SECTION: str = dataclasses.field(
         default="ZONING TRANSLATION PARAMETERS", init=False, repr=False
@@ -164,7 +169,7 @@ class ZoningTranslationInputs:
 
     @staticmethod
     def _path_none(value: str) -> Union[Path, None]:
-        """Convert string to Paath, or None if empty."""
+        """Convert string to Path, or None if empty."""
         if value is None or value.strip() == "":
             return None
         return Path(value)
@@ -192,3 +197,18 @@ class ZoningTranslationInputs:
         for opt in mandatory_options:
             if not config.has_option(cls._CONFIG_SECTION, opt):
                 raise configparser.NoOptionError(opt, cls._CONFIG_SECTION)
+
+def write_example(out_path: Path):
+    zones = {}
+    for i in range(1,3):
+        zones[i] = ZoneSystemInfo(name = f"zone_{i}_name", shapefile = Path(f"path/to/shapefile_{i}"), id_col = f"id_col_for_zone_{i}", lower_translation= Path(f"path/to/lower_trans_{i}"))
+    lower = LowerZoneSystemInfo(name = "lower_zone_name", shapefile = Path("path/to/lower/shapefile"), id_col = "id_col_for_lower_zone", weight_data=Path("path/to/lower/weight/data"), data_col="data_col_name", weight_id_col = "id_col_in_weighting_data")
+    ex = ZoningTranslationInputs(zone_1=zones[1],
+    zone_2 = zones[2],
+    lower_zoning = lower,
+    output_path = r"path\to\output\folder",
+    existing_translation = r"OPTIONAL\path\to\existing\translation",
+    method = "OPTIONAL name of method",
+    point_zones_path = r"OPTIONAL\path\to\list\of\point\zones"
+    )
+    ex.save_yaml(out_path)
