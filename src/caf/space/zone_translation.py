@@ -26,27 +26,27 @@ class ZoneTranslation:
                 )
         else:
             if params.zone_1.lower_translation is None:
-                try:
-                    self.zone_1.lower_translation = self.find_lower_translation(
-                    )
-                except Exception:
-                    LOG.info(
-                        "Running Zone to lower zoning correspondence for zones 1"
-                    )
-                    self.zone_1_lower_trans = self.run_spatial_translation(
-                        params.zone_1_name
-                    )
+                # try:
+                #     self.zone_1.lower_translation = self.find_lower_translation(
+                #     )
+                # except Exception:
+                #     LOG.info(
+                #         "Running Zone to lower zoning correspondence for zones 1"
+                #     )
+                _, self.params.zone_1.lower_translation = self.run_spatial_translation(
+                    params.zone_1.name
+                )
             if params.zone_2.lower_translation is None:
-                try:
-                    self.zone_2_lower_trans = self.find_lower_translation(
-                    )
-                except Exception:
-                    LOG.info(
-                        "Running Zone to lower zoning correspondence for zones 2"
-                    )
-                    self.zone_2_lower_trans = self.run_spatial_translation(
-                        params.zone_2_name
-                    )
+                # try:
+                #     self.zone_2_lower_trans = self.find_lower_translation(
+                #     )
+                # except Exception:
+                #     LOG.info(
+                #         "Running Zone to lower zoning correspondence for zones 2"
+                #     )
+                _, self.params.zone_2.lower_translation = self.run_spatial_translation(
+                    params.zone_2.name
+                )
             self.zone_translation = self.weighted_translation(datetime.datetime.now, write=False)
             
                 
@@ -65,31 +65,14 @@ class ZoneTranslation:
         Columns are zone_id, lsoa code, zone to lsoa match value,
         lsoa to zone match value.
         """
-        if zone_to_translate_from == self.zone_1.name:
-            trans_shape = self.zone_1.shapefile
-            trans_name = self.zone_1.name
-            trans_id_col = self.zone_1.id_col
-        elif zone_to_translate_from == self.zone_2.name:
-            trans_shape = self.zone_2.shapefile
-            trans_name = self.zone_2.name
-            trans_id_col = self.zone_2.id_col
+        inner_params = self.params.copy()
+        inner_params.zone_2 = self.params.lower_zoning._lower_to_higher()
+        inner_params.lower_zoning = None
+        if zone_to_translate_from == self.params.zone_2.name:
+            inner_params.zone_1 = self.params.zone_2
 
         lower_translation, lower_path = zc.main_zone_correspondence(
-            zone_1_path=trans_shape,
-            zone_2_path=self.lower_zoning.shapefile,
-            zone_1_name=trans_name,
-            zone_2_name=self.lower_zoning.name,
-            zone_1_id_col=trans_id_col,
-            zone_2_id_col=self.lower_zoning.id_col,
-            tolerance=self.tolerance,
-            out_path=self.output_path,
-            point_handling=self.point_handling,
-            point_tolerance=self.point_tolerance,
-            point_zones_path=self.point_zones_path,
-            lower_shapefile_path=self.lower_zoning.shapefile,
-            lower_weight_data_path=self.lower_zoning.weight_data,
-            rounding=self.rounding,
-            filter_slithers=self.filter_slithers,
+            inner_params
         )
 
         return lower_translation, lower_path
@@ -97,7 +80,7 @@ class ZoneTranslation:
     def find_lower_translation(self):
         """
         =================================
-        This function needs to be rewritten once the metadata and file structures are decided
+        TODO This function needs to be rewritten once the metadata and file structures are decided
         =================================
         """
 
@@ -123,18 +106,18 @@ class ZoneTranslation:
          """
         LOG.info("Starting weighted translation")
         # Init
-        zone_name1 = self.zone_1_name.lower()
-        zone_name2 = self.zone_2_name.lower()
+        zone_name1 = self.params.zone_1.name.lower()
+        zone_name2 = self.params.zone_2.name.lower()
 
         weighted_translation = nf.zone_split(
-            area_correspondence_path1=self.zone_1_lower_trans,
-            area_correspondence_path2=self.zone_2_lower_trans,
-            weighting_data=self.lower_weight_data_path,
-            weighting_zone_col=self.lower_zoning_weight_id_col,
-            weighting_var_col=self.lower_zoning_data_col,
-            zone_1_name=self.zone_1.name,
-            zone_2_name=self.zone_2.name,
-            lower_zone_name = self.lower_zoning.name
+            area_correspondence_path1=self.params.zone_1.lower_translation,
+            area_correspondence_path2=self.params.zone_2.lower_translation,
+            weighting_data=self.params.lower_zoning.weight_data,
+            weighting_zone_col=self.params.lower_zoning.weight_id_col,
+            weighting_var_col=self.params.lower_zoning.data_col,
+            zone_1_name=self.params.zone_1.name,
+            zone_2_name=self.params.zone_2.name,
+            lower_zoning_name = self.params.lower_zoning.name
         )
         # TODO check code from here to bottom when the tool is functional. I think it works but
         # not sure what it does and it should definitely be refactored

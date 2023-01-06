@@ -62,11 +62,11 @@ class ZoneSystemInfo(ShapefileInfo):
 
     lower_translation: Path = None
 
-    def __post_init__(self) -> None:
-        super().__post_init__()
-        if self.lower_translation is None:
-            return
-        self.lower_translation = Path(self.lower_translation)
+    # def __post_init__(self) -> None:
+    #     super().__post_init__()
+    #     if self.lower_translation is None:
+    #         return
+    #     self.lower_translation = Path(self.lower_translation)
         # if not self.lower_translation.is_file():
         #     raise FileNotFoundError(
         #         f"cannot find {self.name} lower "
@@ -112,6 +112,11 @@ class LowerZoneSystemInfo(ShapefileInfo):
         #     raise FileNotFoundError(
         #         f"cannot find {self.name} weight data: {self.weight_data}"
         #     )
+    
+    def _lower_to_higher(self) -> ZoneSystemInfo:
+        return ZoneSystemInfo(name = self.name,
+        shapefile = self.shapefile,
+        id_col = self.id_col)
 
 
 class ZoningTranslationInputs(config_base.BaseConfig):

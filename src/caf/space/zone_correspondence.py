@@ -8,7 +8,7 @@ from typing import Tuple
 import geopandas as gpd
 import pandas as pd
 
-from space import inputs as si
+from caf.space import inputs as si
 ##### CONSTANTS #####
 LOG = logging.getLogger(__name__)
 
@@ -25,43 +25,44 @@ def read_zone_shapefiles(params: si.ZoningTranslationInputs):
     """
 
     # create geodataframes from zone shapefiles
-    zone_1 = gpd.read_file(params.zone_1_path)
-    zone_2 = gpd.read_file(params.zone_2_path)
+    zone_1 = gpd.read_file(params.zone_1.shapefile)
+    zone_2 = gpd.read_file(params.zone_2.shapefile)
 
     zone_1 = zone_1.dropna(axis=1, how="all")
     zone_2 = zone_2.dropna(axis=1, how="all")
 
-    LOG.info("Count of %s zones: %s", params.zone_2_name, zone_2.iloc[:, 0].count())
-    LOG.info("Count of %s zones: %s", params.zone_1_name, zone_1.iloc[:, 0].count())
+    LOG.info("Count of %s zones: %s", params.zone_2.name, zone_2.iloc[:, 0].count())
+    LOG.info("Count of %s zones: %s", params.zone_1.name, zone_1.iloc[:, 0].count())
+
+    zone_1["area"] = zone_1.area
+    zone_1 = zone_1.dropna(subset=["area"])
+    zone_2["area"] = zone_2.area
+    zone_2 = zone_2.dropna(subset=["area"])
 
     if sum(zone_1["area"]) / len(zone_1) > sum(zone_2["area"]) / len(zone_2):
         # Assign to maj/min
         major_zone = zone_1.copy()
-        major_zone_name = params.zone_1_name
+        major_zone_name = params.zone_1.name
         minor_zone = zone_2.copy()
-        minor_zone_name = params.zone_2_name
-        zones = {"Major":{"Name":major_zone_name,"zone":major_zone.drop("area",axis=1),"ID_col": params.zone_1_id_col},
-                "Minor":{"Name":minor_zone_name,"zone":minor_zone.drop("area",axis=1), "ID_col":params.zone_2_id_col}
+        minor_zone_name = params.zone_2.name
+        zones = {"Major":{"Name":major_zone_name,"Zone":major_zone.drop("area",axis=1),"ID_col": params.zone_1.id_col},
+                "Minor":{"Name":minor_zone_name,"Zone":minor_zone.drop("area",axis=1), "ID_col":params.zone_2.id_col}
         }
 
     elif sum(zone_1.area) / len(zone_1) < sum(zone_2.area) / len(zone_2):
         # Assign to maj/min
         major_zone = zone_2.copy()
-        major_zone_name = params.zone_2_name
+        major_zone_name = params.zone_2.name
         minor_zone = zone_1.copy()
-        minor_zone_name = params.zone_1_name
-        zones = {"Major":{"Name":major_zone_name,"Zone":major_zone.drop("area",axis=1),"ID_col": params.zone_2_id_col},
-                "Minor":{"Name":minor_zone_name,"Zone":minor_zone.drop("area",axis=1), "ID_col":params.zone_1_id_col}
+        minor_zone_name = params.zone_1.name
+        zones = {"Major":{"Name":major_zone_name,"Zone":major_zone.drop("area",axis=1),"ID_col": params.zone_2.id_col},
+                "Minor":{"Name":minor_zone_name,"Zone":minor_zone.drop("area",axis=1), "ID_col":params.zone_1.id_col}
         }
 
     del zone_1, zone_2
 
-    # LOWER all column names
-    major_zone.columns = major_zone.columns.str.lower()
-    minor_zone.columns = minor_zone.columns.str.lower()
-
     for zone in zones.values():
-        zone['Zone'].rename(columns={zone['ID_col'].lower():f"{zone['Name']}_zone_id"},
+        zone['Zone'].rename(columns={zone['ID_col']:f"{zone['Name']}_zone_id"},
         inplace=True
         )
         zone['Zone'][f"{zone['Name']}_area"] = zone['Zone'].area
@@ -366,8 +367,6 @@ def main_zone_correspondence(params: si.ZoningTranslationInputs):
         "Point handling": params.point_handling,
         "Point list": params.point_zones_path,
         "Point tolerance": params.point_tolerance,
-        "Lower zone weighting data": params.lower_zoning.weight_data,
-        "Lower zone shapefile": params.lower_zoning.shapefile,
         "Rounding": params.rounding,
         "filter_slithers": params.filter_slithers,
         "type": "correspondence",
@@ -392,7 +391,7 @@ def main_zone_correspondence(params: si.ZoningTranslationInputs):
 
     # read in zone shapefiles
     zones = read_zone_shapefiles(
-        params.zone_1.shapefile, params.zone_2.shapefile, params.zone_1.name, params.zone_2.name, params.zone_1.id_col, params.zone_2.id_col
+        params
     )
     # produce spatial zone correspondence
     spatial_correspondence = spatial_zone_correspondence(zones)
@@ -422,7 +421,7 @@ def main_zone_correspondence(params: si.ZoningTranslationInputs):
             final_zone_corr = spatial_correspondence
     # Save correspondence output
     final_zone_corr_path = (
-        params.out_path / f"{zone_names[0]}_to_{zone_names[1]}_correspondence.csv"
+        params.output_path / f"{zone_names[0]}_to_{zone_names[1]}_correspondence.csv"
     )
     final_zone_corr.to_csv(
         final_zone_corr_path,
@@ -435,7 +434,7 @@ def main_zone_correspondence(params: si.ZoningTranslationInputs):
     LOG.info("Missing Zones from 1 : %s", len(missing_zones_1))
     LOG.info("Missing Zones from 2 : %s", len(missing_zones_2))
 
-    log_file = f"{params.out_path}/{zone_names[0]}_to_{zone_names[1]}_missing_zones_log.xlsx"
+    log_file = f"{params.output_path}/{zone_names[0]}_to_{zone_names[1]}_missing_zones_log.xlsx"
     with pd.ExcelWriter(log_file, engine="openpyxl") as writer:
         log_df.to_excel(writer, sheet_name="Parameters", index=False)
         missing_zones_1.to_excel(

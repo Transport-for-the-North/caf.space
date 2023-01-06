@@ -51,7 +51,7 @@ def var_apply(area_correspondence_path: str, weighting_data: str, weighting_var_
     LOG.warning("%s zones are not intersected by target zones", missing_lower)
 
     # Multiply var by the minor to major overlap
-    area_correspondence_var[weighting_var_col] *= area_correspondence_var.loc[:, f'{lower_name}_to_{zone_name}']
+    area_correspondence_var[weighting_var_col] *= area_correspondence_var.loc[:, f'{lower_name.lower()}_to_{zone_name.lower()}']
 
     return area_correspondence_var
 
@@ -94,8 +94,8 @@ def zone_split(
 
     # Outer Join to keep var zones which do not intersect with any zone
     area_correspondence_var = pd.merge(
-        ats[zone_1_name], ats[zone_2_name], how="outer", on=weighting_zone_col, lsuffix=zone_1_name,
-        rsuffix=zone_2_name
+        ats[zone_1_name], ats[zone_2_name], how="outer", on=weighting_zone_col, suffixes=(zone_1_name,
+        zone_2_name)
     )
 
     area_correspondence_var[weighting_var_col] = area_correspondence_var[

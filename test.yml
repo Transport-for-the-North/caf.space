@@ -1,0 +1,22 @@
+zone_1:
+  name: LAD
+  shapefile: Y:/Data Strategy/GIS Shapefiles/LAD_2021/LAD_MAY_2021_UK_BFE_V2.shp
+  id_col: LAD21CD
+zone_2:
+  name: MSOA
+  shapefile: Y:/Data Strategy/GIS Shapefiles/MSOA Dec 2011/Middle_Layer_Super_Output_Areas__December_2011__Boundaries_Full_Extent__BFE__EW_V3.shp
+  id_col: MSOA11CD
+output_path: C:/Users/IsaacScott/Projects/geo_rewrite
+method: pop
+tolerance: 0.98
+point_handling: yes
+point_tolerance: 0.95
+rounding: yes
+filter_slithers: yes
+lower_zoning:
+  name: LSOA
+  shapefile: Y:/Data Strategy/GIS Shapefiles/LSOA/Lower_Layer_Super_Output_Areas_(December_2011)_Boundaries_Super_Generalised_Clipped_(BSC)_EW_V3.shp
+  id_col: LSOA11CD
+  weight_data: I:/Data/Zone Translations/weighting vectors/lsoa_pop_2018_weighting.csv
+  data_col: var
+  weight_id_col: lsoa_zone_id
