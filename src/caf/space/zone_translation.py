@@ -115,9 +115,9 @@ class ZoneTranslation:
             weighting_data=self.params.lower_zoning.weight_data,
             weighting_zone_col=self.params.lower_zoning.weight_id_col,
             weighting_var_col=self.params.lower_zoning.data_col,
-            zone_1_name=self.params.zone_1.name,
-            zone_2_name=self.params.zone_2.name,
-            lower_zoning_name = self.params.lower_zoning.name
+            zone_1_name=self.params.zone_1.name.lower(),
+            zone_2_name=self.params.zone_2.name.lower(),
+            lower_zoning_name = self.params.lower_zoning.name.lower()
         )
         # TODO check code from here to bottom when the tool is functional. I think it works but
         # not sure what it does and it should definitely be refactored

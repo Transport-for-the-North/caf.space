@@ -51,7 +51,7 @@ def var_apply(area_correspondence_path: str, weighting_data: str, weighting_var_
     LOG.warning("%s zones are not intersected by target zones", missing_lower)
 
     # Multiply var by the minor to major overlap
-    area_correspondence_var[weighting_var_col] *= area_correspondence_var.loc[:, f'{lower_name.lower()}_to_{zone_name.lower()}']
+    area_correspondence_var[weighting_var_col] *= area_correspondence_var.loc[:, f'{lower_name}_to_{zone_name}']
 
     return area_correspondence_var
 
@@ -112,21 +112,21 @@ def zone_split(
     area_correspondence_sums = {}
     for at in ats.keys():
         # pass zone_names here
-        zone_col = f"{at}_zone_id"
+        zone_col = f"{at.lower()}_zone_id"
         # group by the zone code
-        area_correspondence_sum = area_correspondence_var.groupby(zone_col).sum().reset_index()[weighting_var_col]
+        area_correspondence_sum = area_correspondence_var.groupby(zone_col).sum()
         # change column name to zone_var
-        area_correspondence_sum = area_correspondence_sum.rename(
-            columns={
-                area_correspondence_sum.columns[1]: f"{at}_value"
-            }
-        )
+        # area_correspondence_sum = area_correspondence_sum.rename(
+        #     columns={
+        #         weighting_var_col: f"{at}_value"
+        #     }
+        # )
         del zone_col
-        area_correspondence_sums[at] = area_correspondence_sum
+        area_correspondence_sums[at] = area_correspondence_sum[weighting_var_col]
 
     # This part here is what determines the "overlap_var" it is a groupby on the zone1 then 2
     var_merge_step = (
-    area_correspondence_var.groupby([f"{zone_1_name}_zone_id",f"{zone_1_name}_zone_id"]
+    area_correspondence_var.groupby([f"{zone_1_name}_zone_id",f"{zone_2_name}_zone_id"]
         )[weighting_var_col]
         .sum()
         .reset_index()
@@ -146,7 +146,8 @@ def zone_split(
         weighted_translation,
         area_correspondence_sums[zone_2_name],
         how="inner",
-        on=f"{zone_2_name}_zone_id"
+        on=f"{zone_2_name}_zone_id",
+        suffixes = [f"_{zone_1_name}",f"_{zone_2_name}"]
     )
 
     # Name split factors
@@ -154,13 +155,13 @@ def zone_split(
         f"{zone_1_name}_to_{zone_2_name}"
     ] = (
         weighted_translation["overlap_value"]
-        / weighted_translation[f"{zone_1_name}_value"]
+        / weighted_translation[f"var_{zone_1_name}"]
     )
     weighted_translation[
         f"{zone_2_name}_to_{zone_1_name}"
     ] = (
         weighted_translation["overlap_value"]
-        / weighted_translation[f"{zone_2_name}_value"]
+        / weighted_translation[f"var_{zone_2_name}"]
     )
 
     LOG.debug("Weighted translation:\n%s", weighted_translation)
