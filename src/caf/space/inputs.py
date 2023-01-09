@@ -152,7 +152,9 @@ class ZoningTranslationInputs(config_base.BaseConfig):
 
     zone_1: ZoneSystemInfo
     zone_2: ZoneSystemInfo
+    lower_zoning: LowerZoneSystemInfo
     output_path: Path
+    cache_path: Path
     existing_translation: Path = None
     method: str = None
     tolerance: float = 0.98
@@ -161,7 +163,7 @@ class ZoningTranslationInputs(config_base.BaseConfig):
     point_zones_path: Path = None
     rounding: bool = True
     filter_slithers: bool = True
-    lower_zoning: LowerZoneSystemInfo
+    
 
     _CONFIG_SECTION: str = dataclasses.field(
         default="ZONING TRANSLATION PARAMETERS", init=False, repr=False

@@ -423,10 +423,6 @@ def main_zone_correspondence(params: si.ZoningTranslationInputs):
     final_zone_corr_path = (
         params.output_path / f"{zone_names[0]}_to_{zone_names[1]}_correspondence.csv"
     )
-    final_zone_corr.to_csv(
-        final_zone_corr_path,
-        index=False,
-    )
     missing_zones_1, missing_zones_2 = missing_zones_check(
         zones, final_zone_corr
     )
@@ -454,4 +450,4 @@ def main_zone_correspondence(params: si.ZoningTranslationInputs):
         final_zone_corr_path,
     )
 
-    return final_zone_corr, final_zone_corr_path
+    return final_zone_corr

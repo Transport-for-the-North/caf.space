@@ -1,3 +1,4 @@
+import datetime
 from pathlib import Path
 from caf.space import config_base
 
@@ -24,4 +25,13 @@ class shapefile_metadata(config_base.BaseConfig):
     path: Path
     id_col: str
     weighting_data: weight_metadata = None
+
+class lower_trans_log(config_base.BaseConfig):
+    zone_shapefile: Path
+    lower_shapefile: Path
+    date: datetime.datetime
+
+class lower_metadata(config_base.BaseConfig):
+    translations : list[lower_trans_log]
+
 
