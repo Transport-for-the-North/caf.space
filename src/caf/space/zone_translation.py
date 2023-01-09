@@ -32,7 +32,7 @@ class ZoneTranslation:
                 else:
                     self.params.zone_1.lower_translation = lower
             if params.zone_2.lower_translation is None:
-                lower = self.find_lower_translation(params.zone_1.name)
+                lower = self.find_lower_translation(params.zone_2.name)
                 if lower == None:
                     self.params.zone_2.lower_translation = self.save_lower(self.params.zone_2.name)
                 else:
@@ -69,9 +69,12 @@ class ZoneTranslation:
 
     def find_lower_translation(self, zone: str):
         """
-        =================================
-        TODO This function needs to be rewritten once the metadata and file structures are decided
-        =================================
+        Function to search the cache path for existing lower translations
+        Args:
+            zone (str): Name of the zone. This must always be identical to the corresponding zone name within the config
+
+        Returns:
+            lower (Path): If an appropriate existing lower translation exists, this will return a path to it. If not returns None.
         """
         if zone == self.params.zone_1.name:
             zone = self.params.zone_1
@@ -80,20 +83,24 @@ class ZoneTranslation:
         else:
             NameError("The zone name selected isn't part of this translation.")
         lower_path = self.params.cache_path / f"{zone.name}_{self.params.lower_zoning.name}"
+        lower = None
         if os.path.isdir(lower_path):
-            meta = me.lower_metadata.load_yaml(lower_path / "metadata.yml").translations
-            lower = None
-            for trans in meta:
-                if trans.zone_shapefile == zone.shapefile and trans.lower_shapefile == self.params.lower_zoning.shapefile:
-                    mod_date = max(os.path.getmtime(zone.shapefile),os.path.getmtime(self.params.lower_zoning.shapefile))
-                    if datetime.datetime.timestamp(meta.date) > mod_date:
-                        lower =  lower_path / f'{meta.date.strftime("%d_%m_%y")}.csv'
+            meta_path = lower_path / "metadata.yml"
+            if os.path.isfile(meta_path):
+                meta = me.lower_metadata.load_yaml(lower_path / "metadata.yml").translations
+                for trans in meta:
+                    if trans.zone_shapefile == zone.shapefile and trans.lower_shapefile == self.params.lower_zoning.shapefile:
+                        mod_date = max(os.path.getmtime(zone.shapefile),os.path.getmtime(self.params.lower_zoning.shapefile))
+                        if datetime.datetime.timestamp(trans.date) > mod_date:
+                            lower =  lower_path / f'{trans.date.strftime("%d_%m_%y")}.csv'
+                        else:
+                            LOG.error("Shapefile(s) modified since last translation")
                     else:
-                        LOG.error("Shapefile(s) modified since last translation")
-                else:
-                    continue
+                        continue
+            else:
+                LOG.error("The lower translations folder in this cache has no metadata, or it is names incorrectly. The metadata should be called 'metadata.yml'.")
             if lower == None:
-                LOG.error(f"No appropriate translation exists for {zone.name} to {self.lower_zoning.name}, running spatial correspondence.")
+                LOG.error(f"No appropriate translation exists for {zone.name} to {self.params.lower_zoning.name}, running spatial correspondence.")
         return lower
 
     def weighted_translation(self, start_time):
@@ -208,7 +215,16 @@ class ZoneTranslation:
 
         return weighted_translation
 
-    def save_lower(self, zone_name):
+    def save_lower(self, zone_name: str):
+        """
+        Basically a wrapper for run_spatial_translation, which saves the translation created along with associated metadata, and returns a path to it.
+
+        Args:
+            zone_name (str): name of the zone to create a lower translation from
+
+        Returns:
+            lower_translation: A path to the lower translation created and saved here.
+        """
         lower = self.run_spatial_translation(
             zone_name
         )
@@ -221,8 +237,12 @@ class ZoneTranslation:
             os.mkdir(zone_path)
         zone.lower_translation = zone_path / f'{datetime.datetime.now().strftime("%d_%m_%y")}.csv'
         lower.to_csv(zone.lower_translation)
-        meta = me.lower_metadata.load_yaml(zone_path / "metadata.yml")
-        lower_log = me.lower_trans_log(zone.shapefile, self.lower_zoning.shapefile, datetime.datetime.now())
-        meta.translations.append(lower_log)
+        lower_log = me.lower_trans_log(zone_shapefile = zone.shapefile, lower_shapefile = self.params.lower_zoning.shapefile, date = datetime.datetime.now())
+        meta_path = zone_path / "metadata.yml"
+        if os.path.isdir(meta_path):
+            meta = me.lower_metadata.load_yaml(zone_path / "metadata.yml")
+            meta.translations.append(lower_log)
+        else:
+            meta = me.lower_metadata(translations = [lower_log])
         meta.save_yaml(zone_path / "metadata.yml")
         return zone.lower_translation

@@ -2,13 +2,12 @@ zone_1:
   name: LAD
   shapefile: Y:/Data Strategy/GIS Shapefiles/LAD_2021/LAD_MAY_2021_UK_BFE_V2.shp
   id_col: LAD21CD
-  lower_translation: C:\Users\IsaacScott\Projects\geo_rewrite\LAD_to_LSOA_correspondence.csv
 zone_2:
   name: MSOA
   shapefile: Y:/Data Strategy/GIS Shapefiles/MSOA Dec 2011/Middle_Layer_Super_Output_Areas__December_2011__Boundaries_Full_Extent__BFE__EW_V3.shp
   id_col: MSOA11CD
-  lower_translation: C:\Users\IsaacScott\Projects\geo_rewrite\MSOA_to_LSOA_correspondence.csv
 output_path: C:/Users/IsaacScott/Projects/geo_rewrite
+cache_path: C:\Users\IsaacScott\Projects\geo_rewrite\test_cache
 method: pop
 tolerance: 0.98
 point_handling: yes

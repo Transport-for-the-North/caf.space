@@ -1,5 +1,9 @@
 from caf.space import ZoningTranslationInputs, ZoneTranslation
 from pathlib import Path
+import logging
+
+LOG = logging.getLogger(__name__)
+LOG_FILE = "Zone_Translation.log"
 
 def test_run(config_path: Path):
     config = ZoningTranslationInputs.load_yaml(config_path)
