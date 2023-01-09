@@ -38,7 +38,7 @@ class ZoneTranslation:
                 )
             if params.zone_2.lower_translation is None:
                 # try:
-                #     self.zone_2_lower_trans = self.find_lower_translation(
+                #     self.zone_2.lower_trans = self.find_lower_translation(
                 #     )
                 # except Exception:
                 #     LOG.info(
@@ -115,8 +115,8 @@ class ZoneTranslation:
             weighting_data=self.params.lower_zoning.weight_data,
             weighting_zone_col=self.params.lower_zoning.weight_id_col,
             weighting_var_col=self.params.lower_zoning.data_col,
-            zone_1_name=self.params.zone_1.name.lower(),
-            zone_2_name=self.params.zone_2.name.lower(),
+            zone_1.name=self.params.zone_1.name.lower(),
+            zone_2.name=self.params.zone_2.name.lower(),
             lower_zoning_name = self.params.lower_zoning.name.lower()
         )
         # TODO check code from here to bottom when the tool is functional. I think it works but
@@ -158,26 +158,26 @@ class ZoneTranslation:
 
             LOG.info("Copy of translation written to: %s", out_path)
 
-        run_time = datetime.datetime.now() - start_time
+        run_time = datetime.datetime.now() - start_time()
         LOG.info("Script Completed in : %s", run_time)
 
         log_data = {
             "Run Time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "Zone 1 name": self.zone_1_name,
-            "Zone 2 name": self.zone_2_name,
-            "Zone 1 shapefile": self.zone_1_path,
-            "Zone 2 Shapefile": self.zone_2_path,
+            "Zone 1 name": self.params.zone_1.name,
+            "Zone 2 name": self.params.zone_2.name,
+            "Zone 1 shapefile": self.params.zone_1.path,
+            "Zone 2 Shapefile": self.params.zone_2.path,
             "Output directory": out_path,
-            "Tolerance": self.tolerance,
-            "Point handling": self.point_handling,
-            "Point list": self.point_zones_path,
-            "Point tolerance": self.point_tolerance,
-            "Lower weight data": self.lower_weight_data_path,
-            "Lower shapefile path": self.lower_shapefile_path,
-            "Rounding": self.rounding,
-            "filter_slithers": self.filter_slithers,
+            "Tolerance": self.params.tolerance,
+            "Point handling": self.params.point_handling,
+            "Point list": self.params.point_zones_path,
+            "Point tolerance": self.params.point_tolerance,
+            "Lower weight data": self.params.lower_weight_data_path,
+            "Lower shapefile path": self.params.lower_shapefile_path,
+            "Rounding": self.params.rounding,
+            "filter_slithers": self.params.filter_slithers,
             "type": "weighted_translation",
-            "method": self.method,
+            "method": self.params.method,
             "run_time": run_time,
         }
 
