@@ -32,10 +32,10 @@ class ShapefileInfo(config_base.BaseConfig):
     shapefile: Path
     id_col: str
 
-    @validator('shapefile')
+    @validator("shapefile")
     def path_exists(cls, v):
         if os.path.isfile(v) == False:
-            raise ValueError(f'The path provided for {v} does not exist.')
+            raise ValueError(f"The path provided for {v} does not exist.")
         return v
 
 
@@ -56,11 +56,13 @@ class ZoneSystemInfo(ShapefileInfo):
 
     lower_translation: Path = None
 
-    @validator('lower_translation')
+    @validator("lower_translation")
     def lower_exists(cls, v):
         if v:
             if os.pathing.isfile(v) == False:
-                raise ValueError(f'The lower translation path provided for {cls.name} does not exist.')
+                raise ValueError(
+                    f"The lower translation path provided for {cls.name} does not exist."
+                )
         return v
 
 
@@ -90,16 +92,18 @@ class LowerZoneSystemInfo(ShapefileInfo):
     def __post_init__(self) -> None:
         super().__post_init__()
         self.weight_data = self.weight_data
-    
+
     def _lower_to_higher(self) -> ZoneSystemInfo:
-        return ZoneSystemInfo(name = self.name,
-        shapefile = self.shapefile,
-        id_col = self.id_col)
-    
-    @validator('weight_data')
+        return ZoneSystemInfo(
+            name=self.name, shapefile=self.shapefile, id_col=self.id_col
+        )
+
+    @validator("weight_data")
     def weight_data_exists(cls, v):
         if os.path.isfile(v) == False:
-            raise FileNotFoundError(f'The weight data path provided for {v} does not exist.')
+            raise FileNotFoundError(
+                f"The weight data path provided for {v} does not exist."
+            )
         return v
 
 
@@ -150,6 +154,7 @@ class ZoningTranslationInputs(config_base.BaseConfig):
 
     def __post_init__(self) -> None:
         self.output_path.mkdir(exist_ok=True, parents=True)
+        self.cache_path.mkdir(exist_ok=True, parents=True)
 
     @staticmethod
     def _path_none(value: str) -> Union[Path, None]:
@@ -158,17 +163,31 @@ class ZoningTranslationInputs(config_base.BaseConfig):
             return None
         return Path(value)
 
+
 def write_example(out_path: Path):
     zones = {}
-    for i in range(1,3):
-        zones[i] = ZoneSystemInfo(name = f"zone_{i}_name", shapefile = Path(f"path/to/shapefile_{i}"), id_col = f"id_col_for_zone_{i}", lower_translation= Path(f"path/to/lower_trans_{i}"))
-    lower = LowerZoneSystemInfo(name = "lower_zone_name", shapefile = Path("path/to/lower/shapefile"), id_col = "id_col_for_lower_zone", weight_data=Path("path/to/lower/weight/data"), data_col="data_col_name", weight_id_col = "id_col_in_weighting_data")
-    ex = ZoningTranslationInputs(zone_1=zones[1],
-    zone_2 = zones[2],
-    lower_zoning = lower,
-    output_path = r"path\to\output\folder",
-    cache_path= r"path\to\cache\folder\defaults\to\ydrive",
-    method = "OPTIONAL name of method",
-    point_zones_path = r"OPTIONAL\path\to\list\of\point\zones"
+    for i in range(1, 3):
+        zones[i] = ZoneSystemInfo(
+            name=f"zone_{i}_name",
+            shapefile=Path(f"path/to/shapefile_{i}"),
+            id_col=f"id_col_for_zone_{i}",
+            lower_translation=Path(f"path/to/lower_trans_{i}"),
+        )
+    lower = LowerZoneSystemInfo(
+        name="lower_zone_name",
+        shapefile=Path("path/to/lower/shapefile"),
+        id_col="id_col_for_lower_zone",
+        weight_data=Path("path/to/lower/weight/data"),
+        data_col="data_col_name",
+        weight_id_col="id_col_in_weighting_data",
+    )
+    ex = ZoningTranslationInputs(
+        zone_1=zones[1],
+        zone_2=zones[2],
+        lower_zoning=lower,
+        output_path=r"path\to\output\folder",
+        cache_path=r"path\to\cache\folder\defaults\to\ydrive",
+        method="OPTIONAL name of method",
+        point_zones_path=r"OPTIONAL\path\to\list\of\point\zones",
     )
     ex.save_yaml(out_path)

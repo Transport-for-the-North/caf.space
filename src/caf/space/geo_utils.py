@@ -115,12 +115,6 @@ def zone_split(
         zone_col = f"{at.lower()}_zone_id"
         # group by the zone code
         area_correspondence_sum = area_correspondence_var.groupby(zone_col).sum()
-        # change column name to zone_var
-        # area_correspondence_sum = area_correspondence_sum.rename(
-        #     columns={
-        #         weighting_var_col: f"{at}_value"
-        #     }
-        # )
         del zone_col
         area_correspondence_sums[at] = area_correspondence_sum[weighting_var_col]
 

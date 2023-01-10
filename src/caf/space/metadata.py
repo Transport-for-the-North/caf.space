@@ -28,6 +28,11 @@ class shapefile_metadata(config_base.BaseConfig):
     weighting_data: weight_metadata = None
 
 class spatial_trans_log(config_base.BaseConfig):
+    """
+    Output log of a spatial translation, mainly used for the lower translations used in weighted translations.
+    Args:
+        config_base (_type_): _description_
+    """
     zone_shapefile: Path
     lower_shapefile: Path
     date: datetime.datetime
