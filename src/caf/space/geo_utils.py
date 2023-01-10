@@ -8,7 +8,13 @@ LOG = logging.getLogger(__name__)
 
 
 ##### FUNCTIONS #####
-def var_apply(area_correspondence_path: str, weighting_data: str, weighting_var_col: str, zone_name: str, lower_name: str) -> pd.DataFrame:
+def var_apply(
+    area_correspondence_path: str,
+    weighting_data: str,
+    weighting_var_col: str,
+    zone_name: str,
+    lower_name: str,
+) -> pd.DataFrame:
     """
     Joins chosen method variable to lower zoning shapefile.
 
@@ -38,7 +44,9 @@ def var_apply(area_correspondence_path: str, weighting_data: str, weighting_var_
     area_correspondence = pd.read_csv(area_correspondence_path, index_col=False)
 
     # Work out cols in left and right for merge
-    merge_cols, area_correspondence, zone_variables = _cols_in_both(area_correspondence, zone_variables)
+    merge_cols, area_correspondence, zone_variables = _cols_in_both(
+        area_correspondence, zone_variables
+    )
     LOG.info("Joining on lower zones id, %s", merge_cols)
 
     # Merge var zones onto area translation file
@@ -51,9 +59,12 @@ def var_apply(area_correspondence_path: str, weighting_data: str, weighting_var_
     LOG.warning("%s zones are not intersected by target zones", missing_lower)
 
     # Multiply var by the minor to major overlap
-    area_correspondence_var[weighting_var_col] *= area_correspondence_var.loc[:, f'{lower_name}_to_{zone_name}']
+    area_correspondence_var[weighting_var_col] *= area_correspondence_var.loc[
+        :, f"{lower_name}_to_{zone_name}"
+    ]
 
     return area_correspondence_var
+
 
 def zone_split(
     area_correspondence_path1: str,
@@ -63,48 +74,63 @@ def zone_split(
     weighting_var_col: str,
     zone_1_name: str,
     zone_2_name: str,
-    lower_zoning_name: str
+    lower_zoning_name: str,
 ) -> pd.DataFrame:
-    """ Joins chosen method variable to Zone to Lower Weighted correspondence table on
-        a standard code using var_apply function then calculates weighted
-        translation between Zone 1 and Zone 2.
-        
-        Parameters
-        ----------
-        area_correspondence_path1 : str
-             Path to Zone 1 to lower correspondence csv file
-        area_correspondence_path2 : str
-             Path to Zone 2 to lower correspondence csv file
-        weighting_data: pd.DataFrame:
-            Data to weight translation by
-        weighting_var_col: str
-            Name of the variable to weight by
+    """Joins chosen method variable to Zone to Lower Weighted correspondence table on
+    a standard code using var_apply function then calculates weighted
+    translation between Zone 1 and Zone 2.
 
-        Returns
-         -------
-         weighted_translation: pd.DataFrame
-             Zone 1 to Zone 2 weighted translation using defined method
+    Parameters
+    ----------
+    area_correspondence_path1 : str
+         Path to Zone 1 to lower correspondence csv file
+    area_correspondence_path2 : str
+         Path to Zone 2 to lower correspondence csv file
+    weighting_data: pd.DataFrame:
+        Data to weight translation by
+    weighting_var_col: str
+        Name of the variable to weight by
+
+    Returns
+     -------
+     weighted_translation: pd.DataFrame
+         Zone 1 to Zone 2 weighted translation using defined method
     """
 
     # 2 zone weighted translation
     ats = {
-        zone_1_name: var_apply(area_correspondence_path1,weighting_data,weighting_var_col, zone_1_name, lower_zoning_name),
-        zone_2_name: var_apply(area_correspondence_path2,weighting_data,weighting_var_col, zone_2_name, lower_zoning_name)
+        zone_1_name: var_apply(
+            area_correspondence_path1,
+            weighting_data,
+            weighting_var_col,
+            zone_1_name,
+            lower_zoning_name,
+        ),
+        zone_2_name: var_apply(
+            area_correspondence_path2,
+            weighting_data,
+            weighting_var_col,
+            zone_2_name,
+            lower_zoning_name,
+        ),
     }
 
     # Outer Join to keep var zones which do not intersect with any zone
     area_correspondence_var = pd.merge(
-        ats[zone_1_name], ats[zone_2_name], how="outer", on=weighting_zone_col, suffixes=(zone_1_name,
-        zone_2_name)
+        ats[zone_1_name],
+        ats[zone_2_name],
+        how="outer",
+        on=weighting_zone_col,
+        suffixes=(zone_1_name, zone_2_name),
     )
 
     area_correspondence_var[weighting_var_col] = area_correspondence_var[
         [f"{weighting_var_col}{zone_1_name}", f"{weighting_var_col}{zone_2_name}"]
     ].min(axis=1)
     area_correspondence_var.drop(
-        [f"{weighting_var_col}{zone_1_name}", f"{weighting_var_col}{zone_2_name}"], 
+        [f"{weighting_var_col}{zone_1_name}", f"{weighting_var_col}{zone_2_name}"],
         axis=1,
-        inplace=True
+        inplace=True,
     )
 
     # Loop to get sums from newly adjusted totals
@@ -120,40 +146,35 @@ def zone_split(
 
     # This part here is what determines the "overlap_var" it is a groupby on the zone1 then 2
     var_merge_step = (
-    area_correspondence_var.groupby([f"{zone_1_name}_zone_id",f"{zone_2_name}_zone_id"]
+        area_correspondence_var.groupby(
+            [f"{zone_1_name}_zone_id", f"{zone_2_name}_zone_id"]
         )[weighting_var_col]
         .sum()
         .reset_index()
     )
-    var_merge_step = var_merge_step.rename(
-        columns={weighting_var_col: "overlap_value"}
-    )
+    var_merge_step = var_merge_step.rename(columns={weighting_var_col: "overlap_value"})
 
     # Merges the individual zone totals onto the zone1 zone 2 overlap var table
     weighted_translation = pd.merge(
         var_merge_step,
         area_correspondence_sums[zone_1_name],
         how="inner",
-        on=f"{zone_1_name}_zone_id"
+        on=f"{zone_1_name}_zone_id",
     )
     weighted_translation = pd.merge(
         weighted_translation,
         area_correspondence_sums[zone_2_name],
         how="inner",
         on=f"{zone_2_name}_zone_id",
-        suffixes = [f"_{zone_1_name}",f"_{zone_2_name}"]
+        suffixes=[f"_{zone_1_name}", f"_{zone_2_name}"],
     )
 
     # Name split factors
-    weighted_translation[
-        f"{zone_1_name}_to_{zone_2_name}"
-    ] = (
+    weighted_translation[f"{zone_1_name}_to_{zone_2_name}"] = (
         weighted_translation["overlap_value"]
         / weighted_translation[f"var_{zone_1_name}"]
     )
-    weighted_translation[
-        f"{zone_2_name}_to_{zone_1_name}"
-    ] = (
+    weighted_translation[f"{zone_2_name}_to_{zone_1_name}"] = (
         weighted_translation["overlap_value"]
         / weighted_translation[f"var_{zone_2_name}"]
     )
@@ -169,6 +190,7 @@ def zone_split(
 
     return weighted_translation
 
+
 def _cols_in_both(left: pd.DataFrame, right: pd.DataFrame):
     """
     Short function to find column names common to two dataframes in order to merge them
@@ -182,7 +204,7 @@ def _cols_in_both(left: pd.DataFrame, right: pd.DataFrame):
         left: the input dataframe with lower case column names
         right: the input datafarame with lower case column names
     """
-    
+
     left.columns = [x.lower() for x in left.columns]
     right.columns = [x.lower() for x in right.columns]
     lis = [x for x in list(left) if x in list(right)]
