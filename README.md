@@ -12,7 +12,7 @@
 Common Analytical Framework (CAF) Space contain geo-processing functionality useful
 for transport planners. Primarily it is a tool for generating standard weighting
 translations in `.csv` format describing how to convert between different zoning systems.
-The aim is to free tools up from directly having to do their own geo-processing, and
+The aim is to free tools up from directly having to do their own geo-processing, and    
 instead have a single source of truth to get them from!
 
 <u><h3> Tool info </h3></u>
@@ -22,9 +22,9 @@ The tool has two main options for running a translation, either a purely spatial
 For a sptial correspondence, the only user inputs needed are shapefiles for the two zone systems you want a translation between. The parameters required for a spatial translation are as follows:
 
 <b> zone_1:<br>
-    name:</b> The name of the first zone system you are providing. This should be as simple as possible, so for and MSOA shapefile, name should simply be MSOA<br>
-    <b>shapefile:</b> A file path to the shapefile you want a translation for<br>
-    <b>id_col:</b> The name of the unique ID column in your chosen shapefile. This can be anything as long as it is unique for each zone in the shapefile<br>
+        name:</b> The name of the first zone system you are providing. This should be as simple as possible, so for and MSOA shapefile, name should simply be MSOA<br>
+        <b>shapefile:</b> A file path to the shapefile you want a translation for<br>
+  <b>id_col:</b> The name of the unique ID column in your chosen shapefile. This can be anything as long as it is unique for each zone in the shapefile<br>
 <b> zone_2: Parameters the same as for zone_1, it doesn't matter which order these are in, a two way translation will be created.</b><br>
 <b>output_path:</b> File path to where you want your translation saved. If the path provided doesn't exist it will be created, but it's best to check first to avoid surprises.<br>
 <b>cache_path:</b> File path to a cache of existing translations. This defaults to a location on a network drive, and it is best to keep it there, but it's more important for weighted translations.<br>
