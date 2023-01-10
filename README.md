@@ -22,9 +22,9 @@ The tool has two main options for running a translation, either a purely spatial
 For a sptial correspondence, the only user inputs needed are shapefiles for the two zone systems you want a translation between. The parameters required for a spatial translation are as follows:
 
 <b> zone_1:<br>
-        name:</b> The name of the first zone system you are providing. This should be as simple as possible, so for and MSOA shapefile, name should simply be MSOA<br>
-        <b>shapefile:</b> A file path to the shapefile you want a translation for<br>
-  <b>id_col:</b> The name of the unique ID column in your chosen shapefile. This can be anything as long as it is unique for each zone in the shapefile<br>
+    name:</b> The name of the first zone system you are providing. This should be as simple as possible, so for and MSOA shapefile, name should simply be MSOA<br>
+    <b>shapefile:</b> A file path to the shapefile you want a translation for<br>
+    <b>id_col:</b> The name of the unique ID column in your chosen shapefile. This can be anything as long as it is unique for each zone in the shapefile<br>
 <b> zone_2: Parameters the same as for zone_1, it doesn't matter which order these are in, a two way translation will be created.</b><br>
 <b>output_path:</b> File path to where you want your translation saved. If the path provided doesn't exist it will be created, but it's best to check first to avoid surprises.<br>
 <b>cache_path:</b> File path to a cache of existing translations. This defaults to a location on a network drive, and it is best to keep it there, but it's more important for weighted translations.<br>
@@ -38,11 +38,11 @@ The translation will be output as a csv to your output path location, in a folde
 For a weighted translation more parameters must be provided. The weighted translation is carried out by first producing spatial translations between each primary zone system and a lower zone system. The tool will search the cache for an existing lower translation first, which is why it is preferable to keep cache_path pointing to the network drive where existing translations exist. Once these lower translations are created / loaded the lower weighting data is used to produce a weighted translation between the two primary zone systems. Below are the additional parameters.<br>
 
 <b>zone_1/zone_2:<br>
-  lower_translation:</b> This is an optional parameter providing a path to an existing translation between the respective zone and the lower zone. Almost the entire run time of the tool is creating these lower translations so it is worth providing this if you have it. Alternatively if this translation has previusly been created and saved in the cache, the tool should find it and use it.<br>
+    lower_translation:</b> This is an optional parameter providing a path to an existing translation between the respective zone and the lower zone. Almost the entire run time of the tool is creating these lower translations so it is worth providing this if you have it. Alternatively if this translation has previusly been created and saved in the cache, the tool should find it and use it.<br>
 <b>lower_zoning:</b> The first three parameters for this are the same as for zones 1 and 2<br>
-  weight_data: File path to the weighting data for the lower zone system. This should be saved as a csv, and only needs two columns (an ID column and a column of weighting data)<br>
-  <b>data_col:</b> The name of the column in the weighting data csv containing the weight data.<br>
-  <b>weight_id_col:</b> The name of the columns in the weighting data containing the zone ids. This will be used to join the weighting data to the lower zoning, so the IDs must match, but the names of the ID columns may be different.<br>
+    weight_data: File path to the weighting data for the lower zone system. This should be saved as a csv, and only needs two columns (an ID column and a column of weighting data)<br>
+    <b>data_col:</b> The name of the column in the weighting data csv containing the weight data.<br>
+    <b>weight_id_col:</b> The name of the columns in the weighting data containing the zone ids. This will be used to join the weighting data to the lower zoning, so the IDs must match, but the names of the ID columns may be different.<br>
 <b>method:</b> The name of the methud used for weighting (e.g. pop or emp). This can be anything, but must be included as the tool checks if this parameter exists to decide whether to perform a spatial or weighted translation.
  
  
