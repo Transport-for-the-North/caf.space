@@ -10,10 +10,8 @@ output_path: C:/Users/IsaacScott/Projects/geo_rewrite
 cache_path: C:\Users\IsaacScott\Projects\geo_rewrite\test_cache
 method: pop
 tolerance: 0.98
-point_handling: yes
-point_tolerance: 0.95
-rounding: yes
-filter_slithers: yes
+rounding: True
+filter_slithers: True
 lower_zoning:
   name: LSOA
   shapefile: Y:/Data Strategy/GIS Shapefiles/LSOA/Lower_Layer_Super_Output_Areas_(December_2011)_Boundaries_Super_Generalised_Clipped_(BSC)_EW_V3.shp

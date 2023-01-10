@@ -146,9 +146,6 @@ class ZoningTranslationInputs(config_base.BaseConfig):
     cache_path: Path
     method: str = None
     tolerance: float = 0.98
-    point_handling: bool = True
-    point_tolerance: float = 0.95
-    point_zones_path: Path = None
     rounding: bool = True
     filter_slithers: bool = True
 
