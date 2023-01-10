@@ -24,8 +24,8 @@ from pydantic import validator
 ##### CONSTANTS #####
 LOG = logging.getLogger(__name__)
 
-@dataclasses.dataclass
-class ShapefileInfo:
+
+class ShapefileInfo(config_base.BaseConfig):
     """Base class for storing information about a shapefile input."""
 
     name: str
@@ -34,11 +34,11 @@ class ShapefileInfo:
 
     @validator('shapefile')
     def path_exists(cls, v):
-        if os.pathing.isfile(v) == False:
-            raise ValueError(f'The path provided for {cls.name} does not exist.')
+        if os.path.isfile(v) == False:
+            raise ValueError(f'The path provided for {v} does not exist.')
         return v
 
-@dataclasses.dataclass
+
 class ZoneSystemInfo(ShapefileInfo):
     """Zone system input data for `ZoneTranslationInputs`.
 
@@ -56,14 +56,14 @@ class ZoneSystemInfo(ShapefileInfo):
 
     lower_translation: Path = None
 
-    @validator('lower_translation_path')
+    @validator('lower_translation')
     def lower_exists(cls, v):
         if v:
             if os.pathing.isfile(v) == False:
                 raise ValueError(f'The lower translation path provided for {cls.name} does not exist.')
         return v
 
-@dataclasses.dataclass
+
 class LowerZoneSystemInfo(ShapefileInfo):
     """Lower level zone system input data for `ZoneTranslationInputs`.
 
@@ -98,8 +98,8 @@ class LowerZoneSystemInfo(ShapefileInfo):
     
     @validator('weight_data')
     def weight_data_exists(cls, v):
-        if os.pathing.isfile(v) == False:
-            raise FileNotFoundError(f'The weight data path provided for {cls.name} does not exist.')
+        if os.path.isfile(v) == False:
+            raise FileNotFoundError(f'The weight data path provided for {v} does not exist.')
         return v
 
 
@@ -167,7 +167,7 @@ def write_example(out_path: Path):
     zone_2 = zones[2],
     lower_zoning = lower,
     output_path = r"path\to\output\folder",
-    cache_path= r"path\to\cache\folder\defaults\to\ydrive"
+    cache_path= r"path\to\cache\folder\defaults\to\ydrive",
     method = "OPTIONAL name of method",
     point_zones_path = r"OPTIONAL\path\to\list\of\point\zones"
     )

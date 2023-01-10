@@ -1,8 +1,6 @@
 import os
 import datetime
 import logging
-import csv
-import sys
 import pandas as pd
 
 from caf.space import geo_utils as nf, zone_correspondence as zc, inputs as si, metadata as me
@@ -23,15 +21,19 @@ class ZoneTranslation:
             )
         else:
             if params.zone_1.lower_translation is None:
+                LOG.info(f"Searching for lower translation for {self.params.zone_1.name}.")
                 lower = self.find_lower_translation(params.zone_1.name)
                 if lower == None:
                     self.params.zone_1.lower_translation = self.save_lower(self.params.zone_1.name)
+                    LOG.info("Lower translation created and saved to cache.")
                 else:
                     self.params.zone_1.lower_translation = lower
             if params.zone_2.lower_translation is None:
+                LOG.info(f"Searching for lower translation for {self.params.zone_2.name}.")
                 lower = self.find_lower_translation(params.zone_2.name)
                 if lower == None:
                     self.params.zone_2.lower_translation = self.save_lower(self.params.zone_2.name)
+                    LOG.info("Lower translation created and saved to cache.")
                 else:
                     self.params.zone_2.lower_translation = lower
             self.zone_translation = self.weighted_translation(datetime.datetime.now)
@@ -90,6 +92,7 @@ class ZoneTranslation:
                         mod_date = max(os.path.getmtime(zone.shapefile),os.path.getmtime(self.params.lower_zoning.shapefile))
                         if datetime.datetime.timestamp(trans.date) > mod_date:
                             lower =  lower_path / f'{trans.date.strftime("%d_%m_%y")}.csv'
+                            LOG.info(f"Appropriate translation found at {lower}.")
                         else:
                             LOG.error("Shapefile(s) modified since last translation")
                     else:
@@ -122,8 +125,6 @@ class ZoneTranslation:
          """
         LOG.info("Starting weighted translation")
         # Init
-        zone_name1 = self.params.zone_1.name.lower()
-        zone_name2 = self.params.zone_2.name.lower()
 
         weighted_translation = nf.zone_split(
             area_correspondence_path1=self.params.zone_1.lower_translation,
