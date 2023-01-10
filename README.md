@@ -15,7 +15,7 @@ translations in `.csv` format describing how to convert between different zoning
 The aim is to free tools up from directly having to do their own geo-processing, and
 instead have a single source of truth to get them from!
 
-<u><h4> Tool info </h4></u>
+<u><h3> Tool info </h3></u>
 The tool has two main options for running a translation, either a purely spatial translation (where overlapping zones are split by area), or a weighted translation where overlapping zones are split by some other type of weighting data like population or employment data. for most purposes a weighted translation will be more accurate, and it is up to the user to decide the most appropriate weighting data to use. For both types of translation the tool runs from a config file (a file called config.yml in the base folder). Parameters for this config are described below.
 
 <u><h4> Spatial Correspondence </h4></u>
