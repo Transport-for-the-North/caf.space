@@ -4,7 +4,8 @@ from caf.space import config_base
 
 class weight_metadata(config_base.BaseConfig):
     """
-    Class for storing metadata avout weighting date
+    Class for storing metadata about weighting date.
+    This is not currently used but could be part of a GUI.
 
     Args:
         config_base (_type_): _description_
@@ -17,7 +18,7 @@ class weight_metadata(config_base.BaseConfig):
 class shapefile_metadata(config_base.BaseConfig):
     """
     Class for creating, storing and loading metadata relating to shapefiles used for 
-    translations.
+    translations. This is not currently used but could be part of a GUI.
     Args:
         config_base (_type_): _description_
     """
@@ -26,12 +27,12 @@ class shapefile_metadata(config_base.BaseConfig):
     id_col: str
     weighting_data: weight_metadata = None
 
-class lower_trans_log(config_base.BaseConfig):
+class spatial_trans_log(config_base.BaseConfig):
     zone_shapefile: Path
     lower_shapefile: Path
     date: datetime.datetime
 
 class lower_metadata(config_base.BaseConfig):
-    translations : list[lower_trans_log]
+    translations : list[spatial_trans_log]
 
 

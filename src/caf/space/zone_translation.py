@@ -18,12 +18,9 @@ class ZoneTranslation:
     ):
         self.params = params
         if self.params.method is None:
-            if self.params.existing_translation is not None:
-                self.zone_translation = pd.read_csv(params.existing_translation)
-            else:
-                self.zone_translation = zc.main_zone_correspondence(
-                    self.params
-                )
+            self.zone_translation = zc.main_zone_correspondence(
+                self.params
+            )
         else:
             if params.zone_1.lower_translation is None:
                 lower = self.find_lower_translation(params.zone_1.name)
@@ -138,8 +135,7 @@ class ZoneTranslation:
             zone_2_name=self.params.zone_2.name.lower(),
             lower_zoning_name = self.params.lower_zoning.name.lower()
         )
-        # TODO check code from here to bottom when the tool is functional. I think it works but
-        # not sure what it does and it should definitely be refactored
+
         column_list = list(weighted_translation.columns)
 
         summary_table_1 = weighted_translation.groupby(column_list[0])[
@@ -170,49 +166,6 @@ class ZoneTranslation:
                 under_1_zones_2,
             )
 
-
-        # LOG.info("Copy of translation written to: %s", out_path)
-
-        run_time = datetime.datetime.now() - start_time()
-        # LOG.info("Script Completed in : %s", run_time)
-
-        log_data = {
-            "Run Time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "Zone 1 name": self.params.zone_1.name,
-            "Zone 2 name": self.params.zone_2.name,
-            "Zone 1 shapefile": self.params.zone_1.shapefile,
-            "Zone 2 Shapefile": self.params.zone_2.shapefile,
-            "Output directory": self.params.output_path,
-            "Tolerance": self.params.tolerance,
-            "Point handling": self.params.point_handling,
-            "Point list": self.params.point_zones_path,
-            "Point tolerance": self.params.point_tolerance,
-            "Lower weight data": self.params.lower_zoning.weight_data,
-            "Lower shapefile path": self.params.lower_zoning.shapefile,
-            "Rounding": self.params.rounding,
-            "filter_slithers": self.params.filter_slithers,
-            "type": "weighted_translation",
-            "method": self.params.method,
-            "run_time": run_time,
-        }
-
-        # Update master log spreadsheet with run parameter
-        # convert dict values to list
-
-        list_of_elem = list(log_data.values())
-        try:
-            with open(
-                os.path.join(self.params.output_path, "master_zone_translation_log.csv"),
-                "a+",
-                newline="",
-            ) as write_obj:
-                # Create a writer object from csv module
-                csv_writer = csv.writer(write_obj)
-                # Add contents of list as last row in the csv file
-                csv_writer.writerow(list_of_elem)
-        except Exception:
-            LOG.error("Failed to add to Master Log:", exc_info=True)
-
         return weighted_translation
 
     def save_lower(self, zone_name: str):
@@ -233,11 +186,10 @@ class ZoneTranslation:
         else:
             zone = self.params.zone_2
         zone_path = self.params.cache_path / f"{zone_name}_{self.params.lower_zoning.name}"
-        if os.path.isdir(zone_path) == False:
-            os.mkdir(zone_path)
+        zone_path.mkdir(exist_ok=True, parents=True)
         zone.lower_translation = zone_path / f'{datetime.datetime.now().strftime("%d_%m_%y")}.csv'
         lower.to_csv(zone.lower_translation)
-        lower_log = me.lower_trans_log(zone_shapefile = zone.shapefile, lower_shapefile = self.params.lower_zoning.shapefile, date = datetime.datetime.now())
+        lower_log = me.spatial_trans_log(zone_shapefile = zone.shapefile, lower_shapefile = self.params.lower_zoning.shapefile, date = datetime.datetime.now())
         meta_path = zone_path / "metadata.yml"
         if os.path.isdir(meta_path):
             meta = me.lower_metadata.load_yaml(zone_path / "metadata.yml")

@@ -9,11 +9,13 @@ from __future__ import annotations
 
 # Standard imports
 import logging
-import configparser
+import datetime
 import dataclasses
+import os
 from pathlib import Path
 from typing import Any, Dict, Union
 from caf.space import config_base
+from pydantic import validator
 
 # Third party imports
 
@@ -30,13 +32,11 @@ class ShapefileInfo:
     shapefile: Path
     id_col: str
 
-    def __post_init__(self) -> None:
-        self.name = str(self.name)
-        self.shapefile = Path(self.shapefile)
-        # if not self.shapefile.is_file():
-        #     raise FileNotFoundError(
-        #         f"cannot find {self.name} shapefile: {self.shapefile}"
-        #     )
+    @validator('shapefile')
+    def path_exists(cls, v):
+        if os.pathing.isfile(v) == False:
+            raise ValueError(f'The path provided for {cls.name} does not exist.')
+        return v
 
 @dataclasses.dataclass
 class ZoneSystemInfo(ShapefileInfo):
@@ -52,26 +52,16 @@ class ZoneSystemInfo(ShapefileInfo):
         The name of the column in the shapefile you want to use as ID
     lower_translation : Path, optional
         Path to a lower level translation.
-
-    Raises
-    ------
-    FileNotFoundError
-        If either of the paths given don't
-        exist.
     """
 
     lower_translation: Path = None
 
-    # def __post_init__(self) -> None:
-    #     super().__post_init__()
-    #     if self.lower_translation is None:
-    #         return
-    #     self.lower_translation = Path(self.lower_translation)
-        # if not self.lower_translation.is_file():
-        #     raise FileNotFoundError(
-        #         f"cannot find {self.name} lower "
-        #         f"translation file: {self.lower_translation}"
-        #     )
+    @validator('lower_translation_path')
+    def lower_exists(cls, v):
+        if v:
+            if os.pathing.isfile(v) == False:
+                raise ValueError(f'The lower translation path provided for {cls.name} does not exist.')
+        return v
 
 @dataclasses.dataclass
 class LowerZoneSystemInfo(ShapefileInfo):
@@ -91,12 +81,6 @@ class LowerZoneSystemInfo(ShapefileInfo):
         Name of the column containing weighting data.
     weight_id_col: str
         The name of the column in the weighting data you want to use as ID
-
-    Raises
-    ------
-    FileNotFoundError
-        If either of the paths given don't
-        exist.
     """
 
     weight_data: Path
@@ -105,18 +89,18 @@ class LowerZoneSystemInfo(ShapefileInfo):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        if self.weight_data is None:
-            return
-        self.weight_data = Path(self.weight_data)
-        # if not self.weight_data.is_file():
-        #     raise FileNotFoundError(
-        #         f"cannot find {self.name} weight data: {self.weight_data}"
-        #     )
+        self.weight_data = self.weight_data
     
     def _lower_to_higher(self) -> ZoneSystemInfo:
         return ZoneSystemInfo(name = self.name,
         shapefile = self.shapefile,
         id_col = self.id_col)
+    
+    @validator('weight_data')
+    def weight_data_exists(cls, v):
+        if os.pathing.isfile(v) == False:
+            raise FileNotFoundError(f'The weight data path provided for {cls.name} does not exist.')
+        return v
 
 
 class ZoningTranslationInputs(config_base.BaseConfig):
@@ -130,8 +114,6 @@ class ZoningTranslationInputs(config_base.BaseConfig):
         Zone system 2 information
     output_path : Path
         Folder to save outputs to.
-    existing_translation : Path, optional
-        Path to an existing zone tranlation.
     method : str, optional
         Method for zone correpondence calculation.
     tolerance : float, default 0.98
@@ -148,14 +130,16 @@ class ZoningTranslationInputs(config_base.BaseConfig):
         Should slithers be filtered out.
     lower_zoning : LowerZoneSystemInfo, optional
         Information about the lower zone system.
+    run_date : str
+        When the tool is being run
     """
 
+    run_date: str = datetime.datetime.now().strftime("%d_%m_%y")
     zone_1: ZoneSystemInfo
     zone_2: ZoneSystemInfo
     lower_zoning: LowerZoneSystemInfo
     output_path: Path
     cache_path: Path
-    existing_translation: Path = None
     method: str = None
     tolerance: float = 0.98
     point_handling: bool = True
@@ -163,16 +147,9 @@ class ZoningTranslationInputs(config_base.BaseConfig):
     point_zones_path: Path = None
     rounding: bool = True
     filter_slithers: bool = True
-    
-
-    _CONFIG_SECTION: str = dataclasses.field(
-        default="ZONING TRANSLATION PARAMETERS", init=False, repr=False
-    )
 
     def __post_init__(self) -> None:
-        self.output_path = Path(self.output_path)
         self.output_path.mkdir(exist_ok=True, parents=True)
-        # TODO Add more validation checks for parameters
 
     @staticmethod
     def _path_none(value: str) -> Union[Path, None]:
@@ -180,30 +157,6 @@ class ZoningTranslationInputs(config_base.BaseConfig):
         if value is None or value.strip() == "":
             return None
         return Path(value)
-
-    @classmethod
-    def _check_config_parameters(cls, config: configparser.ConfigParser) -> None:
-        """Check `config` contains all mandatory options.
-
-        Looks in section `cls._CONFIG_SECTION`.
-
-        Parameters
-        ----------
-        config : configparser.ConfigParser
-            Config parser after reading data from file.
-
-        Raises
-        ------
-        configparser.NoOptionError
-            If any mandatory options are missing.
-        """
-        mandatory_options = [
-            f"zone_{i}_{j}" for i in (1, 2) for j in ("name", "shapefile")
-        ]
-        mandatory_options.append("output_path")
-        for opt in mandatory_options:
-            if not config.has_option(cls._CONFIG_SECTION, opt):
-                raise configparser.NoOptionError(opt, cls._CONFIG_SECTION)
 
 def write_example(out_path: Path):
     zones = {}
@@ -214,7 +167,7 @@ def write_example(out_path: Path):
     zone_2 = zones[2],
     lower_zoning = lower,
     output_path = r"path\to\output\folder",
-    existing_translation = r"OPTIONAL\path\to\existing\translation",
+    cache_path= r"path\to\cache\folder\defaults\to\ydrive"
     method = "OPTIONAL name of method",
     point_zones_path = r"OPTIONAL\path\to\list\of\point\zones"
     )
