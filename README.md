@@ -27,7 +27,7 @@ For a sptial correspondence, the only user inputs needed are shapefiles for the 
   <b>id_col:</b> The name of the unique ID column in your chosen shapefile. This can be anything as long as it is unique for each zone in the shapefile<br>
 <b> zone_2: Parameters the same as for zone_1, it doesn't matter which order these are in, a two way translation will be created.</b><br>
 <b>output_path:</b> File path to where you want your translation saved. If the path provided doesn't exist it will be created, but it's best to check first to avoid surprises.<br>
-<b>cache_path:<b/> File path to a cache of existing translations. This defaults to a location on a network drive, and it is best to keep it there, but it's more important for weighted translations.<br>
+<b>cache_path:</b> File path to a cache of existing translations. This defaults to a location on a network drive, and it is best to keep it there, but it's more important for weighted translations.<br>
 <b>tolerance:</b> This is a float less than 1, and defaults to 0.98. If filter_slivers (explained below) is chosen, tolerance controls how big or small the slithers need to be to be rounded away. For most users this can be kept as is.<br>
 <b>rounding:</b> True or False. Select whether or not zone totals will be rounded to 1 after the translation is performed. Recommended to keep as True.<br>
 <b>filter_slithers:</b> True or False. Select whether very small overlaps between zones will be filtered out. This accounts for zone boundaries not aligning perfectly when they should between shapefiles, and the tolerance for this is controlled by the tolerance parameter. With this parameter set to false translations can be a bit messy.<br>
