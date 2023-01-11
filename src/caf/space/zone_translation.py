@@ -121,7 +121,7 @@ class ZoneTranslation:
         if os.path.isdir(lower_path):
             meta_path = lower_path / "metadata.yml"
             if os.path.isfile(meta_path):
-                meta = me.lower_metadata.load_yaml(
+                meta = me.LowerMetadata.load_yaml(
                     lower_path / "metadata.yml"
                 ).translations
                 for trans in meta:
@@ -186,14 +186,7 @@ class ZoneTranslation:
         # Init
 
         weighted_translation = nf.zone_split(
-            area_correspondence_path1=self.params.zone_1.lower_translation,
-            area_correspondence_path2=self.params.zone_2.lower_translation,
-            weighting_data=self.params.lower_zoning.weight_data,
-            weighting_zone_col=self.params.lower_zoning.weight_id_col,
-            weighting_var_col=self.params.lower_zoning.data_col,
-            zone_1_name=self.params.zone_1.name.lower(),
-            zone_2_name=self.params.zone_2.name.lower(),
-            lower_zoning_name=self.params.lower_zoning.name.lower(),
+            self.params
         )
 
         column_list = list(weighted_translation.columns)
@@ -262,18 +255,18 @@ class ZoneTranslation:
             / f'{datetime.datetime.now().strftime("%d_%m_%y")}.csv'
         )
         lower.to_csv(zone.lower_translation)
-        lower_log = me.spatial_trans_log(
+        lower_log = me.SpatialTransLog(
             zone_shapefile=zone.shapefile,
             lower_shapefile=self.params.lower_zoning.shapefile,
             date=datetime.datetime.now(),
         )
         meta_path = zone_path / "metadata.yml"
         if os.path.isdir(meta_path):
-            meta = me.lower_metadata.load_yaml(
+            meta = me.LowerMetadata.load_yaml(
                 zone_path / "metadata.yml"
             )
             meta.translations.append(lower_log)
         else:
-            meta = me.lower_metadata(translations=[lower_log])
+            meta = me.LowerMetadata(translations=[lower_log])
         meta.save_yaml(zone_path / "metadata.yml")
         return zone.lower_translation

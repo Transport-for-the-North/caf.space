@@ -10,10 +10,9 @@ from __future__ import annotations
 # Standard imports
 import logging
 import datetime
-import dataclasses
 import os
 from pathlib import Path
-from typing import Any, Dict, Union
+from typing import Union
 from caf.space import config_base
 from pydantic import validator
 
@@ -33,9 +32,18 @@ class ShapefileInfo(config_base.BaseConfig):
     id_col: str
 
     @validator("shapefile")
-    def path_exists(cls, v):
-        if os.path.isfile(v) == False:
-            raise ValueError(f"The path provided for {v} does not exist.")
+    def path_exists(self, v):
+        """
+        Validator to make sure the shapefile path exists
+        Raises:
+            ValueError: Informs user the path given is incorrect.
+
+        Returns:
+            Unchanged path if no error is raised.
+        """
+        if os.path.isfile(v) is False:
+            raise ValueError(f"The path provided for {v} does not exist."
+            "If this path is on a network drive make sure you are connected")
         return v
 
 
@@ -57,11 +65,19 @@ class ZoneSystemInfo(ShapefileInfo):
     lower_translation: Path = None
 
     @validator("lower_translation")
-    def lower_exists(cls, v):
+    def lower_exists(self, v):
+        """
+        Validator to make sure the shapefile path exists
+        Raises:
+            ValueError: Informs user the path given is incorrect.
+
+        Returns:
+            Unchanged path if no error is raised.
+        """
         if v:
-            if os.pathing.isfile(v) == False:
+            if os.path.isfile(v) is False:
                 raise ValueError(
-                    f"The lower translation path provided for {cls.name} does not exist."
+                    f"The lower translation path provided for {self.name} does not exist."
                 )
         return v
 
@@ -89,18 +105,14 @@ class LowerZoneSystemInfo(ShapefileInfo):
     data_col: str
     weight_id_col: str
 
-    def __post_init__(self) -> None:
-        super().__post_init__()
-        self.weight_data = self.weight_data
-
     def _lower_to_higher(self) -> ZoneSystemInfo:
         return ZoneSystemInfo(
             name=self.name, shapefile=self.shapefile, id_col=self.id_col
         )
 
     @validator("weight_data")
-    def weight_data_exists(cls, v):
-        if os.path.isfile(v) == False:
+    def weight_data_exists(self, v):
+        if os.path.isfile(v) is False:
             raise FileNotFoundError(
                 f"The weight data path provided for {v} does not exist."
             )

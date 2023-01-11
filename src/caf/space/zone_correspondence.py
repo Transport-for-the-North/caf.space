@@ -478,7 +478,8 @@ def main_zone_correspondence(params: si.ZoningTranslationInputs):
     LOG.info("Missing Zones from 1 : %s", len(missing_zones_1))
     LOG.info("Missing Zones from 2 : %s", len(missing_zones_2))
 
-    log_file = params.cache_path / f"{zone_names[0]}_{zone_names[1]}" / "missing_zones_log.xlsx"
+    log_file = params.cache_path / f"{zone_names[0]}_{zone_names[1]}" /
+    "missing_zones_log.xlsx"
     with pd.ExcelWriter(log_file, engine="openpyxl") as writer:
         missing_zones_1.to_excel(
             writer, sheet_name=f"{zone_names[0]}_missing", index=False
