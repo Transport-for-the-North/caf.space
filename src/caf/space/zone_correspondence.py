@@ -9,19 +9,26 @@ import geopandas as gpd
 import pandas as pd
 
 from caf.space import inputs as si
+
 ##### CONSTANTS #####
 LOG = logging.getLogger(__name__)
 
 ##### FUNCTIONS #####
-def read_zone_shapefiles(params: si.ZoningTranslationInputs):
-    """Reads in zone system shapefiles, sets zone id and area column names,
-    sets to same crs.
+def read_zone_shapefiles(params: si.ZoningTranslationInputs) -> dict:
+    """Reads in zone system shapefiles, sets zone id and area column
+    names, sets to same crs.
 
-    If the provided shapefiles don't contain CRS information then they're assumed to
-    be "EPSG:27700".
-    Args:
+    If the provided shapefiles don't contain CRS information then
+    they're assumed to be "EPSG:27700".
+    Parameters
     ----------
-        params (csi.ZoningTranslationInputs): Instance of ZoningTranslationInputs
+    params (csi.ZoningTranslationInputs): Instance of
+    ZoningTranslationInputs, see class for info.
+    Returns
+    ----------
+    zones(dict): A nested dictionary containing major and minor zones
+    for translation. 'Major' and 'Minor' contain 'Name'(str), 'Zone'
+    (GeoDataFrame) and 'ID_col'(str)
     """
 
     # create geodataframes from zone shapefiles
@@ -31,80 +38,120 @@ def read_zone_shapefiles(params: si.ZoningTranslationInputs):
     zone_1 = zone_1.dropna(axis=1, how="all")
     zone_2 = zone_2.dropna(axis=1, how="all")
 
-    LOG.info("Count of %s zones: %s", params.zone_2.name, zone_2.iloc[:, 0].count())
-    LOG.info("Count of %s zones: %s", params.zone_1.name, zone_1.iloc[:, 0].count())
+    LOG.info(
+        "Count of %s zones: %s",
+        params.zone_2.name,
+        zone_2.iloc[:, 0].count(),
+    )
+    LOG.info(
+        "Count of %s zones: %s",
+        params.zone_1.name,
+        zone_1.iloc[:, 0].count(),
+    )
 
     zone_1["area"] = zone_1.area
     zone_1 = zone_1.dropna(subset=["area"])
     zone_2["area"] = zone_2.area
     zone_2 = zone_2.dropna(subset=["area"])
 
-    if sum(zone_1["area"]) / len(zone_1) > sum(zone_2["area"]) / len(zone_2):
+    if sum(zone_1["area"]) / len(zone_1) > sum(zone_2["area"]) / len(
+        zone_2
+    ):
         # Assign to maj/min
         major_zone = zone_1.copy()
         major_zone_name = params.zone_1.name
         minor_zone = zone_2.copy()
         minor_zone_name = params.zone_2.name
-        zones = {"Major":{"Name":major_zone_name,"Zone":major_zone.drop("area",axis=1),"ID_col": params.zone_1.id_col},
-                "Minor":{"Name":minor_zone_name,"Zone":minor_zone.drop("area",axis=1), "ID_col":params.zone_2.id_col}
+        zones = {
+            "Major": {
+                "Name": major_zone_name,
+                "Zone": major_zone.drop("area", axis=1),
+                "ID_col": params.zone_1.id_col,
+            },
+            "Minor": {
+                "Name": minor_zone_name,
+                "Zone": minor_zone.drop("area", axis=1),
+                "ID_col": params.zone_2.id_col,
+            },
         }
 
-    elif sum(zone_1.area) / len(zone_1) < sum(zone_2.area) / len(zone_2):
+    elif sum(zone_1.area) / len(zone_1) < sum(zone_2.area) / len(
+        zone_2
+    ):
         # Assign to maj/min
         major_zone = zone_2.copy()
         major_zone_name = params.zone_2.name
         minor_zone = zone_1.copy()
         minor_zone_name = params.zone_1.name
-        zones = {"Major":{"Name":major_zone_name,"Zone":major_zone.drop("area",axis=1),"ID_col": params.zone_2.id_col},
-                "Minor":{"Name":minor_zone_name,"Zone":minor_zone.drop("area",axis=1), "ID_col":params.zone_1.id_col}
+        zones = {
+            "Major": {
+                "Name": major_zone_name,
+                "Zone": major_zone.drop("area", axis=1),
+                "ID_col": params.zone_2.id_col,
+            },
+            "Minor": {
+                "Name": minor_zone_name,
+                "Zone": minor_zone.drop("area", axis=1),
+                "ID_col": params.zone_1.id_col,
+            },
         }
 
     del zone_1, zone_2
 
     for zone in zones.values():
-        zone['Zone'].rename(columns={zone['ID_col']:f"{zone['Name']}_zone_id"},
-        inplace=True
+        zone["Zone"].rename(
+            columns={zone["ID_col"]: f"{zone['Name']}_zone_id"},
+            inplace=True,
         )
-        zone['Zone'][f"{zone['Name']}_area"] = zone['Zone'].area
+        zone["Zone"][f"{zone['Name']}_area"] = zone["Zone"].area
 
-        if not zone['Zone'].crs:
-            zone['Zone'].crs = "EPSG:27700"
+        if not zone["Zone"].crs:
+            zone["Zone"].crs = "EPSG:27700"
 
     return zones
 
-def spatial_zone_correspondence(zones: dict):
-    """Finds the spatial zone corrrespondence through calculating adjustment
-    factors with areas only.
 
+def spatial_zone_correspondence(zones: dict):
+    """Finds the spatial zone corrrespondence through calculating
+    adjustment factors with areas only.
     Parameters
     ----------
-    zones: Dictionary of two values, "Major" and "Minor", each containing a dictionary of
-        "zone":shapefile geodataframe, "name":zone name, "ID_col", column containing IDs
+    zones: Return value from 'read_zone_shapefiles'.
     Returns
     -------
     GeoDataFrame
-        GeoDataFrame with 4 columns: zone 1 IDs, zone 2 IDs, zone 1 to zone 2
-        adjustment factor and zone 2 to zone 1 adjustment factor
+    GeoDataFrame with 4 columns: zone 1 IDs, zone 2 IDs, zone 1 to zone
+    2 adjustment factor and zone 2 to zone 1 adjustment factor.
     """
 
     # create geodataframe for intersection of zones
     zone_overlay = gpd.overlay(
-        zones['Major']['Zone'], zones['Minor']['Zone'], how="intersection", keep_geom_type=False
+        zones["Major"]["Zone"],
+        zones["Minor"]["Zone"],
+        how="intersection",
+        keep_geom_type=False,
     ).reset_index()
     zone_overlay.loc[:, "intersection_area"] = zone_overlay.area
 
     # columns to include in spatial correspondence
-    column_list = [f"{zones['Major']['Name']}_zone_id", f"{zones['Minor']['Name']}_zone_id"]
+    column_list = [
+        f"{zones['Major']['Name']}_zone_id",
+        f"{zones['Minor']['Name']}_zone_id",
+    ]
 
     # create geodataframe with spatial adjusted factors
     spatial_correspondence = zone_overlay.loc[:, column_list]
 
     # create geodataframe with spatial adjusted factors
-    spatial_correspondence.loc[:, f"{zones['Major']['Name']}_to_{zones['Minor']['Name']}"] = (
+    spatial_correspondence.loc[
+        :, f"{zones['Major']['Name']}_to_{zones['Minor']['Name']}"
+    ] = (
         zone_overlay.loc[:, "intersection_area"]
         / zone_overlay.loc[:, f"{zones['Major']['Name']}_area"]
     )
-    spatial_correspondence.loc[:, f"{zones['Minor']['Name']}_to_{zones['Major']['Name']}"] = (
+    spatial_correspondence.loc[
+        :, f"{zones['Minor']['Name']}_to_{zones['Major']['Name']}"
+    ] = (
         zone_overlay.loc[:, "intersection_area"]
         / zone_overlay.loc[:, f"{zones['Minor']['Name']}_area"]
     )
@@ -113,7 +160,12 @@ def spatial_zone_correspondence(zones: dict):
 
     return spatial_correspondence
 
-def find_slithers(spatial_correspondence: gpd.GeoDataFrame, zone_names: list[str], tolerance: float):
+
+def find_slithers(
+    spatial_correspondence: gpd.GeoDataFrame,
+    zone_names: list[str],
+    tolerance: float,
+):
     """Finds overlap areas between zones which are very small slithers,
     filters them out of the spatial zone correspondence GeoDataFrame, and
     returns the filtered zone correspondence as well as the GeoDataFrame with
@@ -141,31 +193,43 @@ def find_slithers(spatial_correspondence: gpd.GeoDataFrame, zone_names: list[str
     LOG.info("Finding Slithers")
 
     slither_filter = (
-        spatial_correspondence[f"{zone_names[0]}_to_{zone_names[1]}"] < (1 - tolerance)
+        spatial_correspondence[f"{zone_names[0]}_to_{zone_names[1]}"]
+        < (1 - tolerance)
     ) & (
-        spatial_correspondence[f"{zone_names[1]}_to_{zone_names[0]}"] < (1 - tolerance)
+        spatial_correspondence[f"{zone_names[1]}_to_{zone_names[0]}"]
+        < (1 - tolerance)
     )
     slithers = spatial_correspondence.loc[slither_filter]
     no_slithers = spatial_correspondence.loc[~slither_filter]
 
     return slithers, no_slithers
 
+
 def _rounding_correction(
     zone_corr: pd.DataFrame, from_zone_name: str, to_zone_name: str
 ) -> pd.DataFrame:
     """
-    Fixes error causing negative factors. For most translations this function will do almost nothing, but is run anyway.
-    Args:
-        zone_corr (pd.DataFrame): Zone translation dataframe
-        from_zone_name (str): Name of zone_1
-        to_zone_name (str): Name of zone_2
-
-    Returns:
-        pd.DataFrame: The input zone_corr dataframe adjusted to remove errors.
+    Fixes error causing negative factors. For most translations this
+    function will do almost nothing, but is run anyway.
+    Parameters
+    ----------
+    zone_corr (pd.DataFrame): Zone translation dataframe.
+    from_zone_name (str): Name of zone_1.
+    to_zone_name (str): Name of zone_2.
+    Returns
+    ----------
+    pd.DataFrame: The input zone_corr dataframe adjusted to remove errors.
     """
-    def calculate_differences(df: pd.DataFrame) -> Tuple[pd.Series, pd.DataFrame]:
-        factor_totals = df[[from_col, factor_col]].groupby(from_col).sum()
-        differences = (1 - factor_totals).rename(columns={factor_col: "diff"})
+
+    def calculate_differences(
+        df: pd.DataFrame,
+    ) -> Tuple[pd.Series, pd.DataFrame]:
+        factor_totals = (
+            df[[from_col, factor_col]].groupby(from_col).sum()
+        )
+        differences = (1 - factor_totals).rename(
+            columns={factor_col: "diff"}
+        )
         # Convert totals to a Series
         factor_totals = factor_totals.iloc[:, 0]
         return factor_totals, differences
@@ -176,10 +240,14 @@ def _rounding_correction(
     counts = zone_corr.groupby(from_col).size()
 
     # Set factor to 1 for one to one lookups
-    zone_corr.loc[zone_corr[from_col].isin(counts[counts == 1].index), factor_col] = 1.0
+    zone_corr.loc[
+        zone_corr[from_col].isin(counts[counts == 1].index), factor_col
+    ] = 1.0
 
     # calculate missing adjustments for those that don't have a one to one mapping
-    rest_to_round = zone_corr.loc[zone_corr[from_col].isin(counts[counts > 1].index)]
+    rest_to_round = zone_corr.loc[
+        zone_corr[from_col].isin(counts[counts > 1].index)
+    ]
     factor_totals, differences = calculate_differences(zone_corr)
 
     LOG.info(
@@ -194,7 +262,9 @@ def _rounding_correction(
     )
 
     # Calculate factor to adjust the zone correspondence by
-    differences.loc[:, "correction"] = 1 + (differences["diff"] / factor_totals)
+    differences.loc[:, "correction"] = 1 + (
+        differences["diff"] / factor_totals
+    )
 
     # Multiply zone corresondence by the correction factor
     rest_to_round = rest_to_round.merge(
@@ -205,12 +275,15 @@ def _rounding_correction(
     ).set_index(rest_to_round.index)
 
     rest_to_round.loc[:, factor_col] = (
-        rest_to_round.loc[:, factor_col] * rest_to_round.loc[:, "correction"]
+        rest_to_round.loc[:, factor_col]
+        * rest_to_round.loc[:, "correction"]
     )
 
     rest_to_round = rest_to_round.drop(labels="correction", axis=1)
 
-    zone_corr.loc[zone_corr[from_col].isin(rest_to_round[from_col]), :] = rest_to_round
+    zone_corr.loc[
+        zone_corr[from_col].isin(rest_to_round[from_col]), :
+    ] = rest_to_round
 
     # Recalculate differences after adjustment
     factor_totals, differences = calculate_differences(zone_corr)
@@ -229,12 +302,17 @@ def _rounding_correction(
     # Check for negative zone correspondences
     negatives = (zone_corr[factor_col] < 0).sum()
     if negatives > 0:
-        raise ValueError(f"{negatives} negative correspondence factors for {factor_col}")
+        raise ValueError(
+            f"{negatives} negative correspondence factors for {factor_col}"
+        )
     too_big = (zone_corr[factor_col] > 1).sum()
     if too_big > 0:
-        raise ValueError(f"{too_big} correspondence factors > 1 for {factor_col}")
+        raise ValueError(
+            f"{too_big} correspondence factors > 1 for {factor_col}"
+        )
 
     return zone_corr
+
 
 def round_zone_correspondence(
     zone_corr_no_slithers: pd.DataFrame, zone_names: Tuple[str, str]
@@ -302,6 +380,7 @@ def round_zone_correspondence(
 
     return zone_corr_rounded_both_ways
 
+
 def missing_zones_check(zones: dict, zone_correspondence: pd.DataFrame):
     """Checks for zone 1 and zone 2 zones missing from zone correspondence.
 
@@ -323,26 +402,33 @@ def missing_zones_check(zones: dict, zone_correspondence: pd.DataFrame):
     """
     LOG.info("Checking for missing zones")
 
-    missing_zone_1 = zones['Major']['Zone'].loc[
-        ~zones['Major']['Zone'][f"{zones['Major']['Name']}_zone_id"].isin(
+    missing_zone_1 = zones["Major"]["Zone"].loc[
+        ~zones["Major"]["Zone"][
+            f"{zones['Major']['Name']}_zone_id"
+        ].isin(
             zone_correspondence[f"{zones['Major']['Name']}_zone_id"]
         ),
         f"{zones['Major']['Name']}_zone_id",
     ]
-    missing_zone_2 = zones['Minor']['Zone'].loc[
-        ~zones['Minor']['Zone'][f"{zones['Minor']['Name']}_zone_id"].isin(
+    missing_zone_2 = zones["Minor"]["Zone"].loc[
+        ~zones["Minor"]["Zone"][
+            f"{zones['Minor']['Name']}_zone_id"
+        ].isin(
             zone_correspondence[f"{zones['Minor']['Name']}_zone_id"]
         ),
         f"{zones['Minor']['Name']}_zone_id",
     ]
     missing_zone_1_zones = pd.DataFrame(
-        data=missing_zone_1, columns=[f"{zones['Major']['Name']}_zone_id"]
+        data=missing_zone_1,
+        columns=[f"{zones['Major']['Name']}_zone_id"],
     )
     missing_zone_2_zones = pd.DataFrame(
-        data=missing_zone_2, columns=[f"{zones['Minor']['Name']}_zone_id"]
+        data=missing_zone_2,
+        columns=[f"{zones['Minor']['Name']}_zone_id"],
     )
 
     return missing_zone_1_zones, missing_zone_2_zones
+
 
 def main_zone_correspondence(params: si.ZoningTranslationInputs):
     """Performs zone correspondence between two zoning systems, zone 1 and
@@ -353,56 +439,17 @@ def main_zone_correspondence(params: si.ZoningTranslationInputs):
     Args:
         params (csi.ZoningTranslationInputs): Instance of zone paramaters.
     """
-    # create log
-    log_data = {
-        "Run Time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "Zone 1 name": params.zone_1.name,
-        "Zone 2 name": params.zone_2.name,
-        "Zone 1 shapefile": params.zone_1.shapefile,
-        "Zone 2 Shapefile": params.zone_2.shapefile,
-        "Zone 1 ID column": params.zone_1.id_col,
-        "Zone 2 ID column": params.zone_2.id_col,
-        "Output directory": params.output_path,
-        "Tolerance": params.tolerance,
-        "Point handling": params.point_handling,
-        "Point list": params.point_zones_path,
-        "Point tolerance": params.point_tolerance,
-        "Rounding": params.rounding,
-        "filter_slithers": params.filter_slithers,
-        "type": "correspondence",
-        "method": "",
-    }
-
-    
-    log_df = pd.DataFrame({"Parameters": log_data.keys(), "Values": log_data.values()})
-
-    # Update master log spreadsheet with run parameters
-    # convert dict values to list
-
-    list_of_elem = list(log_data.values())
-    try:
-        with open(
-            os.path.join(params.output_path, "_master_zone_translation_log.csv"), "a+", newline=""
-        ) as write_obj:
-            csv_writer = csv.writer(write_obj)
-            csv_writer.writerow(list_of_elem)
-    except Exception:
-        LOG.error("Failed to add to Master Log:", exc_info=True)
-
     # read in zone shapefiles
-    zones = read_zone_shapefiles(
-        params
-    )
+    zones = read_zone_shapefiles(params)
     # produce spatial zone correspondence
     spatial_correspondence = spatial_zone_correspondence(zones)
     # Determine if slither filtering and rounding required.
-    zone_names = [zones['Major']['Name'],zones['Minor']['Name']]
+    zone_names = [zones["Major"]["Name"], zones["Minor"]["Name"]]
     if params.filter_slithers:
         LOG.info("Filtering out small overlaps.")
-        (
-            spatial_correspondence_slithers,
-            spatial_correspondence_no_slithers,
-        ) = find_slithers(spatial_correspondence, zone_names, params.tolerance)
+        (_, spatial_correspondence_no_slithers,) = find_slithers(
+            spatial_correspondence, zone_names, params.tolerance
+        )
 
         if params.rounding:
             LOG.info("Checking all adjustment factors add to 1")
@@ -421,7 +468,8 @@ def main_zone_correspondence(params: si.ZoningTranslationInputs):
             final_zone_corr = spatial_correspondence
     # Save correspondence output
     final_zone_corr_path = (
-        params.output_path / f"{zone_names[0]}_to_{zone_names[1]}_correspondence.csv"
+        params.output_path
+        / f"{zone_names[0]}_to_{zone_names[1]}_correspondence.csv"
     )
     missing_zones_1, missing_zones_2 = missing_zones_check(
         zones, final_zone_corr
@@ -430,17 +478,14 @@ def main_zone_correspondence(params: si.ZoningTranslationInputs):
     LOG.info("Missing Zones from 1 : %s", len(missing_zones_1))
     LOG.info("Missing Zones from 2 : %s", len(missing_zones_2))
 
-    log_file = f"{params.output_path}/{zone_names[0]}_to_{zone_names[1]}_missing_zones_log.xlsx"
+    log_file = params.cache_path / f"{zone_names[0]}_{zone_names[1]}" / "missing_zones_log.xlsx"
     with pd.ExcelWriter(log_file, engine="openpyxl") as writer:
-        log_df.to_excel(writer, sheet_name="Parameters", index=False)
         missing_zones_1.to_excel(
             writer, sheet_name=f"{zone_names[0]}_missing", index=False
         )
         missing_zones_2.to_excel(
             writer, sheet_name=f"{zone_names[1]}_missing", index=False
         )
-        # if point_handling:
-        # point_zones_info.to_excel(writer, sheet_name="point_handling", index=False)
     LOG.info(
         "List of missing zones can be found in log file found here: %s",
         log_file,
