@@ -18,11 +18,13 @@
 # -- Project information -----------------------------------------------------
 import pathlib
 import sys
-sys.path.insert(0, pathlib.Path(__file__).parents[2].resolve().as_posix())
+import os
+sys.path.insert(2, pathlib.Path(__file__).parents[0].resolve().as_posix())
+sys.path.insert(0, os.path.abspath(r'C:\Users\IsaacScott\Projects\caf\caf.space\src\caf\space'))
 
 project = 'caf.space'
 copyright = '2023, TfN'
-author = 'Isaac'
+author = 'Isaac Scott'
 # Napoleon settings
 
 napoleon_google_docstring = False
