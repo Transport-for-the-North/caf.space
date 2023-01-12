@@ -1,4 +1,0 @@
-# Required libraries
-
-# Example
-numpy>=1.19.0
