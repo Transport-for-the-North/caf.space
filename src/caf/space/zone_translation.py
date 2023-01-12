@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+"""
+    Module containing ZoneTranslation class for producing zone translation 
+    from a set of inputs, provided by the ZoneTranslationInputs class in
+    'inputs'
+"""
 import os
 import datetime
 import logging
@@ -16,24 +22,36 @@ LOG = logging.getLogger(__name__)
 
 ##### CLASSES #####
 class ZoneTranslation:
-    def __init__(self, params: si.ZoningTranslationInputs):
-        """
-        This is the main class for the caf.space tool. Running it with an
-        instance of inputs.ZoningTranslationInputs will return a zone
-        translation dataframe.
+    """
+    This is the main class for the caf.space tool. Running it with an
+    instance of 'inputs.ZoningTranslationInputs' will return a zone
+    translation dataframe.
 
-        Parameters
-        ----------
-        params (si.ZoningTranslationInputs): Params should usually be
-        read in from a yml file using the load_yaml method of the
-        ZoningTranslationInputs class. Refer to this class for info on
-        parameters.
-        """
+    Parameters
+    ----------
+    params: ZoningTranslationInputs
+        Params should usually be read in from a yml file using the
+        load_yaml method of the ZoningTranslationInputs class. Refer to
+        this class for info on parameters.
+
+    Returns
+    -------
+    Instance of self
+        Instance of ZoneTranslation, where a spatial or weighted
+        zone translation, dependent on inputs, is stored as
+        self.zone_translation
+    """
+    def __init__(self, params: si.ZoningTranslationInputs):
         self.params = params
+        self.names = sorted([self.params.zone_1.name,self.params.zone_2.name])
+        cacher = self.params.cache_path / f"{self.names[0]}_{self.names[1]}"
         if self.params.method is None:
             self.zone_translation = zc.main_zone_correspondence(
                 self.params
             )
+            
+            self.zone_translation.to_csv(cacher / f"{self.params.run_date}.csv" )
+            self.params.save_yaml(cacher / f"{self.params.run_date}.yml")
         else:
             if params.zone_1.lower_translation is None:
                 LOG.info(
@@ -67,6 +85,11 @@ class ZoneTranslation:
                     self.params.zone_2.lower_translation = lower
             self.zone_translation = self._weighted_translation(
             )
+            name = str(self.params.lower_zoning.weight_data).strip('.csv')
+            self.zone_translation.to_csv(cacher / f"{name}_weighted_trans.csv")
+            self.params.save_yaml(cacher / f"{self.params.run_date}.yml")
+        if self.params.output_path:
+            self.zone_translation.to_csv(self.params.output_path / f"{self.names[0]}_{self.names[1]}_translation.csv")
 
     def run_spatial_translation(self, zone_to_translate_from):
         """Runs a spatial correspondence between specified zones and a

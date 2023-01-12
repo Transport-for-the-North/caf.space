@@ -24,8 +24,12 @@ def var_apply(
         Path to correspondence csv file
     weighting_data : str
         Path to variable csv file
-    weighting_var_col:
+    weighting_var_col: str
         Column name of weighting variable
+    zone_name: str
+        Name of the primary zone system e.g. 'MSOA'
+    lower_name: str
+        Name of the lower zone system used e.g. 'LSOA'
     Returns
     -------
     area_correspondence_var: pd.DataFrame
@@ -59,7 +63,7 @@ def var_apply(
         area_correspondence, zone_variables, how="outer", on=merge_cols
     )
     # Count lsoas/msoas which have not joined to translation indicating 
-    # #they do not intersect with lsoa/msoa zones.
+    # they do not intersect with lsoa/msoa zones.
     missing_lower = area_correspondence_var[merge_cols].isna().sum()
 
     LOG.warning(

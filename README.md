@@ -24,7 +24,7 @@ For a sptial correspondence, the only user inputs needed are shapefiles for the 
 <b> zone_1:<br>
     name:</b> The name of the first zone system you are providing. This should be as simple as possible, so for and MSOA shapefile, name should simply be MSOA<br>
     <b>shapefile:</b> A file path to the shapefile you want a translation for<br>
-    <b>id_col:</b> The name of the unique ID column in your chosen shapefile. This can be anything as long as it is unique for each zone in the shapefile<br>
+    <b>id_col:</b> The name of the unique ID column in your chosen shapefile. This can be any column as long as it is unique for each zone in the shapefile<br>
 <b> zone_2: Parameters the same as for zone_1, it doesn't matter which order these are in, a two way translation will be created.</b><br>
 <b>output_path:</b> File path to where you want your translation saved. If the path provided doesn't exist it will be created, but it's best to check first to avoid surprises.<br>
 <b>cache_path:</b> File path to a cache of existing translations. This defaults to a location on a network drive, and it is best to keep it there, but it's more important for weighted translations.<br>
@@ -43,6 +43,4 @@ For a weighted translation more parameters must be provided. The weighted transl
     weight_data: File path to the weighting data for the lower zone system. This should be saved as a csv, and only needs two columns (an ID column and a column of weighting data)<br>
     <b>data_col:</b> The name of the column in the weighting data csv containing the weight data.<br>
     <b>weight_id_col:</b> The name of the columns in the weighting data containing the zone ids. This will be used to join the weighting data to the lower zoning, so the IDs must match, but the names of the ID columns may be different.<br>
-<b>method:</b> The name of the methud used for weighting (e.g. pop or emp). This can be anything, but must be included as the tool checks if this parameter exists to decide whether to perform a spatial or weighted translation.
- 
- 
+<b>method:</b> The name of the method used for weighting (e.g. pop or emp). This can be anything, but must be included as the tool checks if this parameter exists to decide whether to perform a spatial or weighted translation.

@@ -3,7 +3,7 @@
 
 ##### IMPORTS #####
 import json
-import pathlib
+from pathlib import Path
 from typing import TypeVar
 
 import pydantic
@@ -30,7 +30,7 @@ class BaseConfig(pydantic.BaseModel):
     >>> import normits_demand as nd
     >>> from normits_demand.utils import config_base
     >>> class ExampleParameters(config_base.BaseConfig):
-    ...    import_folder: pathlib.Path
+    ...    import_folder: Path
     ...    notem_iteration: str
     ...    scenario: nd.Scenario
     >>> parameters = ExampleParameters(
@@ -54,9 +54,10 @@ class BaseConfig(pydantic.BaseModel):
     @classmethod
     def from_yaml(cls, text: str):
         """Parse class attributes from YAML `text`.
+
         Parameters
         ----------
-        text : str
+        text: str
             YAML formatted string, with parameters for
             the class attributes.
         Returns
@@ -69,11 +70,12 @@ class BaseConfig(pydantic.BaseModel):
         return cls.parse_obj(data)
 
     @classmethod
-    def load_yaml(cls, path: pathlib.Path):
+    def load_yaml(cls, path: Path):
         """Read YAML file and load the data using `from_yaml`.
+
         Parameters
         ----------
-        path : pathlib.Path
+        path: Path
             Path to YAML file containing parameters.
         Returns
         -------
@@ -87,6 +89,7 @@ class BaseConfig(pydantic.BaseModel):
 
     def to_yaml(self) -> str:
         """Convert attributes from self to YAML string.
+        
         Returns
         -------
         str
@@ -102,11 +105,12 @@ class BaseConfig(pydantic.BaseModel):
 
         return strictyaml.as_document(json_dict).as_yaml()
 
-    def save_yaml(self, path: pathlib.Path) -> None:
+    def save_yaml(self, path: Path) -> None:
         """Write data from self to a YAML file.
+
         Parameters
         ----------
-        path : pathlib.Path
+        path: Path
             Path to YAML file to output.
         """
         with open(path, "wt") as file:
