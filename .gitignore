@@ -70,7 +70,6 @@ instance/
 
 # Sphinx documentation
 docs/_build/
-src/caf/space/docs/
 
 # PyBuilder
 target/
