@@ -19,8 +19,6 @@
 import pathlib
 import sys
 import os
-sys.path.insert(0, os.path.abspath("."))
-sys.path.insert(0, os.path.abspath("../"))
 sys.path.insert(0, os.path.abspath(r'C:\Users\IsaacScott\Projects\caf\caf.space\src\caf\space'))
 
 project = 'caf.space'
