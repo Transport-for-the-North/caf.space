@@ -19,7 +19,7 @@
 import sys
 import os
 
-sys.path.insert(0, os.path.abspath(r'src\caf\space'))
+sys.path.insert(0, os.path.relpath(r'src\caf\space'))
 
 project = 'caf.space'
 copyright = '2023, TfN'
