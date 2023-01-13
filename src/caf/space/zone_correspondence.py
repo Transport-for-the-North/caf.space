@@ -7,13 +7,13 @@ import sys
 
 sys.path.append('..')
 
-import inputs as si
+from caf.space import inputs as si
 
 ##### CONSTANTS #####
 LOG = logging.getLogger(__name__)
 
 ##### FUNCTIONS #####
-def read_zone_shapefiles(params: si.ZoningTranslationInputs) -> dict:
+def _read_zone_shapefiles(params: si.ZoningTranslationInputs) -> dict:
     """Reads in zone system shapefiles, sets zone id and area column
     names, sets to same crs.
 
@@ -110,7 +110,7 @@ def read_zone_shapefiles(params: si.ZoningTranslationInputs) -> dict:
     return zones
 
 
-def spatial_zone_correspondence(zones: dict):
+def _spatial_zone_correspondence(zones: dict):
     """Finds the spatial zone corrrespondence through calculating
     adjustment factors with areas only.
     Parameters
@@ -160,7 +160,7 @@ def spatial_zone_correspondence(zones: dict):
     return spatial_correspondence
 
 
-def find_slithers(
+def _find_slithers(
     spatial_correspondence: gpd.GeoDataFrame,
     zone_names: list[str],
     tolerance: float,
@@ -313,7 +313,7 @@ def _rounding_correction(
     return zone_corr
 
 
-def round_zone_correspondence(
+def _round_zone_correspondence(
     zone_corr_no_slithers: pd.DataFrame, zone_names: Tuple[str, str]
 ):
     """Changes zone_1_to_zone_2 adjustment factors such that they sum to 1 for
@@ -380,7 +380,7 @@ def round_zone_correspondence(
     return zone_corr_rounded_both_ways
 
 
-def missing_zones_check(zones: dict, zone_correspondence: pd.DataFrame):
+def _missing_zones_check(zones: dict, zone_correspondence: pd.DataFrame):
     """Checks for zone 1 and zone 2 zones missing from zone correspondence.
 
     Parameters
@@ -429,7 +429,7 @@ def missing_zones_check(zones: dict, zone_correspondence: pd.DataFrame):
     return missing_zone_1_zones, missing_zone_2_zones
 
 
-def main_zone_correspondence(params: si.ZoningTranslationInputs):
+def _main_zone_correspondence(params: si.ZoningTranslationInputs):
     """Performs zone correspondence between two zoning systems, zone 1 and
     zone 2. Default correspondence is spatial (by zone area), but includes
     options for handling point zones with different data (for example LSOA
@@ -439,20 +439,20 @@ def main_zone_correspondence(params: si.ZoningTranslationInputs):
         params (csi.ZoningTranslationInputs): Instance of zone paramaters.
     """
     # read in zone shapefiles
-    zones = read_zone_shapefiles(params)
+    zones = _read_zone_shapefiles(params)
     # produce spatial zone correspondence
-    spatial_correspondence = spatial_zone_correspondence(zones)
+    spatial_correspondence = _spatial_zone_correspondence(zones)
     # Determine if slither filtering and rounding required.
     zone_names = [zones["Major"]["Name"], zones["Minor"]["Name"]]
     if params.filter_slithers:
         LOG.info("Filtering out small overlaps.")
-        (_, spatial_correspondence_no_slithers,) = find_slithers(
+        (_, spatial_correspondence_no_slithers,) = _find_slithers(
             spatial_correspondence, zone_names, params.tolerance
         )
 
         if params.rounding:
             LOG.info("Checking all adjustment factors add to 1")
-            final_zone_corr = round_zone_correspondence(
+            final_zone_corr = _round_zone_correspondence(
                 spatial_correspondence_no_slithers, zone_names
             )
         else:
@@ -460,7 +460,7 @@ def main_zone_correspondence(params: si.ZoningTranslationInputs):
     else:
         if params.rounding:
             LOG.info("Checking all adjustment factors add to 1")
-            final_zone_corr = round_zone_correspondence(
+            final_zone_corr = _round_zone_correspondence(
                 spatial_correspondence, zone_names
             )
         else:
@@ -470,7 +470,7 @@ def main_zone_correspondence(params: si.ZoningTranslationInputs):
         params.output_path
         / f"{zone_names[0]}_to_{zone_names[1]}_correspondence.csv"
     )
-    missing_zones_1, missing_zones_2 = missing_zones_check(
+    missing_zones_1, missing_zones_2 = _missing_zones_check(
         zones, final_zone_corr
     )
 

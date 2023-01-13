@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-    Module containing functionality for storing
-    input parameters and reading config file.
+    Module containing functionality for storing input parameters and 
+    reading config file. Classes in this module inherit from the
+    BaseConfig class, and are ultimately used as input parameters for
+    the ZoneTranslation class.
 """
 
 ##### IMPORTS #####
@@ -14,12 +16,9 @@ import os
 from pathlib import Path
 from typing import Union
 from pydantic import validator
-import sys
-
-sys.path.append('..')
 
 # Third party imports
-import config_base
+from caf.space import config_base
 # Local imports
 
 ##### CONSTANTS #####
@@ -47,7 +46,7 @@ class ShapefileInfo(config_base.BaseConfig):
     id_col: str
     
     @validator("shapefile")
-    def path_exists(cls, v):
+    def _path_exists(cls, v):
         """
         Validator to make sure the shapefile path exists
         Raises:
@@ -80,7 +79,7 @@ class ZoneSystemInfo(ShapefileInfo):
     lower_translation: Path = None
 
     @validator("lower_translation")
-    def lower_exists(cls, v):
+    def _lower_exists(cls, v):
         """
         Validator to make sure the shapefile path exists
         Raises:
@@ -127,7 +126,7 @@ class LowerZoneSystemInfo(ShapefileInfo):
         )
 
     @validator("weight_data")
-    def weight_data_exists(cls, v):
+    def _weight_data_exists(cls, v):
         if os.path.isfile(v) is False:
             raise FileNotFoundError(
                 f"The weight data path provided for {v} does not exist."

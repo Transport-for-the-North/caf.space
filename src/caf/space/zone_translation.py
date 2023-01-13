@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-    Module containing ZoneTranslation class for producing zone translation 
-    from a set of inputs, provided by the ZoneTranslationInputs class in
-    'inputs'
+    Module containing ZoneTranslation class for producing a zone
+    translation from a set of inputs, provided by the 
+    ZoneTranslationInputs class in 'inputs'.
 """
 import os
 import datetime
@@ -14,7 +14,7 @@ sys.path.append('..')
 
 from pathlib import Path
 
-import geo_utils as nf, zone_correspondence as zc, inputs as si, metadata as me
+from caf.space import geo_utils as nf, zone_correspondence as zc, inputs as si, metadata as me
 
 ##### CONSTANTS #####
 LOG = logging.getLogger(__name__)
@@ -45,7 +45,7 @@ class ZoneTranslation:
         self.names = sorted([self.params.zone_1.name,self.params.zone_2.name])
         cacher = self.params.cache_path / f"{self.names[0]}_{self.names[1]}"
         if self.params.method is None:
-            self.zone_translation = zc.main_zone_correspondence(
+            self.zone_translation = zc._main_zone_correspondence(
                 self.params
             )
             
@@ -90,7 +90,7 @@ class ZoneTranslation:
         if self.params.output_path:
             self.zone_translation.to_csv(self.params.output_path / f"{self.names[0]}_{self.names[1]}_translation.csv")
 
-    def run_spatial_translation(self, zone_to_translate_from):
+    def _run_spatial_translation(self, zone_to_translate_from):
         """Runs a spatial correspondence between specified zones and a
         lower zoning system, specified by the given params.
         Parameters
@@ -112,7 +112,7 @@ class ZoneTranslation:
         if zone_to_translate_from == self.params.zone_2.name:
             inner_params.zone_1 = self.params.zone_2
 
-        lower_translation = zc.main_zone_correspondence(inner_params)
+        lower_translation = zc._main_zone_correspondence(inner_params)
 
         return lower_translation
 
@@ -207,7 +207,7 @@ class ZoneTranslation:
         LOG.info("Starting weighted translation")
         # Init
 
-        weighted_translation = nf.zone_split(
+        weighted_translation = nf._zone_split(
             self.params
         )
 
@@ -262,7 +262,7 @@ class ZoneTranslation:
             lower_translation: A path to the lower translation created
             and saved here.
         """
-        lower = self.run_spatial_translation(zone_name)
+        lower = self._run_spatial_translation(zone_name)
         if zone_name == self.params.zone_1.name:
             zone = self.params.zone_1
         else:

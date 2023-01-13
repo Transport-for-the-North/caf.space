@@ -1,18 +1,15 @@
 ##### IMPORTS #####
 import logging
 import pandas as pd
-import sys
 
-sys.path.append('..')
-
-import inputs as si
+from caf.space import inputs as si
 
 ##### CONSTANTS #####
 LOG = logging.getLogger(__name__)
 
 
 ##### FUNCTIONS #####
-def var_apply(
+def _var_apply(
     area_correspondence_path: str,
     weighting_data: str,
     weighting_var_col: str,
@@ -82,7 +79,7 @@ def var_apply(
     return area_correspondence_var
 
 
-def zone_split(
+def _zone_split(
     params: si.ZoningTranslationInputs
 ) -> pd.DataFrame:
     """Joins chosen method variable to Zone to Lower Weighted
@@ -115,14 +112,14 @@ def zone_split(
     zone_2_name=params.zone_2.name.lower(),
     lower_zoning_name=params.lower_zoning.name.lower()
     ats = {
-        zone_1_name: var_apply(
+        zone_1_name: _var_apply(
             area_correspondence_path1,
             weighting_data,
             weighting_var_col,
             zone_1_name,
             lower_zoning_name,
         ),
-        zone_2_name: var_apply(
+        zone_2_name: _var_apply(
             area_correspondence_path2,
             weighting_data,
             weighting_var_col,
