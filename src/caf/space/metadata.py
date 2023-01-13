@@ -1,9 +1,7 @@
 import datetime
 from pathlib import Path
-import sys
 
-sys.path.append('..')
-import config_base
+from caf.space import config_base
 
 class WeightMetadata(config_base.BaseConfig):
     """

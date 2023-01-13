@@ -10,12 +10,13 @@ import logging
 import pandas as pd
 
 from pathlib import Path
-import sys
 
-sys.path.append('..')
-
-import geo_utils as nf, zone_correspondence as zc, inputs as si, metadata as me
-
+from caf.space import (
+    geo_utils as nf,
+    zone_correspondence as zc,
+    inputs as si,
+    metadata as me
+)
 
 ##### CONSTANTS #####
 LOG = logging.getLogger(__name__)
