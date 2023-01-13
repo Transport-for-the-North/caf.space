@@ -13,11 +13,13 @@ import datetime
 import os
 from pathlib import Path
 from typing import Union
-import config_base
 from pydantic import validator
+import sys
+
+sys.path.append('..')
 
 # Third party imports
-
+import config_base
 # Local imports
 
 ##### CONSTANTS #####
