@@ -1,8 +1,11 @@
 ##### IMPORTS #####
 import logging
 import pandas as pd
+import sys
 
-from caf.space import inputs as si
+sys.path.append('..')
+
+import inputs as si
 
 ##### CONSTANTS #####
 LOG = logging.getLogger(__name__)
