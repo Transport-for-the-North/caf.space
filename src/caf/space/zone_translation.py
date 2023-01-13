@@ -10,7 +10,7 @@ import logging
 import pandas as pd
 from pathlib import Path
 
-from caf.space import (
+import (
     geo_utils as nf,
     zone_correspondence as zc,
     inputs as si,
