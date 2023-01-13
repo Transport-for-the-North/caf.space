@@ -18,6 +18,7 @@
 # -- Project information -----------------------------------------------------
 import sys
 import os
+
 sys.path.insert(0, os.path.abspath(r'C:\Users\IsaacScott\Projects\caf\caf.space\src\caf\space'))
 
 project = 'caf.space'
@@ -68,4 +69,5 @@ master_doc = 'index'
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
-autodoc_mock_imports = ['caf.space']
+autodoc_mock_imports = ['caf.space', 'inputs']
+autodoc_typehints = 'description'
