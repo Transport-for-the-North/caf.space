@@ -19,7 +19,9 @@
 import sys
 import os
 
-sys.path.insert(0, os.path.relpath('src/caf/space'))
+dir_path = os.path.dirname(os.path.realpath(__file__))
+dir_path.strip('/docs')
+sys.path.insert(0, os.path.abspath(dir_path / 'src/caf/space'))
 
 project = 'caf.space'
 copyright = '2023, TfN'
