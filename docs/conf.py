@@ -19,9 +19,9 @@
 import sys
 import os
 from pathlib import Path
-from unittest.mock import MagicMock
+# from unittest.mock import MagicMock
 
-sys.modules['caf.space'] = MagicMock()
+# sys.modules['caf.space'] = MagicMock()
 dir_path = Path(__file__).parents[1]
 source = dir_path / 'src'/'caf'/'space'
 
@@ -75,5 +75,5 @@ master_doc = 'index'
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
-autodoc_mock_imports = ['caf']
+# autodoc_mock_imports = ['caf']
 autodoc_typehints = 'description'
