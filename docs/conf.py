@@ -18,10 +18,13 @@
 # -- Project information -----------------------------------------------------
 import sys
 import os
+from pathlib import Path
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 dir_path.strip('/docs')
-sys.path.insert(0, os.path.abspath(dir_path / 'src/caf/space'))
+dir_path = Path(dir_path)
+source = dir_path / 'src'/'caf'/'space'
+sys.path.insert(0, source)
 
 project = 'caf.space'
 copyright = '2023, TfN'
