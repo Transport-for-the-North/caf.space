@@ -13,7 +13,7 @@ import datetime
 import os
 from pathlib import Path
 from typing import Union
-from caf.space import config_base
+import config_base
 from pydantic import validator
 
 # Third party imports
