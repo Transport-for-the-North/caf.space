@@ -20,11 +20,10 @@ import sys
 import os
 from pathlib import Path
 
-dir_path = os.path.dirname(os.path.realpath(__file__))
-dir_path.strip('/docs')
-dir_path = Path(dir_path)
+dir_path = Path(__file__).parents[1]
 source = dir_path / 'src'/'caf'/'space'
-sys.path.insert(0, source)
+
+sys.path.insert(0, os.path.abspath(str(source)))
 
 project = 'caf.space'
 copyright = '2023, TfN'
@@ -67,7 +66,7 @@ exclude_patterns = []
 #
 html_theme = 'alabaster'
 
-master_doc = 'doc/index'
+master_doc = 'index'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
