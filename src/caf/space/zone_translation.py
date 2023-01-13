@@ -8,8 +8,9 @@ import os
 import datetime
 import logging
 import pandas as pd
-import sys
+
 from pathlib import Path
+import sys
 
 sys.path.append('..')
 
