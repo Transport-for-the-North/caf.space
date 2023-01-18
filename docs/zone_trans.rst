@@ -1,4 +1,5 @@
 Zone translation class
 ----------------------
 
-.. autoclass:: zone_translation.ZoneTranslation
+.. automodule:: zone_translation
+   :members:

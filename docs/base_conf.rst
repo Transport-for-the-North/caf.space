@@ -1,5 +1,5 @@
 BaseConfig class
 ----------------
 
-.. autoclass:: config_base.BaseConfig
+.. automodule:: config_base
    :members:

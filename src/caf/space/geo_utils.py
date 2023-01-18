@@ -1,10 +1,12 @@
 ##### IMPORTS #####
 import logging
 import pandas as pd
+import warnings
 
 from caf.space import inputs as si
 
 ##### CONSTANTS #####
+logging.captureWarnings(True)
 LOG = logging.getLogger(__name__)
 
 
@@ -67,6 +69,7 @@ def _var_apply(
     # they do not intersect with lsoa/msoa zones.
     missing_lower = area_correspondence_var[merge_cols].isna().sum()
 
+    warnings.warn("%s zones are not intersected by target zones", missing_lower)
     LOG.warning(
         "%s zones are not intersected by target zones", missing_lower
     )

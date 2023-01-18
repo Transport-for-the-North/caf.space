@@ -35,9 +35,9 @@ Contents
 
 .. toctree::
 
-   inputs
+   input
    zonesystem
-   base_config
-   zone_translation
+   base_conf
+   zone_trans
    weighted_trans
    op_model

@@ -4,6 +4,7 @@ from typing import Tuple
 import geopandas as gpd
 import pandas as pd
 import sys
+import warnings
 
 sys.path.append('..')
 
@@ -11,6 +12,7 @@ from caf.space import inputs as si
 
 ##### CONSTANTS #####
 LOG = logging.getLogger(__name__)
+logging.captureWarnings(True)
 
 ##### FUNCTIONS #####
 def _read_zone_shapefiles(params: si.ZoningTranslationInputs) -> dict:
@@ -53,47 +55,23 @@ def _read_zone_shapefiles(params: si.ZoningTranslationInputs) -> dict:
     zone_2["area"] = zone_2.area
     zone_2 = zone_2.dropna(subset=["area"])
 
-    if sum(zone_1["area"]) / len(zone_1) > sum(zone_2["area"]) / len(
-        zone_2
-    ):
-        # Assign to maj/min
-        major_zone = zone_1.copy()
-        major_zone_name = params.zone_1.name
-        minor_zone = zone_2.copy()
-        minor_zone_name = params.zone_2.name
-        zones = {
-            "Major": {
-                "Name": major_zone_name,
-                "Zone": major_zone.drop("area", axis=1),
-                "ID_col": params.zone_1.id_col,
-            },
-            "Minor": {
-                "Name": minor_zone_name,
-                "Zone": minor_zone.drop("area", axis=1),
-                "ID_col": params.zone_2.id_col,
-            },
-        }
 
-    elif sum(zone_1.area) / len(zone_1) < sum(zone_2.area) / len(
-        zone_2
-    ):
-        # Assign to maj/min
-        major_zone = zone_2.copy()
-        major_zone_name = params.zone_2.name
-        minor_zone = zone_1.copy()
-        minor_zone_name = params.zone_1.name
-        zones = {
-            "Major": {
-                "Name": major_zone_name,
-                "Zone": major_zone.drop("area", axis=1),
-                "ID_col": params.zone_2.id_col,
-            },
-            "Minor": {
-                "Name": minor_zone_name,
-                "Zone": minor_zone.drop("area", axis=1),
-                "ID_col": params.zone_1.id_col,
-            },
-        }
+    major_zone = zone_1.copy()
+    major_zone_name = params.zone_1.name
+    minor_zone = zone_2.copy()
+    minor_zone_name = params.zone_2.name
+    zones = {
+        "Major": {
+            "Name": major_zone_name,
+            "Zone": major_zone.drop("area", axis=1),
+            "ID_col": params.zone_1.id_col,
+        },
+        "Minor": {
+            "Name": minor_zone_name,
+            "Zone": minor_zone.drop("area", axis=1),
+            "ID_col": params.zone_2.id_col,
+        },
+    }
 
     del zone_1, zone_2
 
@@ -105,6 +83,7 @@ def _read_zone_shapefiles(params: si.ZoningTranslationInputs) -> dict:
         zone["Zone"][f"{zone['Name']}_area"] = zone["Zone"].area
 
         if not zone["Zone"].crs:
+            warnings.warn(f"Zone {zone['Name']} has no CRS, setting crs to EPSG:27700.")
             zone["Zone"].crs = "EPSG:27700"
 
     return zones

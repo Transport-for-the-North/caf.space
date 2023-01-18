@@ -1,0 +1,54 @@
+testing inputs folder:
+
+geo_utils._cols_in_both:
+    Returns both dataframes with lowercase columns
+    Returns correct list of matching columns names, case insensitively
+
+geo_utils._var_apply:
+    Can join weighting to correspondence with matching id cols
+    Returns number of none matching zones for none matching id
+
+geo_utils._zone_split:
+    Returns correct weighting translation
+    Possibly break function down further for more thorough testing?
+
+zone_correspondence.read_zone_shapefiles:
+    Raises FileNotFound error if path doesn't exist
+    Raises error for faulty path
+    Raises message for incorrect CRS
+    Assert returned gdf has correct CRS
+
+zone_correspondence._spatial_zone_correspondence:
+    Check spatial correspondence is correct
+    Error for wrong format of zones input
+
+zone_correspondence._find_slithers:
+    Assert returns combined equal to input
+    Assert slithers meets tolerance
+
+zone_correspondence._rounding_correction:
+    Grouped by each zone system goes to 1
+    No values less than zero
+
+zone_correspondence._missing_zones_check:
+    Assert returns missing zones correctly
+
+ZoneTranslation test:
+    _run_spatial_translation:
+        Check spatial translation is correct compared against expected output
+        Check missing zones warning is correct
+
+    _find_lower_translation:
+        finds lower translation correctly when it should
+        Doesn't return lower translation for updated shapefile
+        Correct warning for missing metadata
+        Correct warning for no lower translation
+
+    ZoneTranslation:
+        Grouped by each zone system sum to 1
+        No values in either column less than zero
+        Correct number of missing zones warned about
+        zone columns identical between spatial and weighted
+        
+
+    

@@ -19,9 +19,7 @@
 import sys
 import os
 from pathlib import Path
-# from unittest.mock import MagicMock
 
-# sys.modules['caf.space'] = MagicMock()
 dir_path = Path(__file__).parents[1]
 source = dir_path / 'src'/'caf'/'space'
 

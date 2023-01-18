@@ -9,6 +9,7 @@ import datetime
 import logging
 import pandas as pd
 import sys
+import warnings
 
 sys.path.append('..')
 
@@ -18,6 +19,7 @@ from caf.space import geo_utils as nf, zone_correspondence as zc, inputs as si, 
 
 ##### CONSTANTS #####
 LOG = logging.getLogger(__name__)
+logging.captureWarnings(True)
 
 ##### CLASSES #####
 class ZoneTranslation:
@@ -170,19 +172,19 @@ class ZoneTranslation:
                                 f"Appropriate translation found at {lower}."
                             )
                         else:
-                            LOG.error(
+                            warnings.warn(
                                 "Shapefile(s) modified since last translation"
                             )
                     else:
                         continue
             else:
-                LOG.error(
+                warnings.warn(
                     "The lower translations folder in this cache has no "
                     "metadata, or it is names incorrectly. The metadata "
                     "should be called 'metadata.yml'."
                 )
             if lower is None:
-                LOG.error(
+                warnings.warn(
                     f"No appropriate translation exists for {zone.name} "
                     f"to {self.params.lower_zoning.name}, running "
                     "spatial correspondence."
