@@ -12,8 +12,10 @@ from __future__ import annotations
 # Standard imports
 import logging
 import datetime
+import fiona
 import os
 from pathlib import Path
+import pandas as pd
 from typing import Union
 from pydantic import validator
 
@@ -45,6 +47,15 @@ class ShapefileInfo(config_base.BaseConfig):
     shapefile: Path
     id_col: str
     
+    @validator("id_col")
+    def _id_col_in_file(cls, v):
+        with fiona.collection(cls.shapefile) as source:
+            schema = source.schema
+            if v not in schema['properties'].keys():
+                raise ValueError(f"The id_col provided, {v}, does not appear"
+                f" in the given shapefile, {cls.shapefile}.")
+        return v
+
     @validator("shapefile")
     def _path_exists(cls, v):
         """
@@ -124,6 +135,7 @@ class LowerZoneSystemInfo(ShapefileInfo):
         return ZoneSystemInfo(
             name=self.name, shapefile=self.shapefile, id_col=self.id_col
         )
+    
 
     @validator("weight_data")
     def _weight_data_exists(cls, v):
@@ -131,6 +143,13 @@ class LowerZoneSystemInfo(ShapefileInfo):
             raise FileNotFoundError(
                 f"The weight data path provided for {v} does not exist."
             )
+        return v
+    
+    @validator("data_col", "weight_id_col")
+    def _valid_data_col(cls, v):
+        cols = pd.read_csv(cls.weight_data, nrows=1).tolist()
+        if v not in cols:
+            raise ValueError(f"The given col, {v}, does not appear in the weight data.")
         return v
 
 
