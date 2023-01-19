@@ -453,8 +453,8 @@ def _main_zone_correspondence(params: si.ZoningTranslationInputs):
         zones, final_zone_corr
     )
 
-    LOG.info("Missing Zones from 1 : %s", len(missing_zones_1))
-    LOG.info("Missing Zones from 2 : %s", len(missing_zones_2))
+    warnings.warn("Missing Zones from 1 : %s", len(missing_zones_1))
+    warnings.warn("Missing Zones from 2 : %s", len(missing_zones_2))
 
     log_file = (params.cache_path / f"{zone_names[0]}_{zone_names[1]}" /
     "missing_zones_log.xlsx")
