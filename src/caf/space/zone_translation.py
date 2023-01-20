@@ -44,8 +44,9 @@ class ZoneTranslation:
     """
     def __init__(self, params: si.ZoningTranslationInputs):
         self.params = params
-        self.names = sorted([self.params.zone_1.name,self.params.zone_2.name])
+        self.names = sorted([params.zone_1.name,params.zone_2.name])
         cacher = self.params.cache_path / f"{self.names[0]}_{self.names[1]}"
+        cacher.mkdir(exist_ok=True,parents=True)
         if self.params.method is None:
             self.zone_translation = zc._main_zone_correspondence(
                 self.params
@@ -86,11 +87,11 @@ class ZoneTranslation:
                     self.params.zone_2.lower_translation = lower
             self.zone_translation = self._weighted_translation(
             )
-            name = str(self.params.lower_zoning.weight_data).strip('.csv')
-            self.zone_translation.to_csv(cacher / f"{name}_weighted_trans.csv")
-            self.params.save_yaml(cacher / f"{self.params.run_date}.yml")
-        if self.params.output_path:
-            self.zone_translation.to_csv(self.params.output_path / f"{self.names[0]}_{self.names[1]}_translation.csv")
+        #     name = str(self.params.lower_zoning.weight_data).strip('.csv')
+        #     self.zone_translation.to_csv(cacher / f"{name}_weighted_trans.csv")
+        #     self.params.save_yaml(cacher / f"{self.params.run_date}.yml")
+        # if self.params.output_path:
+        #     self.zone_translation.to_csv(self.params.output_path / f"{self.names[0]}_{self.names[1]}_translation.csv")
 
     def _run_spatial_translation(self, zone_to_translate_from):
         """Runs a spatial correspondence between specified zones and a

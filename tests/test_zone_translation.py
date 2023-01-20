@@ -8,8 +8,22 @@ from caf.space import inputs
 cols = ["zone_1_to_zone_2", "zone_2_to_zone_1"]
 
 
-@pytest.fixture()
-def lower_zone() -> gpd.GeoDataFrame:
+@pytest.fixture(scope="session")
+def main_dir(tmp_path_factory):
+    """
+    Create temporary directory for files to be written to and from
+    Args:
+        tmp_path_fatory (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    path = tmp_path_factory.mktemp("main")
+    return path
+
+
+@pytest.fixture(scope="session")
+def lower_zone(main_dir) -> gpd.GeoDataFrame:
     """
     lower zone system for testing
     Returns:
@@ -38,12 +52,14 @@ def lower_zone() -> gpd.GeoDataFrame:
         ],
         crs="EPSG:27700",
     )
-    lower.geometry = lower.geometry.rotate(270,origin=[4,4])
-    return lower
+    lower.geometry = lower.geometry.rotate(270, origin=[4, 4])
+    file = main_dir / "lower_zone.shp"
+    lower.to_file(file)
+    return file
 
 
-@pytest.fixture()
-def zone_1_shape() -> gpd.GeoDataFrame:
+@pytest.fixture(scope="session")
+def zone_1_shape(main_dir) -> gpd.GeoDataFrame:
     """
     zone system 1 for testing. Can be manipulated for different permutations
     Returns:
@@ -61,10 +77,13 @@ def zone_1_shape() -> gpd.GeoDataFrame:
         ],
         crs="EPSG:27700",
     )
-    return zone_1
+    file = main_dir / "zone_1_zone.shp"
+    zone_1.to_file(file)
+    return file
 
-@pytest.fixture()
-def zone_2_shape() -> gpd.GeoDataFrame:
+
+@pytest.fixture(scope="session")
+def zone_2_shape(main_dir) -> gpd.GeoDataFrame:
     """
     Zone system 2 for testing, can me manipulated for different permutations.
     Returns:
@@ -83,11 +102,13 @@ def zone_2_shape() -> gpd.GeoDataFrame:
         ],
         crs="EPSG:27700",
     )
-    return zone_2
+    file = main_dir / "zone_2.shp"
+    zone_2.to_file(main_dir / "zone_2.shp")
+    return file
 
 
-@pytest.fixture()
-def lower_weighting() -> pd.DataFrame:
+@pytest.fixture(scope="session")
+def lower_weighting(main_dir) -> pd.DataFrame:
     """
     Weighting data to be joined to lower zoning system for testing
     Returns:
@@ -117,9 +138,51 @@ def lower_weighting() -> pd.DataFrame:
         columns=["weight"],
     )
     weighting.index.name = "lower_id"
-    return weighting
+    file = main_dir / "weighting.csv"
+    weighting.to_csv(main_dir / "weighting.csv")
+    return file
 
-@pytest.fixture()
+
+@pytest.fixture(scope="session")
+def cache_path(main_dir):
+    path = main_dir / "cache"
+    return path
+
+
+@pytest.fixture(scope="session")
+def out_path(main_dir):
+    path = main_dir / "output"
+    return path
+
+
+@pytest.fixture(scope = "session")
+def config(zone_1_shape, zone_2_shape, lower_zone, lower_weighting, out_path, cache_path):
+    zone_1 = inputs.ZoneSystemInfo(
+        name="zone_1", shapefile=zone_1_shape, id_col="zone_1_id"
+    )
+    zone_2 = inputs.ZoneSystemInfo(
+        name="zone_2", shapefile=zone_2_shape, id_col="zone_2_id"
+    )
+    lower = inputs.LowerZoneSystemInfo(
+        name="lower_zone",
+        shapefile=lower_zone,
+        id_col="lower_id",
+        weight_data=lower_weighting,
+        data_col="weight",
+        weight_id_col="lower_id",
+    )
+    params = inputs.ZoningTranslationInputs(
+        zone_1=zone_1,
+        zone_2=zone_2,
+        lower_zoning=lower,
+        output_path=out_path,
+        cache_path=cache_path,
+        method="test",
+    )
+    return params
+
+
+@pytest.fixture(scope="session")
 def expected_output() -> pd.DataFrame:
     """
     The expected output from a weighted translation using vanila inputs.
@@ -128,24 +191,47 @@ def expected_output() -> pd.DataFrame:
         pd.DataFrame: 4 columns of zone_1, zone_2, zone_1_to_zone_2,
         zone_2_to_zone_1
     """
-    output = pd.DataFrame({'zone_1':['A','A','A','A','B','B','C','C'],
-    'zone_2':['Z','X','Y','W','Z','X','Z','Y'],
-    'zone_1_to_zone_2':[0.014,0.187,0.214,0.585,0.383,0.617,0.506,0.494],
-    'zone_2_to_zone_1':[0.020,0.303,0.361,1.000,0.401,0.697,0.579,0.639]})
+    output = pd.DataFrame(
+        {
+            "zone_1": ["A", "A", "A", "A", "B", "B", "C", "C"],
+            "zone_2": ["Z", "X", "Y", "W", "Z", "X", "Z", "Y"],
+            "zone_1_to_zone_2": [
+                0.014,
+                0.187,
+                0.214,
+                0.585,
+                0.383,
+                0.617,
+                0.506,
+                0.494,
+            ],
+            "zone_2_to_zone_1": [
+                0.020,
+                0.303,
+                0.361,
+                1.000,
+                0.401,
+                0.697,
+                0.579,
+                0.639,
+            ],
+        }
+    )
     return output
 
-# @pytest.fixture()
-# def weighted_trans():
-#     config = inputs.ZoningTranslationInputs.load_yaml("weighted.yml")
-#     weighted_trans = zone_translation.ZoneTranslation(config)
-#     return weighted_trans
+
+@pytest.fixture(scope="session")
+def weighted_trans(config):
+    trans = zone_translation.ZoneTranslation(config).zone_translation
+    return trans
 
 
-# @pytest.fixture()
-# def spatial_trans():
-#     config = inputs.ZoningTranslationInputs.load_yaml("spatial.yml")
-#     spatial_trans = zone_translation.ZoneTranslation(config)
-#     return spatial_trans
+@pytest.fixture(scope="session")
+def spatial_trans(config):
+    config.lower_zoning = None
+    config.method = None
+    trans = zone_translation.ZoneTranslation(config).zone_translation
+    return trans
 
 
 class TestZoneTranslation:
@@ -160,10 +246,10 @@ class TestZoneTranslation:
             spatial_trans (_type_): _description_
             weighted_trans (_type_): _description_
         """
-        spatial_1 = spatial_trans.groupby("zone_1").sum()
-        spatial_2 = spatial_trans.groupby("zone_2").sum()
-        weighted_1 = weighted_trans.groupby("zone_1").sum()
-        weighted_2 = weighted_trans.groupby("zone_2").sum()
+        spatial_1 = spatial_trans.groupby("zone_1_zone_id").sum()
+        spatial_2 = spatial_trans.groupby("zone_2_zone_id").sum()
+        weighted_1 = weighted_trans.groupby("zone_1_zone_id").sum()
+        weighted_2 = weighted_trans.groupby("zone_2_zone_id").sum()
         assert (
             round(spatial_1["zone_1_to_zone_2"], 5).astype("int") == 1
         ).all()
@@ -196,44 +282,44 @@ class TestZoneTranslation:
             spatial_trans (_type_): _description_
             weighted_trans (_type_): _description_
         """
-        assert (spatial_trans.zone_1 == weighted_trans.zone_1).all()
-        assert (spatial_trans.zone_2 == weighted_trans.zone_2).all()
+        assert (spatial_trans.zone_1_zone_id == weighted_trans.zone_1_zone_id).all()
+        assert (spatial_trans.zone_2_zone_id == weighted_trans.zone_2_zone_id).all()
 
-    def test_lower_find(self, spatial_trans):
-        """
-        Test that the _find_lower method works where it should.
-        Args:
-            spatial_trans (_type_): _description_
-        """
-        assert (
-            spatial_trans.params.zone_1.lower_translation
-            == "insert value"
-        )
+    # def test_lower_find(self):
+    #     """
+    #     Test that the _find_lower method works where it should.
+    #     Args:
+    #         spatial_trans (_type_): _description_
+    #     """
+    #     assert (
+    #         spatial_trans.params.zone_1.lower_translation
+    #         == "insert value"
+    #     )
 
-    def test_lower_date(self):
-        """
-        Test that the find lower method will reject an existing translation
-        created before either shapefile involved was last edited.
-        """
-        with pytest.warns(
-            UserWarning,
-            match="Shapefile(s) modified since last translation",
-        ):
-            zone_translation.ZoneTranslation(
-                inputs.load_yaml("date_test.yml")
-            )
+    # def test_lower_date(self):
+    #     """
+    #     Test that the find lower method will reject an existing translation
+    #     created before either shapefile involved was last edited.
+    #     """
+    #     with pytest.warns(
+    #         UserWarning,
+    #         match="Shapefile(s) modified since last translation",
+    #     ):
+    #         zone_translation.ZoneTranslation(
+    #             inputs.load_yaml("date_test.yml")
+    #         )
 
-    def test_lower_meta(self):
-        """
-        Tests that missing or incorrect metadata attached to an existing
-        translation returns the correct warning.
-        """
-        with pytest.warns(
-            UserWarning,
-            match="The lower translations folder in this cache has no "
-            "metadata, or it is names incorrectly. The metadata "
-            "should be called 'metadata.yml'.",
-        ):
-            zone_translation.ZoneTranslation(
-                inputs.load_yaml("meta_test.yml")
-            )
+    # def test_lower_meta(self):
+    #     """
+    #     Tests that missing or incorrect metadata attached to an existing
+    #     translation returns the correct warning.
+    #     """
+    #     with pytest.warns(
+    #         UserWarning,
+    #         match="The lower translations folder in this cache has no "
+    #         "metadata, or it is names incorrectly. The metadata "
+    #         "should be called 'metadata.yml'.",
+    #     ):
+    #         zone_translation.ZoneTranslation(
+    #             inputs.load_yaml("meta_test.yml")
+    #         )

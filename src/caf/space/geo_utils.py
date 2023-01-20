@@ -69,7 +69,7 @@ def _var_apply(
     # they do not intersect with lsoa/msoa zones.
     missing_lower = area_correspondence_var[merge_cols].isna().sum()
 
-    warnings.warn("%s zones are not intersected by target zones", missing_lower)
+    warnings.warn(f"{missing_lower} zones are not intersected by target zones")
     LOG.warning(
         "%s zones are not intersected by target zones", missing_lower
     )
@@ -106,13 +106,13 @@ def _zone_split(
     """
 
     # 2 zone weighted translation
-    area_correspondence_path1=params.zone_1.lower_translation,
-    area_correspondence_path2=params.zone_2.lower_translation,
-    weighting_data=params.lower_zoning.weight_data,
-    weighting_zone_col=params.lower_zoning.weight_id_col,
-    weighting_var_col=params.lower_zoning.data_col,
-    zone_1_name=params.zone_1.name.lower(),
-    zone_2_name=params.zone_2.name.lower(),
+    area_correspondence_path1=params.zone_1.lower_translation
+    area_correspondence_path2=params.zone_2.lower_translation
+    weighting_data=params.lower_zoning.weight_data
+    weighting_zone_col=params.lower_zoning.weight_id_col
+    weighting_var_col=params.lower_zoning.data_col
+    zone_1_name=params.zone_1.name.lower()
+    zone_2_name=params.zone_2.name.lower()
     lower_zoning_name=params.lower_zoning.name.lower()
     ats = {
         zone_1_name: _var_apply(

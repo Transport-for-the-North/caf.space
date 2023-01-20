@@ -48,12 +48,12 @@ class ShapefileInfo(config_base.BaseConfig):
     id_col: str
     
     @validator("id_col")
-    def _id_col_in_file(cls, v):
-        with fiona.collection(cls.shapefile) as source:
+    def _id_col_in_file(cls, v, values):
+        with fiona.collection(values['shapefile']) as source:
             schema = source.schema
             if v not in schema['properties'].keys():
                 raise ValueError(f"The id_col provided, {v}, does not appear"
-                f" in the given shapefile, {cls.shapefile}.")
+                f" in the given shapefile, {'shapefile'}.")
         return v
 
     @validator("shapefile")
@@ -146,8 +146,8 @@ class LowerZoneSystemInfo(ShapefileInfo):
         return v
     
     @validator("data_col", "weight_id_col")
-    def _valid_data_col(cls, v):
-        cols = pd.read_csv(cls.weight_data, nrows=1).tolist()
+    def _valid_data_col(cls, v, values):
+        cols = pd.read_csv(values['weight_data'], nrows=1).columns
         if v not in cols:
             raise ValueError(f"The given col, {v}, does not appear in the weight data.")
         return v
@@ -203,9 +203,9 @@ class ZoningTranslationInputs(config_base.BaseConfig):
     #TODO choose and set default path for cache path
     zone_1: ZoneSystemInfo
     zone_2: ZoneSystemInfo
-    lower_zoning: LowerZoneSystemInfo
     output_path: Path
     cache_path: Path
+    lower_zoning: LowerZoneSystemInfo = None
     method: str = None
     tolerance: float = 0.98
     rounding: bool = True
