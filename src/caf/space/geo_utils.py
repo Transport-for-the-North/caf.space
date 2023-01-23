@@ -2,6 +2,8 @@
 import logging
 import pandas as pd
 import warnings
+import geopandas as gpd
+from functools import reduce
 
 from caf.space import inputs as si
 
@@ -11,6 +13,42 @@ LOG = logging.getLogger(__name__)
 
 
 ##### FUNCTIONS #####
+def placeholder(params: si.ZoningTranslationInputs):
+    lower_zoning = gpd.read_file(params.lower_zoning.shapefile)
+    lower_zoning.set_index(params.lower_zoning.id_col,inplace=True)
+    weighting = pd.read_csv(params.lower_zoning.weight_data, index_col = params.lower_zoning.weight_id_col)
+    weighted = lower_zoning.join(weighting)
+    weighted['lower_area'] = weighted.area
+    return weighted
+
+def placeholder_2(params: si.ZoningTranslationInputs):
+    zone_1 = gpd.read_file(params.zone_1.shapefile)
+    zone_2 = gpd.read_file(params.zone_2.shapefile)
+    weighting = placeholder(params)
+    tiles = reduce(lambda x, y: gpd.overlay(x,y,keep_geom_type=True),[zone_1,zone_2,weighting])
+    tiles.overlay_area = tiles.area
+    tiles.prop = tiles.overlay_area / tiles.lower_area
+    tiles[params.lower_zoning.data_col] *= tiles.prop
+    return tiles[[params.zone_1.id_col, params.zone_2.id_col, params.lower_zoning.data_col]]
+
+def return_totals(df: pd.DataFrame, id_col: str, data_col: str):
+    totals = df.groupby(id_col).sum().loc[:, data_col]
+    return totals
+
+def placeholder_3(params: si.ZoningTranslationInputs):
+    tiles = placeholder_2(params)
+    totals_1 = return_totals(tiles, params.zone_1.id_col, params.lower_zoning.data_col).to_frame()
+    totals_2 = return_totals(tiles, params.zone_2.id_col, params.lower_zoning.data_col).to_frame()
+    overlap = tiles.groupby([params.zone_1.id_col, params.zone_2.id_col]).sum().loc[:,params.lower_zoning.data_col].to_frame()
+    return overlap.join(totals_1, rsuffix = '_1').join(totals_2, lsuffix = '_overlap', rsuffix = '_2')
+
+def final_weighted(params: si.ZoningTranslationInputs):
+    full_df = placeholder_3(params)
+    full_df[f"{params.zone_1.name}_to_{params.zone_2.name}"] = full_df[f"{params.lower_zoning.data_col}_overlap"] / full_df[f"{params.lower_zoning.data_col}_1"]
+    full_df[f"{params.zone_2.name}_to_{params.zone_1.name}"] = full_df[f"{params.lower_zoning.data_col}_overlap"] / full_df[f"{params.lower_zoning.data_col}_2"]
+    return full_df
+
+
 def _var_apply(
     area_correspondence_path: str,
     weighting_data: str,

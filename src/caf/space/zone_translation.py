@@ -55,36 +55,36 @@ class ZoneTranslation:
             self.zone_translation.to_csv(cacher / f"{self.params.run_date}.csv" )
             self.params.save_yaml(cacher / f"{self.params.run_date}.yml")
         else:
-            if params.zone_1.lower_translation is None:
-                LOG.info(
-                    "Searching for lower translation for "
-                    f"{self.params.zone_1.name}."
-                )
-                lower = self._find_lower_translation(params.zone_1.name)
-                if lower is None:
-                    self.params.zone_1.lower_translation = (
-                        self._save_lower(self.params.zone_1.name)
-                    )
-                    LOG.info(
-                        "Lower translation created and saved to cache."
-                    )
-                else:
-                    self.params.zone_1.lower_translation = lower
-            if params.zone_2.lower_translation is None:
-                LOG.info(
-                    "Searching for lower translation for "
-                    f"{self.params.zone_2.name}."
-                )
-                lower = self._find_lower_translation(params.zone_2.name)
-                if lower is None:
-                    self.params.zone_2.lower_translation = (
-                        self._save_lower(self.params.zone_2.name)
-                    )
-                    LOG.info(
-                        "Lower translation created and saved to cache."
-                    )
-                else:
-                    self.params.zone_2.lower_translation = lower
+            # if params.zone_1.lower_translation is None:
+            #     LOG.info(
+            #         "Searching for lower translation for "
+            #         f"{self.params.zone_1.name}."
+            #     )
+            #     lower = self._find_lower_translation(params.zone_1.name)
+            #     if lower is None:
+            #         self.params.zone_1.lower_translation = (
+            #             self._save_lower(self.params.zone_1.name)
+            #         )
+            #         LOG.info(
+            #             "Lower translation created and saved to cache."
+            #         )
+            #     else:
+            #         self.params.zone_1.lower_translation = lower
+            # if params.zone_2.lower_translation is None:
+            #     LOG.info(
+            #         "Searching for lower translation for "
+            #         f"{self.params.zone_2.name}."
+            #     )
+            #     lower = self._find_lower_translation(params.zone_2.name)
+            #     if lower is None:
+            #         self.params.zone_2.lower_translation = (
+            #             self._save_lower(self.params.zone_2.name)
+            #         )
+            #         LOG.info(
+            #             "Lower translation created and saved to cache."
+            #         )
+            #     else:
+            #         self.params.zone_2.lower_translation = lower
             self.zone_translation = self._weighted_translation(
             )
         #     name = str(self.params.lower_zoning.weight_data).strip('.csv')
@@ -210,9 +210,11 @@ class ZoneTranslation:
         LOG.info("Starting weighted translation")
         # Init
 
-        weighted_translation = nf._zone_split(
+        weighted_translation = nf.final_weighted(
             self.params
-        )
+        )[f"{self.params.zone_1.name}_to_{self.params.zone_2.name}",
+        f"{self.params.zone_2.name}_to_{self.params.zone_1.name}"]
+        weighted_translation.reset_index(inplace=True)
 
         column_list = list(weighted_translation.columns)
 
