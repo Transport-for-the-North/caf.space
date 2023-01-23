@@ -178,6 +178,8 @@ def config(zone_1_shape, zone_2_shape, lower_zone, lower_weighting, out_path, ca
         output_path=out_path,
         cache_path=cache_path,
         method="test",
+        tolerance=0.99,
+        rounding = False
     )
     return params
 
@@ -193,8 +195,8 @@ def expected_output() -> pd.DataFrame:
     """
     output = pd.DataFrame(
         {
-            "zone_1": ["A", "A", "A", "A", "B", "B", "C", "C"],
-            "zone_2": ["Z", "X", "Y", "W", "Z", "X", "Z", "Y"],
+            "zone_1_zone_id": ["A", "A", "A", "A", "B", "B", "C", "C"],
+            "zone_2_zone_id": ["Z", "X", "Y", "W", "Z", "X", "Z", "Y"],
             "zone_1_to_zone_2": [
                 0.014,
                 0.187,
@@ -217,12 +219,14 @@ def expected_output() -> pd.DataFrame:
             ],
         }
     )
+    output.to_csv(r"C:\Users\IsaacScott\Projects\geo_rewrite\output.csv")
     return output
 
 
 @pytest.fixture(scope="session")
 def weighted_trans(config):
     trans = zone_translation.ZoneTranslation(config).zone_translation
+    trans.to_csv(r"C:\Users\IsaacScott\Projects\geo_rewrite\weighted.csv")
     return trans
 
 
@@ -284,6 +288,11 @@ class TestZoneTranslation:
         """
         assert (spatial_trans.zone_1_zone_id == weighted_trans.zone_1_zone_id).all()
         assert (spatial_trans.zone_2_zone_id == weighted_trans.zone_2_zone_id).all()
+    
+    def test_output(self, weighted_trans, expected_output):
+        df_1 = weighted_trans.groupby(['zone_1_zone_id','zone_2_zone_id']).sum()
+        df_2 = expected_output.groupby(['zone_1_zone_id','zone_2_zone_id']).sum()
+        pd.testing.assert_frame_equal(df_1, df_2)
 
     # def test_lower_find(self):
     #     """

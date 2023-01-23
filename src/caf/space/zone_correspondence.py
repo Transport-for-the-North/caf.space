@@ -455,8 +455,9 @@ def _main_zone_correspondence(params: si.ZoningTranslationInputs):
 
     warnings.warn(f"Missing Zones from 1 : {len(missing_zones_1)}")
     warnings.warn(f"Missing Zones from 2 : {len(missing_zones_2)}")
-
-    log_file = (params.cache_path / f"{zone_names[0]}_{zone_names[1]}" /
+    log_path = params.cache_path / f"{zone_names[0]}_{zone_names[1]}"
+    log_path.mkdir(exist_ok=True, parents=True)
+    log_file = (log_path /
     "missing_zones_log.xlsx")
     with pd.ExcelWriter(log_file, engine="openpyxl") as writer:
         missing_zones_1.to_excel(

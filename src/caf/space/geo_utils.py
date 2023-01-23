@@ -17,6 +17,7 @@ def _var_apply(
     weighting_var_col: str,
     zone_name: str,
     lower_name: str,
+    weighting_zone_id: str
 ) -> pd.DataFrame:
     """
     Joins chosen method variable to lower zoning shapefile.
@@ -54,7 +55,7 @@ def _var_apply(
     area_correspondence = pd.read_csv(
         area_correspondence_path, index_col=False
     )
-
+    zone_variables.rename(columns = {weighting_zone_id:f"{lower_name}_zone_id"}, inplace=True)
     # Work out cols in left and right for merge
     merge_cols, area_correspondence, zone_variables = _cols_in_both(
         area_correspondence, zone_variables
@@ -114,6 +115,7 @@ def _zone_split(
     zone_1_name=params.zone_1.name.lower()
     zone_2_name=params.zone_2.name.lower()
     lower_zoning_name=params.lower_zoning.name.lower()
+    weighting_zone_id = params.lower_zoning.weight_id_col
     ats = {
         zone_1_name: _var_apply(
             area_correspondence_path1,
@@ -121,6 +123,7 @@ def _zone_split(
             weighting_var_col,
             zone_1_name,
             lower_zoning_name,
+            weighting_zone_id
         ),
         zone_2_name: _var_apply(
             area_correspondence_path2,
@@ -128,6 +131,7 @@ def _zone_split(
             weighting_var_col,
             zone_2_name,
             lower_zoning_name,
+            weighting_zone_id
         ),
     }
 
@@ -136,7 +140,7 @@ def _zone_split(
         ats[zone_1_name],
         ats[zone_2_name],
         how="outer",
-        on=weighting_zone_col,
+        on=f"{lower_zoning_name}_zone_id",
         suffixes=(zone_1_name, zone_2_name),
     )
 
@@ -205,11 +209,11 @@ def _zone_split(
     # Name split factors
     weighted_translation[f"{zone_1_name}_to_{zone_2_name}"] = (
         weighted_translation["overlap_value"]
-        / weighted_translation[f"var_{zone_1_name}"]
+        / weighted_translation[f"{weighting_var_col}_{zone_1_name}"]
     )
     weighted_translation[f"{zone_2_name}_to_{zone_1_name}"] = (
         weighted_translation["overlap_value"]
-        / weighted_translation[f"var_{zone_2_name}"]
+        / weighted_translation[f"{weighting_var_col}_{zone_2_name}"]
     )
 
     LOG.debug("Weighted translation:\n%s", weighted_translation)
