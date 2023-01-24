@@ -77,7 +77,7 @@ def _read_zone_shapefiles(params: si.ZoningTranslationInputs) -> dict:
 
     for zone in zones.values():
         zone["Zone"].rename(
-            columns={zone["ID_col"]: f"{zone['Name']}_zone_id"},
+            columns={zone["ID_col"]: f"{zone['Name']}_id"},
             inplace=True,
         )
         zone["Zone"][f"{zone['Name']}_area"] = zone["Zone"].area
@@ -113,8 +113,8 @@ def _spatial_zone_correspondence(zones: dict):
 
     # columns to include in spatial correspondence
     column_list = [
-        f"{zones['Major']['Name']}_zone_id",
-        f"{zones['Minor']['Name']}_zone_id",
+        f"{zones['Major']['Name']}_id",
+        f"{zones['Minor']['Name']}_id",
     ]
 
     # create geodataframe with spatial adjusted factors
@@ -212,7 +212,7 @@ def _rounding_correction(
         factor_totals = factor_totals.iloc[:, 0]
         return factor_totals, differences
 
-    from_col = f"{from_zone_name}_zone_id"
+    from_col = f"{from_zone_name}_id"
     factor_col = f"{from_zone_name}_to_{to_zone_name}"
 
     counts = zone_corr.groupby(from_col).size()
@@ -321,8 +321,8 @@ def _round_zone_correspondence(
     zone_corr_rounded = _rounding_correction(
         zone_corr_no_slithers[
             [
-                f"{zone_names[0]}_zone_id",
-                f"{zone_names[1]}_zone_id",
+                f"{zone_names[0]}_id",
+                f"{zone_names[1]}_id",
                 f"{zone_names[0]}_to_{zone_names[1]}",
             ]
         ].copy(),
@@ -336,8 +336,8 @@ def _round_zone_correspondence(
     zone_corr_rounded = _rounding_correction(
         zone_corr_no_slithers[
             [
-                f"{zone_names[0]}_zone_id",
-                f"{zone_names[1]}_zone_id",
+                f"{zone_names[0]}_id",
+                f"{zone_names[1]}_id",
                 f"{zone_names[1]}_to_{zone_names[0]}",
             ]
         ].copy(),
@@ -382,27 +382,27 @@ def _missing_zones_check(zones: dict, zone_correspondence: pd.DataFrame):
 
     missing_zone_1 = zones["Major"]["Zone"].loc[
         ~zones["Major"]["Zone"][
-            f"{zones['Major']['Name']}_zone_id"
+            f"{zones['Major']['Name']}_id"
         ].isin(
-            zone_correspondence[f"{zones['Major']['Name']}_zone_id"]
+            zone_correspondence[f"{zones['Major']['Name']}_id"]
         ),
-        f"{zones['Major']['Name']}_zone_id",
+        f"{zones['Major']['Name']}_id",
     ]
     missing_zone_2 = zones["Minor"]["Zone"].loc[
         ~zones["Minor"]["Zone"][
-            f"{zones['Minor']['Name']}_zone_id"
+            f"{zones['Minor']['Name']}_id"
         ].isin(
-            zone_correspondence[f"{zones['Minor']['Name']}_zone_id"]
+            zone_correspondence[f"{zones['Minor']['Name']}_id"]
         ),
-        f"{zones['Minor']['Name']}_zone_id",
+        f"{zones['Minor']['Name']}_id",
     ]
     missing_zone_1_zones = pd.DataFrame(
         data=missing_zone_1,
-        columns=[f"{zones['Major']['Name']}_zone_id"],
+        columns=[f"{zones['Major']['Name']}_id"],
     )
     missing_zone_2_zones = pd.DataFrame(
         data=missing_zone_2,
-        columns=[f"{zones['Minor']['Name']}_zone_id"],
+        columns=[f"{zones['Minor']['Name']}_id"],
     )
 
     return missing_zone_1_zones, missing_zone_2_zones

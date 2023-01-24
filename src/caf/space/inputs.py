@@ -27,7 +27,7 @@ from caf.space import config_base
 LOG = logging.getLogger(__name__)
 
 
-class ShapefileInfo(config_base.BaseConfig):
+class ZoneSystemInfo(config_base.BaseConfig):
     """Base class for storing information about a shapefile input.
 
     Parameters
@@ -72,42 +72,7 @@ class ShapefileInfo(config_base.BaseConfig):
         return v
 
 
-class ZoneSystemInfo(ShapefileInfo):
-    """Zone system input data for `ZoneTranslationInputs`.
-    Inherits from ShapefileInfo.
-
-    Parameters
-    ----------
-    lower_translation : Path, optional
-        This is an optional parameter providing a path to an existing
-        translation between the respective zone and the lower zone.
-        Almost the entire run time of the tool is creating these lower
-        translations so it is worth providing this if you have it.
-        Alternatively if this translation has previusly been created and
-        saved in the cache, the tool should find it and use it.
-    """
-
-    lower_translation: Path = None
-
-    @validator("lower_translation")
-    def _lower_exists(cls, v):
-        """
-        Validator to make sure the shapefile path exists
-        Raises:
-            ValueError: Informs user the path given is incorrect.
-
-        Returns:
-            Unchanged path if no error is raised.
-        """
-        if v:
-            if os.path.isfile(v) is False:
-                raise ValueError(
-                    f"The lower translation path provided for {self.name} does not exist."
-                )
-        return v
-
-
-class LowerZoneSystemInfo(ShapefileInfo):
+class LowerZoneSystemInfo(ZoneSystemInfo):
     """Lower level zone system input data for `ZoneTranslationInputs`.
     Inherits from ShapefileInfo.
 
@@ -136,7 +101,6 @@ class LowerZoneSystemInfo(ShapefileInfo):
             name=self.name, shapefile=self.shapefile, id_col=self.id_col
         )
     
-
     @validator("weight_data")
     def _weight_data_exists(cls, v):
         if os.path.isfile(v) is False:
