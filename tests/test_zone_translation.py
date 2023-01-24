@@ -264,11 +264,12 @@ class TestZoneTranslation:
         """
         dic = {1: 2, 2: 1}
         trans = request.getfixturevalue(translation_str)
-        summed = trans.groupby(f"zone_{origin_zone}_zone_id").sum()
+        summed = trans.groupby(f"zone_{origin_zone}_id").sum()
         assert (
             round(summed[f"zone_{origin_zone}_to_zone_{dic[origin_zone]}"], 5).astype("int") == 1
         ).all()
-    @pytest.mark.paremtrize("translation_str", ["spatial_trans", "weighted_trans"])
+
+    @pytest.mark.parametrize("translation_str", ["spatial_trans", "weighted_trans"])
     @pytest.mark.parametrize("col", ["zone_1_to_zone_2", "zone_2_to_zone_1"])
     def test_positive(self, translation_str: str, col: str, request):
         """
@@ -278,7 +279,7 @@ class TestZoneTranslation:
         trans = request.getfixturevalue(translation_str)
         assert (trans[col] > 0).all()
 
-    @pytest.mark.paremtrize("number", [1, 2])
+    @pytest.mark.parametrize("number", [1, 2])
     def test_same_zones(self, spatial_trans, weighted_trans, number: int):
         """
         Test that the two id columns are identical in weighted and
@@ -287,7 +288,7 @@ class TestZoneTranslation:
             spatial_trans (_type_): _description_
             weighted_trans (_type_): _description_
         """
-        assert (sorted(spatial_trans[f"zone_{number}_zone_id"]) == sorted(weighted_trans[f"zone_{number}_zone_id"]))
+        assert (sorted(spatial_trans[f"zone_{number}_id"]) == sorted(weighted_trans[f"zone_{number}_id"]))
     
     def test_output(self, weighted_trans, expected_output):
         df_1 = weighted_trans.groupby(['zone_1_id', 'zone_2_id']).sum().round(3)
