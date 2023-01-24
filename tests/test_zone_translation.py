@@ -7,15 +7,18 @@ from caf.space import inputs
 
 cols = ["zone_1_to_zone_2", "zone_2_to_zone_1"]
 
+
 @pytest.fixture(scope="class")
 def main_dir(tmp_path_factory):
     """
-    Create temporary directory for files to be written to and from
-    Args:
-        tmp_path_fatory (_type_): _description_
 
-    Returns:
-        _type_: _description_
+    Parameters
+    ----------
+    tmp_path_factory
+
+    Returns
+    -------
+    Path: file path used for all saving and loading of files within the tests
     """
     path = tmp_path_factory.mktemp("main")
     return path
@@ -107,6 +110,15 @@ def zone_2_shape(main_dir) -> gpd.GeoDataFrame:
 
 
 @pytest.fixture(scope="class")
+def zone_2_moved(zone_2_shape, main_dir):
+    gdf = gpd.read_file(zone_2_shape)
+    gdf.affine_transform(1, 0, 0, 1, 4, 4)
+    file = main_dir / 'zone_2_altered.shp'
+    gdf.to_file(file)
+    return file
+
+
+@pytest.fixture(scope="class")
 def lower_weighting(main_dir) -> pd.DataFrame:
     """
     Weighting data to be joined to lower zoning system for testing
@@ -155,7 +167,8 @@ def out_path(main_dir):
 
 
 @pytest.fixture(scope="class")
-def weighted_config(zone_1_shape, zone_2_shape, lower_zone, lower_weighting, out_path, cache_path):
+def weighted_config(zone_1_shape, zone_2_shape, lower_zone, lower_weighting,
+                    out_path, cache_path):
     zone_1 = inputs.ZoneSystemInfo(
         name="zone_1", shapefile=zone_1_shape, id_col="zone_1_id"
     )
@@ -178,12 +191,14 @@ def weighted_config(zone_1_shape, zone_2_shape, lower_zone, lower_weighting, out
         cache_path=cache_path,
         method="test",
         tolerance=0.99,
-        rounding = True
+        rounding=True
     )
     return params
 
+
 @pytest.fixture(scope="class")
-def spatial_config(zone_1_shape, zone_2_shape, lower_zone, lower_weighting, out_path, cache_path):
+def spatial_config(zone_1_shape, zone_2_shape, lower_zone, lower_weighting,
+                   out_path, cache_path):
     zone_1 = inputs.ZoneSystemInfo(
         name="zone_1", shapefile=zone_1_shape, id_col="zone_1_id"
     )
@@ -196,12 +211,13 @@ def spatial_config(zone_1_shape, zone_2_shape, lower_zone, lower_weighting, out_
         output_path=out_path,
         cache_path=cache_path,
         tolerance=0.99,
-        rounding = True
+        rounding=True
     )
     return params
 
+
 @pytest.fixture(scope="class")
-def expected_output() -> pd.DataFrame:
+def expected_weighted() -> pd.DataFrame:
     """
     The expected output from a weighted translation using vanila inputs.
     Compare to output from weighted translation in testing
@@ -239,6 +255,44 @@ def expected_output() -> pd.DataFrame:
 
 
 @pytest.fixture(scope="class")
+def expected_spatial() -> pd.DataFrame:
+    """
+    The expected output from a weighted translation using vanila inputs.
+    Compare to output from weighted translation in testing
+    Returns:
+        pd.DataFrame: 4 columns of zone_1, zone_2, zone_1_to_zone_2,
+        zone_2_to_zone_1
+    """
+    output = pd.DataFrame(
+        {
+            "zone_1_id": ["A", "A", "A", "A", "B", "B", "C", "C"],
+            "zone_2_id": ["Z", "X", "Y", "W", "Z", "X", "Z", "Y"],
+            "zone_1_to_zone_2": [
+                0.05,
+                0.2,
+                0.15,
+                0.6,
+                0.2,
+                0.8,
+                0.625,
+                0.375,
+            ],
+            "zone_2_to_zone_1": [
+                0.05,
+                0.2,
+                0.25,
+                1.000,
+                0.2,
+                0.8,
+                0.75,
+                0.75,
+            ],
+        }
+    )
+    return output
+
+
+@pytest.fixture(scope="class")
 def weighted_trans(weighted_config):
     trans = zone_translation.ZoneTranslation(weighted_config).zone_translation
     return trans
@@ -255,7 +309,8 @@ class TestZoneTranslation:
     Class containing tests for the ZoneTranslation class
     """
 
-    @pytest.mark.parametrize("translation_str", ["spatial_trans", "weighted_trans"])
+    @pytest.mark.parametrize("translation_str",
+                             ["spatial_trans", "weighted_trans"])
     @pytest.mark.parametrize("origin_zone", [1, 2])
     def test_sum_to_1(self, translation_str: str, origin_zone: int, request):
         """
@@ -266,10 +321,13 @@ class TestZoneTranslation:
         trans = request.getfixturevalue(translation_str)
         summed = trans.groupby(f"zone_{origin_zone}_id").sum()
         assert (
-            round(summed[f"zone_{origin_zone}_to_zone_{dic[origin_zone]}"], 5).astype("int") == 1
+                round(summed[f"zone_{origin_zone}_to_zone_{dic[origin_zone]}"],
+                      5).astype(
+                    "int") == 1
         ).all()
 
-    @pytest.mark.parametrize("translation_str", ["spatial_trans", "weighted_trans"])
+    @pytest.mark.parametrize("translation_str",
+                             ["spatial_trans", "weighted_trans"])
     @pytest.mark.parametrize("col", ["zone_1_to_zone_2", "zone_2_to_zone_1"])
     def test_positive(self, translation_str: str, col: str, request):
         """
@@ -288,12 +346,18 @@ class TestZoneTranslation:
             spatial_trans (_type_): _description_
             weighted_trans (_type_): _description_
         """
-        assert (sorted(spatial_trans[f"zone_{number}_id"]) == sorted(weighted_trans[f"zone_{number}_id"]))
-    
-    def test_output(self, weighted_trans, expected_output):
-        df_1 = weighted_trans.groupby(['zone_1_id', 'zone_2_id']).sum().round(3)
+        assert (sorted(spatial_trans[f"zone_{number}_id"]) == sorted(
+            weighted_trans[f"zone_{number}_id"]))
+
+    @pytest.mark.parametrize("expected_str,trans_str",
+                             [("expected_spatial", "spatial_trans"),
+                              ("expected_weighted", "weighted_trans")])
+    def test_output(self, trans_str: str, expected_str: str, request):
+        trans = request.getfixturevalue(trans_str)
+        expected = request.getfixturevalue(expected_str)
+        df_1 = trans.groupby(['zone_1_id', 'zone_2_id']).sum().round(3)
         df_1.sort_index(inplace=True)
-        df_2 = expected_output.groupby(['zone_1_id', 'zone_2_id']).sum()
+        df_2 = expected.groupby(['zone_1_id', 'zone_2_id']).sum()
         df_2.sort_index(inplace=True)
         pd.testing.assert_frame_equal(df_1, df_2)
 
