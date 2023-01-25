@@ -11,7 +11,6 @@ cols = ["zone_1_to_zone_2", "zone_2_to_zone_1"]
 @pytest.fixture(scope="class")
 def main_dir(tmp_path_factory):
     """
-
     Parameters
     ----------
     tmp_path_factory
@@ -215,6 +214,23 @@ def spatial_config(zone_1_shape, zone_2_shape, lower_zone, lower_weighting,
     )
     return params
 
+@pytest.fixture(scope="class")
+def dupe_shapes_config(weighted_config):
+    """
+    Parameters
+    ----------
+    weighted_config:
+        weighted config to modify and use for a new translation.
+    Returns
+    -------
+        A new config with lower zoning and zone 2 the same.
+    """
+    config = weighted_config.copy()
+    config.zone_2 = weighted_config.lower_zoning
+    config.zone_2.name = weighted_config.zone_2.name
+    config.lower_zoning.name = weighted_config.zone_2.name
+    return config
+
 
 @pytest.fixture(scope="class")
 def expected_weighted() -> pd.DataFrame:
@@ -303,6 +319,10 @@ def spatial_trans(spatial_config):
     trans = zone_translation.ZoneTranslation(spatial_config).zone_translation
     return trans
 
+@pytest.fixture(scope="class")
+def dupe_trans(dupe_shapes_config):
+    trans = zone_translation.ZoneTranslation(dupe_shapes_config).zone_translation
+    return trans
 
 class TestZoneTranslation:
     """
@@ -310,7 +330,7 @@ class TestZoneTranslation:
     """
 
     @pytest.mark.parametrize("translation_str",
-                             ["spatial_trans", "weighted_trans"])
+                             ["spatial_trans", "weighted_trans", "dupe_trans"])
     @pytest.mark.parametrize("origin_zone", [1, 2])
     def test_sum_to_1(self, translation_str: str, origin_zone: int, request):
         """
@@ -327,7 +347,7 @@ class TestZoneTranslation:
         ).all()
 
     @pytest.mark.parametrize("translation_str",
-                             ["spatial_trans", "weighted_trans"])
+                             ["spatial_trans", "weighted_trans", "dupe_trans"])
     @pytest.mark.parametrize("col", ["zone_1_to_zone_2", "zone_2_to_zone_1"])
     def test_positive(self, translation_str: str, col: str, request):
         """
@@ -360,42 +380,3 @@ class TestZoneTranslation:
         df_2 = expected.groupby(['zone_1_id', 'zone_2_id']).sum()
         df_2.sort_index(inplace=True)
         pd.testing.assert_frame_equal(df_1, df_2)
-
-    # def test_lower_find(self):
-    #     """
-    #     Test that the _find_lower method works where it should.
-    #     Args:
-    #         spatial_trans (_type_): _description_
-    #     """
-    #     assert (
-    #         spatial_trans.params.zone_1.lower_translation
-    #         == "insert value"
-    #     )
-
-    # def test_lower_date(self):
-    #     """
-    #     Test that the find lower method will reject an existing translation
-    #     created before either shapefile involved was last edited.
-    #     """
-    #     with pytest.warns(
-    #         UserWarning,
-    #         match="Shapefile(s) modified since last translation",
-    #     ):
-    #         zone_translation.ZoneTranslation(
-    #             inputs.load_yaml("date_test.yml")
-    #         )
-
-    # def test_lower_meta(self):
-    #     """
-    #     Tests that missing or incorrect metadata attached to an existing
-    #     translation returns the correct warning.
-    #     """
-    #     with pytest.warns(
-    #         UserWarning,
-    #         match="The lower translations folder in this cache has no "
-    #         "metadata, or it is names incorrectly. The metadata "
-    #         "should be called 'metadata.yml'.",
-    #     ):
-    #         zone_translation.ZoneTranslation(
-    #             inputs.load_yaml("meta_test.yml")
-    #         )
