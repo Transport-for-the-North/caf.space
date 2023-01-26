@@ -1,9 +1,10 @@
 ##### IMPORTS #####
 import logging
-import pandas as pd
 import warnings
-import geopandas as gpd
 from functools import reduce
+import pandas as pd
+import geopandas as gpd
+
 
 from caf.space import inputs as si
 
@@ -86,11 +87,13 @@ def overlaps_and_totals(
         params: si.ZoningTranslationInputs,
 ) -> pd.DataFrame:
     """
-    Creates overlap totals for each zone system, as well as totals for each zone on its own, then joins them all together.
+    Creates overlap totals for each zone system, as well as totals for
+    each zone on its own, then joins them all together.
     Args:
-        params (si.ZoningTranslationInputs): see ZoneingTranslationInputs
+        params (si.ZoningTranslationInputs): see ZoningTranslationInputs
     Returns:
-        pd.DataFrame: Dataframe with columns for overlap total, zone 1 total, zone 2 total weights.
+        pd.DataFrame: Dataframe with columns for overlap total, zone 1
+        total, zone 2 total weights.
     """
     tiles = _create_tiles(params)
     totals_1 = return_totals(
@@ -114,10 +117,13 @@ def final_weighted(params: si.ZoningTranslationInputs) -> pd.DataFrame:
     """
     Runs the above functions to produce a weighted translation using parameters provided.
     Args:
-        params (si.ZoningTranslationInputs): _description_
+        params (si.ZoningTranslationInputs): See ZoningTranslationInputs
 
     Returns:
-        pd.DataFrame: _description_
+        pd.DataFrame: A weighted zone translation DataFrame. This
+        contains more columns than the final output and will be passed
+        through more checks for slither and rounding before being output,
+        according to the input parameters.
     """
     full_df = overlaps_and_totals(params)
     full_df[f"{params.zone_1.name}_to_{params.zone_2.name}"] = (

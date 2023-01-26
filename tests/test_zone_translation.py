@@ -2,14 +2,16 @@ import pytest
 import pandas as pd
 import geopandas as gpd
 from shapely.geometry import Polygon
+from pathlib import Path
+# pylint: disable=import-error, wrong-import-position
 from caf.space import zone_translation
 from caf.space import inputs
 
-cols = ["zone_1_to_zone_2", "zone_2_to_zone_1"]
 
+# pylint: enable=import-error,wrong-import-position
 
 @pytest.fixture(scope="class")
-def main_dir(tmp_path_factory):
+def main_dir(tmp_path_factory) -> Path:
     """
     Parameters
     ----------
@@ -24,11 +26,11 @@ def main_dir(tmp_path_factory):
 
 
 @pytest.fixture(scope="class")
-def lower_zone(main_dir) -> gpd.GeoDataFrame:
+def lower_zone(main_dir) -> Path:
     """
     lower zone system for testing
     Returns:
-        gpd.GeoDataFrame: 16 attributes, 1-17, ID_COL = lower_id
+        Path: Temp path to gdf, 16 attributes, 1-17, ID_COL = lower_id
     """
     lower_df = pd.DataFrame(data=range(1, 17), columns=["lower_id"])
     lower = gpd.GeoDataFrame(
@@ -60,11 +62,11 @@ def lower_zone(main_dir) -> gpd.GeoDataFrame:
 
 
 @pytest.fixture(scope="class")
-def zone_1_shape(main_dir) -> gpd.GeoDataFrame:
+def zone_1_shape(main_dir) -> Path:
     """
     zone system 1 for testing. Can be manipulated for different permutations
     Returns:
-        gpd.GeoDataFrame: 3 attributes, A, B and C. ID_COL = zone_1_id
+        Path: Temp path to gdf,  3 attributes, A, B and C. ID_COL = zone_1_id
     """
     zone_1_df = pd.DataFrame(
         data=["A", "B", "C"], columns=["zone_1_id"]
@@ -84,11 +86,11 @@ def zone_1_shape(main_dir) -> gpd.GeoDataFrame:
 
 
 @pytest.fixture(scope="class")
-def zone_2_shape(main_dir) -> gpd.GeoDataFrame:
+def zone_2_shape(main_dir) -> Path:
     """
     Zone system 2 for testing, can me manipulated for different permutations.
     Returns:
-        gpd.GeoDataFrame: 4 Attributes, W, X, Y, Z. ID_COL = zone_2_id
+        Path: Temp path to gdf, 4 Attributes, W, X, Y, Z. ID_COL = zone_2_id
     """
     zone_2_df = pd.DataFrame(
         data=["W", "X", "Y", "Z"], columns=["zone_2_id"]
@@ -109,7 +111,18 @@ def zone_2_shape(main_dir) -> gpd.GeoDataFrame:
 
 
 @pytest.fixture(scope="class")
-def zone_2_moved(zone_2_shape, main_dir):
+def zone_2_moved(zone_2_shape, main_dir) -> Path:
+    """
+    TODO add in testing for this fixture
+    Parameters
+    ----------
+    zone_2_shape
+    main_dir
+
+    Returns
+    -------
+
+    """
     gdf = gpd.read_file(zone_2_shape)
     gdf.affine_transform(1, 0, 0, 1, 4, 4)
     file = main_dir / 'zone_2_altered.shp'
@@ -118,11 +131,11 @@ def zone_2_moved(zone_2_shape, main_dir):
 
 
 @pytest.fixture(scope="class")
-def lower_weighting(main_dir) -> pd.DataFrame:
+def lower_weighting(main_dir) -> Path:
     """
     Weighting data to be joined to lower zoning system for testing
     Returns:
-        pd.DataFrame: Weighting data in a column called 'weight', with
+        Path: Temp path to weighting data in a column called 'weight', with
         an index called 'lower_id', matching lower_id in lower shape.
     """
     weighting = pd.DataFrame(
@@ -154,20 +167,58 @@ def lower_weighting(main_dir) -> pd.DataFrame:
 
 
 @pytest.fixture(scope="class")
-def cache_path(main_dir):
+def cache_path(main_dir) -> Path:
+    """
+    A temporary path used as the 'cache_path' for translations
+    Parameters
+    ----------
+    main_dir: cache_path is a subdirectory of main_dir
+
+    Returns
+    -------
+    cache_path
+    """
     path = main_dir / "cache"
     return path
 
 
 @pytest.fixture(scope="class")
-def out_path(main_dir):
+def out_path(main_dir) -> Path:
+    """
+    Analogous to cache_path
+    Parameters
+    ----------
+    main_dir
+
+    Returns
+    -------
+    Path to main_dir. This is used as an argument in many other fixtures
+    """
     path = main_dir / "output"
     return path
 
 
 @pytest.fixture(scope="class")
-def weighted_config(zone_1_shape, zone_2_shape, lower_zone, lower_weighting,
-                    out_path, cache_path):
+def weighted_config(zone_1_shape: Path, zone_2_shape: Path, lower_zone: Path,
+                    lower_weighting: Path, out_path: Path, cache_path: Path
+                    ) -> inputs.ZoningTranslationInputs:
+    """
+    The config for a test weighted translation. This config is used as
+    a base for other weighted test cases.
+    Parameters
+    ----------
+    Params are all inherited from fixtures.
+    zone_1_shape
+    zone_2_shape
+    lower_zone
+    lower_weighting
+    out_path
+    cache_path
+
+    Returns
+    -------
+    An input config for running a basic weighted zone translation.
+    """
     zone_1 = inputs.ZoneSystemInfo(
         name="zone_1", shapefile=zone_1_shape, id_col="zone_1_id"
     )
@@ -196,8 +247,25 @@ def weighted_config(zone_1_shape, zone_2_shape, lower_zone, lower_weighting,
 
 
 @pytest.fixture(scope="class")
-def spatial_config(zone_1_shape, zone_2_shape, lower_zone, lower_weighting,
-                   out_path, cache_path):
+def spatial_config(zone_1_shape: Path, zone_2_shape: Path, lower_zone: Path,
+                   lower_weighting: Path, out_path: Path, cache_path: Path
+                   ) -> inputs.ZoningTranslationInputs:
+    """
+    Config for a test case spatial translation.This config can be altered
+    for other test cases.
+    Parameters
+    ----------
+    All params are inherited from fixtures
+    zone_1_shape
+    zone_2_shape
+    lower_zone
+    lower_weighting
+    out_path
+    cache_path
+    Returns
+    -------
+    A spatial translation config.
+    """
     zone_1 = inputs.ZoneSystemInfo(
         name="zone_1", shapefile=zone_1_shape, id_col="zone_1_id"
     )
@@ -214,9 +282,13 @@ def spatial_config(zone_1_shape, zone_2_shape, lower_zone, lower_weighting,
     )
     return params
 
+
 @pytest.fixture(scope="class")
-def dupe_shapes_config(weighted_config):
+def dupe_shapes_config(weighted_config: inputs.ZoningTranslationInputs
+                       ) -> inputs.ZoningTranslationInputs:
     """
+    A config file for testing translations with one zone the same as
+    lower zoning.
     Parameters
     ----------
     weighted_config:
@@ -241,32 +313,20 @@ def expected_weighted() -> pd.DataFrame:
         pd.DataFrame: 4 columns of zone_1, zone_2, zone_1_to_zone_2,
         zone_2_to_zone_1
     """
+    # fmt: off
     output = pd.DataFrame(
         {
             "zone_1_id": ["A", "A", "A", "A", "B", "B", "C", "C"],
             "zone_2_id": ["Z", "X", "Y", "W", "Z", "X", "Z", "Y"],
             "zone_1_to_zone_2": [
-                0.059,
-                0.176,
-                0.235,
-                0.529,
-                0.263,
-                0.737,
-                0.500,
-                0.500,
+                0.059, 0.176, 0.235, 0.529, 0.263, 0.737, 0.500, 0.500,
             ],
             "zone_2_to_zone_1": [
-                0.053,
-                0.176,
-                0.235,
-                1.000,
-                0.263,
-                0.824,
-                0.684,
-                0.765,
+                0.053, 0.176, 0.235, 1.000, 0.263, 0.824, 0.684, 0.765,
             ],
         }
     )
+    # fmt: on
     return output
 
 
@@ -279,50 +339,62 @@ def expected_spatial() -> pd.DataFrame:
         pd.DataFrame: 4 columns of zone_1, zone_2, zone_1_to_zone_2,
         zone_2_to_zone_1
     """
+    # fmt: off
     output = pd.DataFrame(
         {
             "zone_1_id": ["A", "A", "A", "A", "B", "B", "C", "C"],
             "zone_2_id": ["Z", "X", "Y", "W", "Z", "X", "Z", "Y"],
             "zone_1_to_zone_2": [
-                0.05,
-                0.2,
-                0.15,
-                0.6,
-                0.2,
-                0.8,
-                0.625,
-                0.375,
+                0.05, 0.2, 0.15, 0.6, 0.2, 0.8, 0.625, 0.375,
             ],
             "zone_2_to_zone_1": [
-                0.05,
-                0.2,
-                0.25,
-                1.000,
-                0.2,
-                0.8,
-                0.75,
-                0.75,
+                0.05, 0.2, 0.25, 1.000, 0.2, 0.8, 0.75, 0.75,
             ],
         }
     )
+    # fmt: on
     return output
 
 
 @pytest.fixture(scope="class")
-def weighted_trans(weighted_config):
+def weighted_trans(weighted_config) -> pd.DataFrame:
+    """
+    Creates a weighted zone translation to be used in tests.
+    Parameters
+    ----------
+    weighted_config: inherited from fixture
+
+    Returns
+    -------
+    A complete weighted zone translation stored in a dataframe
+    """
     trans = zone_translation.ZoneTranslation(weighted_config).zone_translation
     return trans
 
 
 @pytest.fixture(scope="class")
-def spatial_trans(spatial_config):
+def spatial_trans(spatial_config) -> pd.DataFrame:
+    """
+    Creates a spatial zone translation to be used in tests.
+    Parameters
+    ----------
+    spatial_config: inherited from fixture
+
+    Returns
+    -------
+    A complete spatial zone translation stored in a dataframe
+
+    """
     trans = zone_translation.ZoneTranslation(spatial_config).zone_translation
     return trans
 
+
 @pytest.fixture(scope="class")
 def dupe_trans(dupe_shapes_config):
-    trans = zone_translation.ZoneTranslation(dupe_shapes_config).zone_translation
+    trans = zone_translation.ZoneTranslation(
+        dupe_shapes_config).zone_translation
     return trans
+
 
 class TestZoneTranslation:
     """
@@ -334,25 +406,38 @@ class TestZoneTranslation:
     @pytest.mark.parametrize("origin_zone", [1, 2])
     def test_sum_to_1(self, translation_str: str, origin_zone: int, request):
         """
-        Test that totals sum to one.
-        Args:
+        Test that translation totals from each zone sum to 1.
+        Parameters
+        ----------
+        translation_str: Used to parametrize and test the different translations
+        origin_zone: 1 or 2 for each test zone system/
+        request: pytest inbuilt for parametrizing with fixtures
+
+        Returns
+        -------
+
         """
         dic = {1: 2, 2: 1}
         trans = request.getfixturevalue(translation_str)
         summed = trans.groupby(f"zone_{origin_zone}_id").sum()
-        assert (
-                round(summed[f"zone_{origin_zone}_to_zone_{dic[origin_zone]}"],
-                      5).astype(
-                    "int") == 1
-        ).all()
+        rounded = round(summed[f"zone_{origin_zone}_to_zone_{dic[origin_zone]}"], 5).astype("int")
+        assert (rounded == 1).all()
 
     @pytest.mark.parametrize("translation_str",
                              ["spatial_trans", "weighted_trans", "dupe_trans"])
     @pytest.mark.parametrize("col", ["zone_1_to_zone_2", "zone_2_to_zone_1"])
     def test_positive(self, translation_str: str, col: str, request):
         """
-        Test that all translation values are positive.
-        Args:
+        Tests that all translation values are positive
+        Parameters
+        ----------
+        translation_str
+        col: column being checked for positives
+        request
+
+        Returns
+        -------
+
         """
         trans = request.getfixturevalue(translation_str)
         assert (trans[col] > 0).all()
@@ -363,8 +448,8 @@ class TestZoneTranslation:
         Test that the two id columns are identical in weighted and
         spatial translations.
         Args:
-            spatial_trans (_type_): _description_
-            weighted_trans (_type_): _description_
+            spatial_trans (_type_): The spatial translation being checked
+            weighted_trans (_type_): Weighted translation being checked
         """
         assert (sorted(spatial_trans[f"zone_{number}_id"]) == sorted(
             weighted_trans[f"zone_{number}_id"]))
