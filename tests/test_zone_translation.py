@@ -33,103 +33,7 @@ def fixture_zone_2_moved(zone_2_shape, main_dir) -> Path:
     return file
 
 
-@pytest.fixture(name="lower_weighting", scope="class")
-def fixture_lower_weighting(main_dir) -> Path:
-    """
-    Weighting data to be joined to lower zoning system for testing
-    Returns:
-        Path: Temp path to weighting data in a column called 'weight', with
-        an index called 'lower_id', matching lower_id in lower shape.
-    """
-    weighting = pd.DataFrame(
-        data=[
-            10,
-            20,
-            20,
-            30,
-            20,
-            10,
-            10,
-            10,
-            30,
-            20,
-            20,
-            30,
-            30,
-            30,
-            10,
-            10,
-        ],
-        index=range(1, 17),
-        columns=["weight"],
-    )
-    weighting.index.name = "lower_id"
-    file = main_dir / "weighting.csv"
-    weighting.to_csv(main_dir / "weighting.csv")
-    return file
 
-@pytest.fixture(name="paths", scope="class")
-def fixture_paths(main_dir) -> dict[str, Path]:
-    """
-    fixture storing paths for configs
-    Parameters
-    ----------
-    main_dir
-
-    Returns
-    -------
-
-    """
-    output_path = main_dir / "output"
-    cache_path = main_dir / "cache"
-    paths = {"output": output_path, "cache": cache_path}
-    return paths
-
-@pytest.fixture(name="weighted_config", scope="class")
-def fixture_weighted_config(zone_1_shape: Path, zone_2_shape: Path, lower_zone: Path,
-                            lower_weighting: Path, paths: dict
-                            ) -> inputs.ZoningTranslationInputs:
-    """
-    The config for a test weighted translation. This config is used as
-    a base for other weighted test cases.
-    Parameters
-    ----------
-    Params are all inherited from fixtures.
-    zone_1_shape
-    zone_2_shape
-    lower_zone
-    lower_weighting
-    paths
-
-    Returns
-    -------
-    An input config for running a basic weighted zone translation.
-    """
-    zone_1 = inputs.ZoneSystemInfo(
-        name="zone_1", shapefile=zone_1_shape, id_col="zone_1_id"
-    )
-    zone_2 = inputs.ZoneSystemInfo(
-        name="zone_2", shapefile=zone_2_shape, id_col="zone_2_id"
-    )
-    lower = inputs.LowerZoneSystemInfo(
-        name="lower_zone",
-        shapefile=lower_zone,
-        id_col="lower_id",
-        weight_data=lower_weighting,
-        data_col="weight",
-        weight_id_col="lower_id",
-    )
-    params = inputs.ZoningTranslationInputs(
-        zone_1=zone_1,
-        zone_2=zone_2,
-        lower_zoning=lower,
-        output_path=paths['output'],
-        cache_path=paths['cache'],
-        method="test",
-        tolerance=0.99,
-        rounding=True
-    )
-    return params
 
 
 @pytest.fixture(name="spatial_config", scope="class")
@@ -235,22 +139,6 @@ def fixture_expected_spatial() -> pd.DataFrame:
     )
     # fmt: on
     return output
-
-
-@pytest.fixture(name="weighted_trans", scope="class")
-def fixture_weighted_trans(weighted_config) -> pd.DataFrame:
-    """
-    Creates a weighted zone translation to be used in tests.
-    Parameters
-    ----------
-    weighted_config: inherited from fixture
-
-    Returns
-    -------
-    A complete weighted zone translation stored in a dataframe
-    """
-    trans = zone_translation.ZoneTranslation(weighted_config).zone_translation
-    return trans
 
 
 @pytest.fixture(name="spatial_trans", scope="class")

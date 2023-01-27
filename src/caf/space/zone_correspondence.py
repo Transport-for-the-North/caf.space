@@ -14,6 +14,8 @@ LOG = logging.getLogger(__name__)
 logging.captureWarnings(True)
 
 ##### FUNCTIONS #####
+
+
 def read_zone_shapefiles(params: si.ZoningTranslationInputs) -> dict:
     """Reads in zone system shapefiles, sets zone id and area column
     names, sets to same crs.
@@ -26,8 +28,8 @@ def read_zone_shapefiles(params: si.ZoningTranslationInputs) -> dict:
     ZoningTranslationInputs, see class for info.
     Returns
     ----------
-    zones(dict): A nested dictionary containing major and minor zones
-    for translation. 'Major' and 'Minor' contain 'Name'(str), 'Zone'
+    zones(dict): A nested dictionary containing zones
+    for translation. zone_1.name and zone_1.name contain 'Zone'
     (GeoDataFrame) and 'ID_col'(str)
     """
 
@@ -54,46 +56,38 @@ def read_zone_shapefiles(params: si.ZoningTranslationInputs) -> dict:
     zone_2["area"] = zone_2.area
     zone_2 = zone_2.dropna(subset=["area"])
 
-
-    major_zone = zone_1.copy()
-    major_zone_name = params.zone_1.name
-    minor_zone = zone_2.copy()
-    minor_zone_name = params.zone_2.name
     zones = {
-        "Major": {
-            "Name": major_zone_name,
-            "Zone": major_zone.drop("area", axis=1),
+        zone_1.name: {
+            "Zone": zone_1.drop("area", axis=1),
             "ID_col": params.zone_1.id_col,
         },
-        "Minor": {
-            "Name": minor_zone_name,
-            "Zone": minor_zone.drop("area", axis=1),
+        zone_2.name: {
+            "Zone": zone_2.drop("area", axis=1),
             "ID_col": params.zone_2.id_col,
         },
     }
 
-    del zone_1, zone_2
-
-    for zone in zones.values():
+    for name, zone in zones.items():
         zone["Zone"].rename(
-            columns={zone["ID_col"]: f"{zone['Name']}_id"},
+            columns={zone["ID_col"]: f"{name}_id"},
             inplace=True,
         )
-        zone["Zone"][f"{zone['Name']}_area"] = zone["Zone"].area
+        zone["Zone"][f"{name}_area"] = zone["Zone"].area
 
         if not zone["Zone"].crs:
-            warnings.warn(f"Zone {zone['Name']} has no CRS, setting crs to EPSG:27700.")
+            warnings.warn(f"Zone {name} has no CRS, setting crs to EPSG:27700.")
             zone["Zone"].crs = "EPSG:27700"
 
     return zones
 
 
-def spatial_zone_correspondence(zones: dict):
+def spatial_zone_correspondence(zones: dict, params: si.ZoningTranslationInputs):
     """Finds the spatial zone corrrespondence through calculating
     adjustment factors with areas only.
     Parameters
     ----------
     zones: Return value from 'read_zone_shapefiles'.
+    params:
     Returns
     -------
     GeoDataFrame
@@ -103,8 +97,8 @@ def spatial_zone_correspondence(zones: dict):
 
     # create geodataframe for intersection of zones
     zone_overlay = gpd.overlay(
-        zones["Major"]["Zone"],
-        zones["Minor"]["Zone"],
+        zones[params.zone_1.name]["Zone"],
+        zones[params.zone_2.name]["Zone"],
         how="intersection",
         keep_geom_type=False,
     ).reset_index()
@@ -112,8 +106,8 @@ def spatial_zone_correspondence(zones: dict):
 
     # columns to include in spatial correspondence
     column_list = [
-        f"{zones['Major']['Name']}_id",
-        f"{zones['Minor']['Name']}_id",
+        f"{params.zone_1.name}_id",
+        f"{params.zone_2.name}_id",
     ]
 
     # create geodataframe with spatial adjusted factors
@@ -121,16 +115,16 @@ def spatial_zone_correspondence(zones: dict):
 
     # create geodataframe with spatial adjusted factors
     spatial_correspondence.loc[
-        :, f"{zones['Major']['Name']}_to_{zones['Minor']['Name']}"
+        :, f"{params.zone_1.name}_to_{params.zone_2.name}"
     ] = (
         zone_overlay.loc[:, "intersection_area"]
-        / zone_overlay.loc[:, f"{zones['Major']['Name']}_area"]
+        / zone_overlay.loc[:, f"{params.zone_1.name}_area"]
     )
     spatial_correspondence.loc[
-        :, f"{zones['Minor']['Name']}_to_{zones['Major']['Name']}"
+        :, f"{params.zone_2.name}_to_{params.zone_1.name}"
     ] = (
         zone_overlay.loc[:, "intersection_area"]
-        / zone_overlay.loc[:, f"{zones['Minor']['Name']}_area"]
+        / zone_overlay.loc[:, f"{params.zone_2.name}_area"]
     )
 
     LOG.info("Unfiltered Spatial Correspondence completed")
@@ -358,7 +352,7 @@ def round_zone_correspondence(
     return zone_corr_rounded_both_ways
 
 
-def missing_zones_check(zones: dict, zone_correspondence: pd.DataFrame):
+def missing_zones_check(zones: dict, zone_correspondence: pd.DataFrame, params: si.ZoningTranslationInputs):
     """Checks for zone 1 and zone 2 zones missing from zone correspondence.
 
     Parameters
@@ -379,29 +373,29 @@ def missing_zones_check(zones: dict, zone_correspondence: pd.DataFrame):
     """
     LOG.info("Checking for missing zones")
 
-    missing_zone_1 = zones["Major"]["Zone"].loc[
-        ~zones["Major"]["Zone"][
-            f"{zones['Major']['Name']}_id"
+    missing_zone_1 = zones[params.zone_1.name]["Zone"].loc[
+        ~zones[params.zone_1.name]["Zone"][
+            f"{params.zone_1.name}_id"
         ].isin(
-            zone_correspondence[f"{zones['Major']['Name']}_id"]
+            zone_correspondence[f"{params.zone_1.name}_id"]
         ),
-        f"{zones['Major']['Name']}_id",
+        f"{params.zone_1.name}_id",
     ]
-    missing_zone_2 = zones["Minor"]["Zone"].loc[
-        ~zones["Minor"]["Zone"][
-            f"{zones['Minor']['Name']}_id"
+    missing_zone_2 = zones[params.zone_2.name]["Zone"].loc[
+        ~zones[params.zone_2.name]["Zone"][
+            f"{params.zone_2.name}_id"
         ].isin(
-            zone_correspondence[f"{zones['Minor']['Name']}_id"]
+            zone_correspondence[f"{params.zone_2.name}_id"]
         ),
-        f"{zones['Minor']['Name']}_id",
+        f"{params.zone_2.name}_id",
     ]
     missing_zone_1_zones = pd.DataFrame(
         data=missing_zone_1,
-        columns=[f"{zones['Major']['Name']}_id"],
+        columns=[f"{params.zone_1.name}_id"],
     )
     missing_zone_2_zones = pd.DataFrame(
         data=missing_zone_2,
-        columns=[f"{zones['Minor']['Name']}_id"],
+        columns=[f"{params.zone_2.name}_id"],
     )
 
     return missing_zone_1_zones, missing_zone_2_zones

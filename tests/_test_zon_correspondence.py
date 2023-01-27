@@ -8,10 +8,10 @@ class Test_Read_Zone_Shapefiles:
 
     def test_crs_warn(self):
         with pytest.warns(UserWarning, match = "Zone LSOA has no CRS, setting crs to EPSG:27700.")
-            zone_correspondence._read_zone_shapefiles(self.crs_params)
+            zone_correspondence.read_zone_shapefiles(self.crs_params)
 
     def test_crs_change(self):
-        zones = zone_correspondence._read_zone_shapefiles(self.crs_params)
+        zones = zone_correspondence.read_zone_shapefiles(self.crs_params)
         assert zones['Major']['Zone'].crs is not None
         assert zones['Minor']['Zone'].crs is not None
     
@@ -21,7 +21,7 @@ class Test_Spatial_Zone_Correspondence:
         self.spatial_corr = spatial_corr
     
     def _test_format(self):
-        corr = zone_correspondence._spatial_zone_correspondence(self.test_zones)
+        corr = zone_correspondence.spatial_zone_correspondence(self.test_zones)
         pd.testing.assert_frame_equal(corr, self.spatial_corr)
     
 class Test_Find_Slithers:

@@ -53,6 +53,18 @@ def _create_tiles(params: si.ZoningTranslationInputs) -> pd.DataFrame:
     """
     zone_1 = gpd.read_file(params.zone_1.shapefile)
     zone_2 = gpd.read_file(params.zone_2.shapefile)
+
+    LOG.info(
+        "Count of %s zones: %s",
+        params.zone_2.name,
+        zone_2.iloc[:, 0].count(),
+    )
+    LOG.info(
+        "Count of %s zones: %s",
+        params.zone_1.name,
+        zone_1.iloc[:, 0].count(),
+    )
+
     weighting = _weighted_lower(params)
     tiles = reduce(
         lambda x, y: gpd.overlay(x, y, keep_geom_type=True),
