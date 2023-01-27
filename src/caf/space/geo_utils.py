@@ -1,3 +1,7 @@
+"""
+    This module contains functionality for creating weighted translations.
+    These are called in the 'weighted_trans' method in ZoneTranslation.
+"""
 ##### IMPORTS #####
 import logging
 import warnings
@@ -67,7 +71,7 @@ def _create_tiles(params: si.ZoningTranslationInputs) -> pd.DataFrame:
 
 
 def return_totals(
-        df: pd.DataFrame, id_col: str, data_col: str
+        frame: pd.DataFrame, id_col: str, data_col: str
 ) -> pd.DataFrame:
     """
     Groups df by dataframe and sums, keeping data_col
@@ -79,7 +83,7 @@ def return_totals(
     Returns:
         pd.DataFrame: Grouped and summed df
     """
-    totals = df.groupby(id_col).sum().loc[:, data_col]
+    totals = frame.groupby(id_col).sum().loc[:, data_col]
     return totals
 
 

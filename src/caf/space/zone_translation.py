@@ -1,18 +1,12 @@
 # -*- coding: utf-8 -*-
 """
     Module containing ZoneTranslation class for producing a zone
-    translation from a set of inputs, provided by the 
+    translation from a set of inputs, provided by the
     ZoneTranslationInputs class in 'inputs'.
 """
-import os
-import datetime
 import logging
-import pandas as pd
-import sys
 import warnings
-
-from pathlib import Path
-
+import pandas as pd
 from caf.space import geo_utils as nf, zone_correspondence as zc, inputs as si
 
 ##### CONSTANTS #####
@@ -47,9 +41,7 @@ class ZoneTranslation:
         cacher = self.params.cache_path / f"{self.names[0]}_{self.names[1]}"
         cacher.mkdir(exist_ok=True, parents=True)
         if self.params.method is None:
-            self.zone_translation = zc._main_zone_correspondence(
-                self.params
-            )
+            self.zone_translation = self.main_zone_correspondence()
 
             self.zone_translation.to_csv(
                 cacher / f"{self.params.run_date}.csv")
@@ -57,12 +49,79 @@ class ZoneTranslation:
         else:
             cacher = cacher / self.params.method
             cacher.mkdir(exist_ok=True, parents=True)
-            self.zone_translation = self._weighted_translation()
+            self.zone_translation = self.weighted_translation()
             self.zone_translation.to_csv(
                 cacher / f"{self.params.run_date}.csv", index=False)
             self.params.save_yaml(cacher / f"{self.params.run_date}.yml")
 
-    def _weighted_translation(self):
+    def main_zone_correspondence(self):
+        """Performs zone correspondence between two zoning systems, zone 1 and
+        zone 2. Default correspondence is spatial (by zone area), but includes
+        options for handling point zones with different data (for example LSOA
+        employment data). Also includes option to check adjustment factors from
+        zone 1 to zone 2 add to 1.
+        """
+        # read in zone shapefiles
+        zones = zc.read_zone_shapefiles(self.params)
+        # produce spatial zone correspondence
+        spatial_correspondence = zc.spatial_zone_correspondence(zones)
+        # Determine if slither filtering and rounding required.
+        zone_names = [zones["Major"]["Name"], zones["Minor"]["Name"]]
+        if self.params.filter_slithers:
+            LOG.info("Filtering out small overlaps.")
+            (_, spatial_correspondence_no_slithers,) = zc.find_slithers(
+                spatial_correspondence, zone_names, self.params.tolerance
+            )
+
+            if self.params.rounding:
+                LOG.info("Checking all adjustment factors add to 1")
+                final_zone_corr = zc.round_zone_correspondence(
+                    spatial_correspondence_no_slithers, zone_names
+                )
+            else:
+                final_zone_corr = spatial_correspondence_no_slithers
+        else:
+            if self.params.rounding:
+                LOG.info("Checking all adjustment factors add to 1")
+                final_zone_corr = zc.round_zone_correspondence(
+                    spatial_correspondence, zone_names
+                )
+            else:
+                final_zone_corr = spatial_correspondence
+        # Save correspondence output
+        final_zone_corr_path = (
+                self.params.output_path
+                / f"{zone_names[0]}_to_{zone_names[1]}_correspondence.csv"
+        )
+        missing_zones_1, missing_zones_2 = zc.missing_zones_check(
+            zones, final_zone_corr
+        )
+
+        warnings.warn(f"Missing Zones from 1 : {len(missing_zones_1)}")
+        warnings.warn(f"Missing Zones from 2 : {len(missing_zones_2)}")
+        log_path = self.params.cache_path / f"{zone_names[0]}_{zone_names[1]}"
+        log_path.mkdir(exist_ok=True, parents=True)
+        log_file = (log_path /
+                    "missing_zones_log.xlsx")
+        with pd.ExcelWriter(log_file, engine="openpyxl") as writer: # pylint: disable=abstract-class-instantiated
+            missing_zones_1.to_excel(
+                writer, sheet_name=f"{zone_names[0]}_missing", index=False
+            )
+            missing_zones_2.to_excel(
+                writer, sheet_name=f"{zone_names[1]}_missing", index=False
+            )
+        LOG.info(
+            "List of missing zones can be found in log file found here: %s",
+            log_file,
+        )
+        LOG.info(
+            "Zone correspondence finished, file saved here: %s",
+            final_zone_corr_path,
+        )
+
+        return final_zone_corr
+
+    def weighted_translation(self):
         """
         Runs a weighted translation using the zone 1 to lower
         correspondence csv file and the zone 2 to lower correspondence

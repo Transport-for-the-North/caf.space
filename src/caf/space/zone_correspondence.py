@@ -1,21 +1,20 @@
+"""
+    This module contains functionality for creating spatial zone translations
+    as well as checks on various things for translations (rounding, slithers)
+"""
 import logging
 from typing import Tuple
+import warnings
 
 import geopandas as gpd
 import pandas as pd
-import sys
-import warnings
-
-sys.path.append('..')
-
 from caf.space import inputs as si
-
 ##### CONSTANTS #####
 LOG = logging.getLogger(__name__)
 logging.captureWarnings(True)
 
 ##### FUNCTIONS #####
-def _read_zone_shapefiles(params: si.ZoningTranslationInputs) -> dict:
+def read_zone_shapefiles(params: si.ZoningTranslationInputs) -> dict:
     """Reads in zone system shapefiles, sets zone id and area column
     names, sets to same crs.
 
@@ -89,7 +88,7 @@ def _read_zone_shapefiles(params: si.ZoningTranslationInputs) -> dict:
     return zones
 
 
-def _spatial_zone_correspondence(zones: dict):
+def spatial_zone_correspondence(zones: dict):
     """Finds the spatial zone corrrespondence through calculating
     adjustment factors with areas only.
     Parameters
@@ -139,7 +138,7 @@ def _spatial_zone_correspondence(zones: dict):
     return spatial_correspondence
 
 
-def _find_slithers(
+def find_slithers(
     spatial_correspondence: gpd.GeoDataFrame,
     zone_names: list[str],
     tolerance: float,
@@ -183,7 +182,7 @@ def _find_slithers(
     return slithers, no_slithers
 
 
-def _rounding_correction(
+def rounding_correction(
     zone_corr: pd.DataFrame, from_zone_name: str, to_zone_name: str
 ) -> pd.DataFrame:
     """
@@ -200,10 +199,10 @@ def _rounding_correction(
     """
 
     def calculate_differences(
-        df: pd.DataFrame,
+        frame: pd.DataFrame,
     ) -> Tuple[pd.Series, pd.DataFrame]:
         factor_totals = (
-            df[[from_col, factor_col]].groupby(from_col).sum()
+            frame[[from_col, factor_col]].groupby(from_col).sum()
         )
         differences = (1 - factor_totals).rename(
             columns={factor_col: "diff"}
@@ -292,7 +291,7 @@ def _rounding_correction(
     return zone_corr
 
 
-def _round_zone_correspondence(
+def round_zone_correspondence(
     zone_corr_no_slithers: pd.DataFrame, zone_names: Tuple[str, str]
 ):
     """Changes zone_1_to_zone_2 adjustment factors such that they sum to 1 for
@@ -318,7 +317,7 @@ def _round_zone_correspondence(
     )
 
     # create rounded zone correspondence
-    zone_corr_rounded = _rounding_correction(
+    zone_corr_rounded = rounding_correction(
         zone_corr_no_slithers[
             [
                 f"{zone_names[0]}_id",
@@ -333,7 +332,7 @@ def _round_zone_correspondence(
     zone_corr_rounded_both_ways = zone_corr_rounded
 
     # create rounded zone correspondence for the other direction
-    zone_corr_rounded = _rounding_correction(
+    zone_corr_rounded = rounding_correction(
         zone_corr_no_slithers[
             [
                 f"{zone_names[0]}_id",
@@ -359,7 +358,7 @@ def _round_zone_correspondence(
     return zone_corr_rounded_both_ways
 
 
-def _missing_zones_check(zones: dict, zone_correspondence: pd.DataFrame):
+def missing_zones_check(zones: dict, zone_correspondence: pd.DataFrame):
     """Checks for zone 1 and zone 2 zones missing from zone correspondence.
 
     Parameters
@@ -406,73 +405,3 @@ def _missing_zones_check(zones: dict, zone_correspondence: pd.DataFrame):
     )
 
     return missing_zone_1_zones, missing_zone_2_zones
-
-
-def _main_zone_correspondence(params: si.ZoningTranslationInputs):
-    """Performs zone correspondence between two zoning systems, zone 1 and
-    zone 2. Default correspondence is spatial (by zone area), but includes
-    options for handling point zones with different data (for example LSOA
-    employment data). Also includes option to check adjustment factors from
-    zone 1 to zone 2 add to 1.
-    Args:
-        params (csi.ZoningTranslationInputs): Instance of zone paramaters.
-    """
-    # read in zone shapefiles
-    zones = _read_zone_shapefiles(params)
-    # produce spatial zone correspondence
-    spatial_correspondence = _spatial_zone_correspondence(zones)
-    # Determine if slither filtering and rounding required.
-    zone_names = [zones["Major"]["Name"], zones["Minor"]["Name"]]
-    if params.filter_slithers:
-        LOG.info("Filtering out small overlaps.")
-        (_, spatial_correspondence_no_slithers,) = _find_slithers(
-            spatial_correspondence, zone_names, params.tolerance
-        )
-
-        if params.rounding:
-            LOG.info("Checking all adjustment factors add to 1")
-            final_zone_corr = _round_zone_correspondence(
-                spatial_correspondence_no_slithers, zone_names
-            )
-        else:
-            final_zone_corr = spatial_correspondence_no_slithers
-    else:
-        if params.rounding:
-            LOG.info("Checking all adjustment factors add to 1")
-            final_zone_corr = _round_zone_correspondence(
-                spatial_correspondence, zone_names
-            )
-        else:
-            final_zone_corr = spatial_correspondence
-    # Save correspondence output
-    final_zone_corr_path = (
-        params.output_path
-        / f"{zone_names[0]}_to_{zone_names[1]}_correspondence.csv"
-    )
-    missing_zones_1, missing_zones_2 = _missing_zones_check(
-        zones, final_zone_corr
-    )
-
-    warnings.warn(f"Missing Zones from 1 : {len(missing_zones_1)}")
-    warnings.warn(f"Missing Zones from 2 : {len(missing_zones_2)}")
-    log_path = params.cache_path / f"{zone_names[0]}_{zone_names[1]}"
-    log_path.mkdir(exist_ok=True, parents=True)
-    log_file = (log_path /
-    "missing_zones_log.xlsx")
-    with pd.ExcelWriter(log_file, engine="openpyxl") as writer:
-        missing_zones_1.to_excel(
-            writer, sheet_name=f"{zone_names[0]}_missing", index=False
-        )
-        missing_zones_2.to_excel(
-            writer, sheet_name=f"{zone_names[1]}_missing", index=False
-        )
-    LOG.info(
-        "List of missing zones can be found in log file found here: %s",
-        log_file,
-    )
-    LOG.info(
-        "Zone correspondence finished, file saved here: %s",
-        final_zone_corr_path,
-    )
-
-    return final_zone_corr
