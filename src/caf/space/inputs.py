@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-    Module containing functionality for storing input parameters and
-    reading config file. Classes in this module inherit from the
-    BaseConfig class, and are ultimately used as input parameters for
-    the ZoneTranslation class.
+Inputs module.
+
+Module containing functionality for storing input parameters and reading config
+file. Classes in this module inherit from the BaseConfig class, and are
+ultimately used as input parameters for the ZoneTranslation class.
 """
 
 ##### IMPORTS #####
@@ -62,15 +63,19 @@ class ZoneSystemInfo(BaseConfig):
                 )
         return v
 
+
     @validator("shapefile")
     def _path_exists(cls, v):
         """
-        Validator to make sure the shapefile path exists
-        Raises:
-            ValueError: Informs user the path given is incorrect.
+        Validate a path exists.
 
-        Returns:
-            Unchanged path if no error is raised.
+        Raises
+        ------
+        ValueError: Informs user the path given is incorrect.
+
+        Returns
+        -------
+        Unchanged path if no error is raised.
         """
         if os.path.isfile(v) is False:
             raise ValueError(
@@ -81,7 +86,9 @@ class ZoneSystemInfo(BaseConfig):
 
 
 class LowerZoneSystemInfo(ZoneSystemInfo):
-    """Lower level zone system input data for `ZoneTranslationInputs`.
+    """
+    Lower level zone system input data for `ZoneTranslationInputs`.
+
     Inherits from ShapefileInfo.
 
     Parameters
@@ -122,8 +129,8 @@ class LowerZoneSystemInfo(ZoneSystemInfo):
 
 
 class ZoningTranslationInputs(BaseConfig):
-    """Class for storing and reading input parameters for
-    `ZoneTranslation`.
+    """
+    Class for storing and reading input parameters for `ZoneTranslation`.
 
     Parameters
     ----------
@@ -181,6 +188,7 @@ class ZoningTranslationInputs(BaseConfig):
     run_date: str = datetime.datetime.now().strftime("%d_%m_%y")
 
     def __post_init__(self) -> None:
+        """Make directories if they don't exist."""
         self.output_path.mkdir(exist_ok=True, parents=True)
         self.cache_path.mkdir(exist_ok=True, parents=True)
 
@@ -193,9 +201,10 @@ class ZoningTranslationInputs(BaseConfig):
 
     def write_example(self, out_path: Path):
         """
-        Method to write out an example config file. When creating a real
-        config, any optional parameters not set should be removed
-        entirely, and not just left blank to the right of the colon.
+        Write out an example config file.
+
+        When creating a real config, any optional parameters not set should be
+        removed entirely, and not just left blank to the right of the colon.
 
         Parameters
         ----------

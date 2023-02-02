@@ -1,6 +1,7 @@
 """
-    This module contains functionality for creating spatial zone translations
-    as well as checks on various things for translations (rounding, slithers)
+Contains functionality for creating spatial zone translation.
+
+Also checks on various things for translations (rounding, slithers).
 """
 import logging
 from typing import Tuple
@@ -17,38 +18,42 @@ logging.captureWarnings(True)
 ##### FUNCTIONS #####
 
 
-def read_zone_shapefiles(params: si.ZoningTranslationInputs) -> dict:
-    """Reads in zone system shapefiles, sets zone id and area column
-    names, sets to same crs.
+def read_zone_shapefiles(zone_1: si.ZoneSystemInfo, zone_2: si.ZoneSystemInfo) -> dict:
+    """
+    Read in zone system shapefiles.
 
-    If the provided shapefiles don't contain CRS information then
-    they're assumed to be "EPSG:27700".
+    Reads in shapefiles and sets zone id and area column names, as well as
+    matching to same crs. If the provided shapefiles don't contain CRS
+    information then they're assumed to be "EPSG:27700".
+
     Parameters
     ----------
-    params (csi.ZoningTranslationInputs): Instance of
-    ZoningTranslationInputs, see class for info.
+    zone_1: si.ZoneSystemInfo
+        Info on first zone system
+    zone_2: si.ZoneSystemInfo
+        Info on second zone system
+
     Returns
-    ----------
+    -------
     zones(dict): A nested dictionary containing zones
     for translation. zone_1.name and zone_1.name contain 'Zone'
     (GeoDataFrame) and 'ID_col'(str)
     """
-
     # create geodataframes from zone shapefiles
-    z_1 = gpd.read_file(params.zone_1.shapefile)
-    z_2 = gpd.read_file(params.zone_2.shapefile)
+    z_1 = gpd.read_file(zone_1.shapefile)
+    z_2 = gpd.read_file(zone_2.shapefile)
 
     z_1 = z_1.dropna(axis=1, how="all")
     z_2 = z_2.dropna(axis=1, how="all")
 
     LOG.info(
         "Count of %s zones: %s",
-        params.zone_2.name,
+        zone_2.name,
         z_2.iloc[:, 0].count(),
     )
     LOG.info(
         "Count of %s zones: %s",
-        params.zone_1.name,
+        zone_1.name,
         z_1.iloc[:, 0].count(),
     )
 
@@ -58,13 +63,13 @@ def read_zone_shapefiles(params: si.ZoningTranslationInputs) -> dict:
     z_2 = z_2.dropna(subset=["area"])
 
     zones = {
-        params.zone_1.name: {
+        zone_1.name: {
             "Zone": z_1.drop("area", axis=1),
-            "ID_col": params.zone_1.id_col,
+            "ID_col": zone_1.id_col,
         },
-        params.zone_2.name: {
+        zone_2.name: {
             "Zone": z_2.drop("area", axis=1),
-            "ID_col": params.zone_2.id_col,
+            "ID_col": zone_2.id_col,
         },
     }
 
@@ -82,24 +87,32 @@ def read_zone_shapefiles(params: si.ZoningTranslationInputs) -> dict:
     return zones
 
 
-def spatial_zone_correspondence(zones: dict, params: si.ZoningTranslationInputs):
-    """Finds the spatial zone corrrespondence through calculating
-    adjustment factors with areas only.
+def spatial_zone_correspondence(zones: dict, zone_1: si.ZoneSystemInfo,
+                                zone_2: si.ZoneSystemInfo):
+    """
+    Find the spatial zone correspondence.
+
+    Finds zone correspondence through calculating adjustment factors with areas
+    only.
+
     Parameters
     ----------
     zones: Return value from 'read_zone_shapefiles'.
-    params: Instance of params.
+    zone_1: si.ZoneSystemInfo
+        Info on first zone system
+    zone_2: si.ZoneSystemInfo
+        Info on second zone system
+
     Returns
     -------
     GeoDataFrame
     GeoDataFrame with 4 columns: zone 1 IDs, zone 2 IDs, zone 1 to zone
     2 adjustment factor and zone 2 to zone 1 adjustment factor.
     """
-
     # create geodataframe for intersection of zones
     zone_overlay = gpd.overlay(
-        zones[params.zone_1.name]["Zone"],
-        zones[params.zone_2.name]["Zone"],
+        zones[zone_1.name]["Zone"],
+        zones[zone_2.name]["Zone"],
         how="intersection",
         keep_geom_type=False,
     ).reset_index()
@@ -107,21 +120,21 @@ def spatial_zone_correspondence(zones: dict, params: si.ZoningTranslationInputs)
 
     # columns to include in spatial correspondence
     column_list = [
-        f"{params.zone_1.name}_id",
-        f"{params.zone_2.name}_id",
+        f"{zone_1.name}_id",
+        f"{zone_2.name}_id",
     ]
 
     # create geodataframe with spatial adjusted factors
     spatial_correspondence = zone_overlay.loc[:, column_list]
 
     # create geodataframe with spatial adjusted factors
-    spatial_correspondence.loc[:, f"{params.zone_1.name}_to_{params.zone_2.name}"] = (
+    spatial_correspondence.loc[:, f"{zone_1.name}_to_{zone_2.name}"] = (
         zone_overlay.loc[:, "intersection_area"]
-        / zone_overlay.loc[:, f"{params.zone_1.name}_area"]
+        / zone_overlay.loc[:, f"{zone_1.name}_area"]
     )
-    spatial_correspondence.loc[:, f"{params.zone_2.name}_to_{params.zone_1.name}"] = (
+    spatial_correspondence.loc[:, f"{zone_2.name}_to_{zone_1.name}"] = (
         zone_overlay.loc[:, "intersection_area"]
-        / zone_overlay.loc[:, f"{params.zone_2.name}_area"]
+        / zone_overlay.loc[:, f"{zone_2.name}_area"]
     )
 
     LOG.info("Unfiltered Spatial Correspondence completed")
@@ -131,13 +144,15 @@ def spatial_zone_correspondence(zones: dict, params: si.ZoningTranslationInputs)
 
 def find_slithers(
     spatial_correspondence: gpd.GeoDataFrame,
-    zone_names: list[str],
+    zone_names: tuple[str, str],
     tolerance: float,
 ):
-    """Finds overlap areas between zones which are very small slithers,
-    filters them out of the spatial zone correspondence GeoDataFrame, and
-    returns the filtered zone correspondence as well as the GeoDataFrame with
-    only the slithers.
+    """
+    Find overlap areas between zones which are very small slithers.
+
+    Finds slithers and filters them out of the spatial zone correspondence
+    GeoDataFrame, and returns the filtered zone correspondence as well as the
+    GeoDataFrame wit only the slithers.
 
     Parameters
     ----------
@@ -174,18 +189,21 @@ def rounding_correction(
     zone_corr: pd.DataFrame, from_zone_name: str, to_zone_name: str
 ) -> pd.DataFrame:
     """
-    Fixes error causing negative factors. For most translations this
-    function will do almost nothing, but is run anyway.
+    Fix error causing negative factors.
+
+    For most translations this function will do almost nothing, but is run
+    anyway.
+
     Parameters
     ----------
     zone_corr (pd.DataFrame): Zone translation dataframe.
     from_zone_name (str): Name of zone_1.
     to_zone_name (str): Name of zone_2.
+
     Returns
-    ----------
+    -------
     pd.DataFrame: The input zone_corr dataframe adjusted to remove errors.
     """
-
     def calculate_differences(
         frame: pd.DataFrame,
     ) -> Tuple[pd.Series, pd.DataFrame]:
@@ -265,7 +283,10 @@ def rounding_correction(
 def round_zone_correspondence(
     zone_corr_no_slithers: pd.DataFrame, zone_names: Tuple[str, str]
 ):
-    """Changes zone_1_to_zone_2 adjustment factors such that they sum to 1 for
+    """
+    Round translation factors.
+
+    Changes zone_1_to_zone_2 adjustment factors such that they sum to 1 for
     every zone in zone 1.
 
     Parameters
@@ -328,9 +349,13 @@ def round_zone_correspondence(
 
 
 def missing_zones_check(
-    zones: dict, zone_correspondence: pd.DataFrame, params: si.ZoningTranslationInputs
+    zones: dict, zone_correspondence: pd.DataFrame, zone_1: si.ZoneSystemInfo,
+    zone_2: si.ZoneSystemInfo
 ):
-    """Checks for zone 1 and zone 2 zones missing from zone correspondence.
+    """
+    Find missing zones.
+
+    Checks for zone 1 and zone 2 zones missing from zone correspondence.
 
     Parameters
     ----------
@@ -338,8 +363,10 @@ def missing_zones_check(
         Zone 1 and zone 2 GeoDataFrames.
     zone_correspondence : pd.DataFrame
         Zone correspondence between zone systems 1 and 2.
-    params: si.ZoningTranslationInputs
-        Instance of params.
+    zone_1: si.ZoneSystemInfo
+        Info on first zone system
+    zone_2: si.ZoneSystemInfo
+        Info on second zone system
     Returns
     -------
     pd.DataFrame
@@ -349,25 +376,25 @@ def missing_zones_check(
     """
     LOG.info("Checking for missing zones")
 
-    missing_zone_1 = zones[params.zone_1.name]["Zone"].loc[
-        ~zones[params.zone_1.name]["Zone"][f"{params.zone_1.name}_id"].isin(
-            zone_correspondence[f"{params.zone_1.name}_id"]
+    missing_zone_1 = zones[zone_1.name]["Zone"].loc[
+        ~zones[zone_1.name]["Zone"][f"{zone_1.name}_id"].isin(
+            zone_correspondence[f"{zone_1.name}_id"]
         ),
-        f"{params.zone_1.name}_id",
+        f"{zone_1.name}_id",
     ]
-    missing_zone_2 = zones[params.zone_2.name]["Zone"].loc[
-        ~zones[params.zone_2.name]["Zone"][f"{params.zone_2.name}_id"].isin(
-            zone_correspondence[f"{params.zone_2.name}_id"]
+    missing_zone_2 = zones[zone_2.name]["Zone"].loc[
+        ~zones[zone_2.name]["Zone"][f"{zone_2.name}_id"].isin(
+            zone_correspondence[f"{zone_2.name}_id"]
         ),
-        f"{params.zone_2.name}_id",
+        f"{zone_2.name}_id",
     ]
     missing_zone_1_zones = pd.DataFrame(
         data=missing_zone_1,
-        columns=[f"{params.zone_1.name}_id"],
+        columns=[f"{zone_1.name}_id"],
     )
     missing_zone_2_zones = pd.DataFrame(
         data=missing_zone_2,
-        columns=[f"{params.zone_2.name}_id"],
+        columns=[f"{zone_2.name}_id"],
     )
 
     return missing_zone_1_zones, missing_zone_2_zones

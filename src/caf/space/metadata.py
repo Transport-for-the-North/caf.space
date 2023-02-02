@@ -1,8 +1,8 @@
-"""
-Module for metadata. None of this is currently used but hasn't been deleted.
-"""
+"""Module for metadata. None of this is currently used but hasn't been deleted."""
+from __future__ import annotations
 import datetime
 from pathlib import Path
+
 
 # Third party imports
 # pylint: disable=no-name-in-module
@@ -14,6 +14,7 @@ from caf.toolkit import BaseConfig
 class WeightMetadata(BaseConfig):
     """
     Class for storing metadata about weighting date.
+
     This is not currently used but could be part of a GUI.
     """
 
@@ -25,20 +26,25 @@ class WeightMetadata(BaseConfig):
 
 class ShapefileMetadata(BaseConfig):
     """
-    Class for creating, storing and loading metadata relating to shapefiles used for
-    translations. This is not currently used but could be part of a GUI.
+    Store shapefile metadata.
+
+    Class for creating, storing and loading metadata relating to shapefiles
+    used for translations. This is not currently used but could be part of a
+    GUI.
     """
 
     name: str
     path: Path
     id_col: str
-    weighting_data: WeightMetadata = None
+    weighting_data: WeightMetadata | None = None
 
 
 class SpatialTransLog(BaseConfig):
     """
-    Output log of a spatial translation, mainly used for the lower
-    translations used in weighted translations.
+    Output log of a spatial translation.
+
+    Mainly used for the lower translations used in weighted translations.
+
     Parameters
     ----------
     zone_shapefile: Path to the primary zone shapefile used in the
@@ -55,10 +61,12 @@ class SpatialTransLog(BaseConfig):
 
 class LowerMetadata(BaseConfig):
     """
-    Class for storing metadata for all translations between two zones.
+    Store metadata for all translations between two zones.
+
     Every time a translation is run between two zones info about that
     translation should be added to an instance of this class saved as
     'metadata.yml'.
+
     Parameters
     ----------
     translations: A list of SpatialTransLog classes for all translations

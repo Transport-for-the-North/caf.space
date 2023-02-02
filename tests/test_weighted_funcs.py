@@ -31,7 +31,7 @@ def fixture_overlaps(weighted_config):
     """
     Fixture returning overlaps ond totals.
     """
-    overlaps = weighted_funcs.overlaps_and_totals(weighted_config)
+    overlaps = weighted_funcs.overlaps_and_totals(weighted_config.zone_1, weighted_config.zone_2, weighted_config.lower_zoning)
     return overlaps
 
 

@@ -36,6 +36,8 @@ from caf.space import inputs, zone_translation
 @pytest.fixture(name="main_dir", scope="session")
 def fixture_main_dir(tmp_path_factory) -> Path:
     """
+    Temporary path for I/O.
+
     Parameters
     ----------
     tmp_path_factory
@@ -51,7 +53,7 @@ def fixture_main_dir(tmp_path_factory) -> Path:
 @pytest.fixture(name="lower_zone", scope="session")
 def fixture_lower_zone(main_dir) -> Path:
     """
-    lower zone system for testing
+    Lower zone system for testing.
     Returns:
         Path: Temp path to gdf, 16 attributes, 1-17, ID_COL = lower_id
     """
@@ -132,10 +134,17 @@ def fixture_zone_2_shape(main_dir) -> Path:
 @pytest.fixture(name="lower_weighting", scope="session")
 def fixture_lower_weighting(main_dir) -> Path:
     """
-    Weighting data to be joined to lower zoning system for testing
-    Returns:
-        Path: Temp path to weighting data in a column called 'weight', with
-        an index called 'lower_id', matching lower_id in lower shape.
+    Weighting data to be joined to lower zoning system for testing.
+
+    Parameters
+    ----------
+    main_dir
+
+    Returns
+    -------
+    Path: Temp path to weighting data in a column called 'weight', with an
+    index called 'lower_id', matching lower_id in lower shape.
+
     """
     weighting = pd.DataFrame(
         data=[
@@ -169,6 +178,7 @@ def fixture_lower_weighting(main_dir) -> Path:
 def fixture_paths(main_dir) -> dict[str, Path]:
     """
     fixture storing paths for configs
+
     Parameters
     ----------
     main_dir
