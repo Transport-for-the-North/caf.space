@@ -22,6 +22,7 @@ from pydantic import validator
 
 # Third party imports
 from caf.toolkit import BaseConfig
+
 # pylint: enable=import-error
 # Local imports
 

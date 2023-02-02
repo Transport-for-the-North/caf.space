@@ -1,11 +1,10 @@
 """
-Module for testing the geo_utils module
+Module for testing the weighted_funcs module
 """
 from copy import deepcopy
 import pytest
 import pandas as pd
-from caf.space import geo_utils
-
+from caf.space import weighted_funcs
 
 
 @pytest.fixture(name="weighted", scope="class")
@@ -14,7 +13,7 @@ def fixture_weighted(weighted_config):
     Fixture returning a lower zone system with a weighting vector attached to
     it.
     """
-    weighted = geo_utils._weighted_lower(weighted_config)
+    weighted = weighted_funcs._weighted_lower(weighted_config)
     return weighted
 
 
@@ -23,7 +22,7 @@ def fixture_tiles(weighted_config):
     """
     Fixture returning tiles from the _create_tiles function
     """
-    tiles = geo_utils._create_tiles(weighted_config)
+    tiles = weighted_funcs._create_tiles(weighted_config)
     return tiles
 
 
@@ -32,13 +31,13 @@ def fixture_overlaps(weighted_config):
     """
     Fixture returning overlaps ond totals.
     """
-    overlaps = geo_utils.overlaps_and_totals(weighted_config)
+    overlaps = weighted_funcs.overlaps_and_totals(weighted_config)
     return overlaps
 
 
 class TestWeightedLower:
     """
-    Class for testing the _weighted_lower function in geo_utils
+    Class for testing the _weighted_lower function in weighted_funcs
     """
 
     def test_join(self, weighted):
@@ -68,12 +67,12 @@ class TestWeightedLower:
             UserWarning,
             match="1 zones do not match up between the lower zoning and weighting data.",
         ):
-            geo_utils._weighted_lower(mismatched_config)
+            weighted_funcs._weighted_lower(mismatched_config)
 
 
 class TestCreateTiles:
     """
-    Class for testing the _create_tiles function in geo_utils
+    Class for testing the _create_tiles function in weighted_funcs
     """
 
     def test_weight(self, tiles):
@@ -86,7 +85,7 @@ class TestCreateTiles:
 
 class TestOverlapsTotals:
     """
-    Class for testing the overlaps_and_totals function in geo_utils
+    Class for testing the overlaps_and_totals function in weighted_funcs
     """
 
     def test_sums(self, overlaps):
@@ -105,7 +104,7 @@ class TestOverlapsTotals:
 #         self.cols = cols
 #         self.lower_cols_left = lower_cols_left
 #         self.lower_cols_right = lower_cols_right
-#         self.lis, self.left, self.right,  = geo_utils._cols_in_both(left_in, right_in)
+#         self.lis, self.left, self.right,  = weighted_funcs._cols_in_both(left_in, right_in)
 #
 #     def test_returns_lower(self):
 #         assert self.left.columns, self.right.columns == self.lower_cols_left, self.lower_cols_right
@@ -119,7 +118,7 @@ class TestOverlapsTotals:
 #         self.corr_path = corr_path
 #         self.weight_path = weight_path
 #         self.area_corr = area_corr
-#         self.output_corr = geo_utils._var_apply(corr_path, weight_path,
+#         self.output_corr = weighted_funcs._var_apply(corr_path, weight_path,
 #         'var','zone_id','lower_name')
 #
 #     def test_join(self):
@@ -127,7 +126,7 @@ class TestOverlapsTotals:
 #
 #     def test_logging(self):
 #         with pytest.warns(UserWarning, match="3 zones are not intersected by target zones"):
-#             geo_utils._var_apply(self.corr_path, self.weight_path_missing, 'var','zone_id','lower_name'
+#             weighted_funcs._var_apply(self.corr_path, self.weight_path_missing, 'var','zone_id','lower_name'
 #             )
 #
 # class Test_Zone_Split:

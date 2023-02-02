@@ -7,7 +7,7 @@
 import logging
 import warnings
 import pandas as pd
-from caf.space import geo_utils as nf, zone_correspondence as zc, inputs as si
+from caf.space import weighted_funcs as nf, zone_correspondence as zc, inputs as si
 
 ##### CONSTANTS #####
 LOG = logging.getLogger(__name__)

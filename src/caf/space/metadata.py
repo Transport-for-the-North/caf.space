@@ -7,7 +7,9 @@ from pathlib import Path
 # Third party imports
 # pylint: disable=no-name-in-module
 from caf.toolkit import BaseConfig
+
 # pylint: enable=no-name-in-module
+
 
 class WeightMetadata(BaseConfig):
     """

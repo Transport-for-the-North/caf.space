@@ -88,7 +88,7 @@ def spatial_zone_correspondence(zones: dict, params: si.ZoningTranslationInputs)
     Parameters
     ----------
     zones: Return value from 'read_zone_shapefiles'.
-    params:
+    params: Instance of params.
     Returns
     -------
     GeoDataFrame
@@ -334,13 +334,12 @@ def missing_zones_check(
 
     Parameters
     ----------
-    zone_list : List[gpd.GeoDataFrame, gpd.GeoDataFrame]
+    zones : List[gpd.GeoDataFrame, gpd.GeoDataFrame]
         Zone 1 and zone 2 GeoDataFrames.
-    zone_names : List[str, str]
-        Zone 1 and zone 2 names.
     zone_correspondence : pd.DataFrame
         Zone correspondence between zone systems 1 and 2.
-
+    params: si.ZoningTranslationInputs
+        Instance of params.
     Returns
     -------
     pd.DataFrame
