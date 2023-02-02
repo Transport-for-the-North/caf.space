@@ -8,7 +8,6 @@ zone_2:
   id_col: zone_2_id
 output_path: C:/Users/IsaacScott/Projects/geo_rewrite
 cache_path: C:\Users\IsaacScott\Projects\geo_rewrite\test_cache
-method: test
 tolerance: 0.98
 rounding: True
 filter_slithers: True

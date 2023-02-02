@@ -12,15 +12,22 @@ File purpose:
 """
 # Built-Ins
 from pathlib import Path
+
 # Third Party
 import pytest
+
+# pylint: disable=import-error
 from shapely.geometry import Polygon
 import geopandas as gpd
+
+# pylint: enable=import-error
 import pandas as pd
+
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
 # Local imports here
-from caf.space import inputs
+from caf.space import inputs, zone_translation
+
 # pylint: enable=import-error,wrong-import-position
 
 # # # CONSTANTS # # #
@@ -84,9 +91,7 @@ def fixture_zone_1_shape(main_dir) -> Path:
     Returns:
         Path: Temp path to gdf,  3 attributes, A, B and C. ID_COL = zone_1_id
     """
-    zone_1_df = pd.DataFrame(
-        data=["A", "B", "C"], columns=["zone_1_id"]
-    )
+    zone_1_df = pd.DataFrame(data=["A", "B", "C"], columns=["zone_1_id"])
     zone_1 = gpd.GeoDataFrame(
         data=zone_1_df,
         geometry=[
@@ -108,9 +113,7 @@ def fixture_zone_2_shape(main_dir) -> Path:
     Returns:
         Path: Temp path to gdf, 4 Attributes, W, X, Y, Z. ID_COL = zone_2_id
     """
-    zone_2_df = pd.DataFrame(
-        data=["W", "X", "Y", "Z"], columns=["zone_2_id"]
-    )
+    zone_2_df = pd.DataFrame(data=["W", "X", "Y", "Z"], columns=["zone_2_id"])
     zone_2 = gpd.GeoDataFrame(
         data=zone_2_df,
         geometry=[
@@ -180,10 +183,61 @@ def fixture_paths(main_dir) -> dict[str, Path]:
     return paths
 
 
+@pytest.fixture(name="spatial_config", scope="class")
+def fixture_spatial_config(
+    zone_1_shape: Path, zone_2_shape: Path, paths: dict
+) -> inputs.ZoningTranslationInputs:
+    """
+    Config for a test case spatial translation.This config can be altered
+    for other test cases.
+    Parameters
+    ----------
+    All params are inherited from fixtures
+    zone_1_shape
+    zone_2_shape
+    paths
+    Returns
+    -------
+    A spatial translation config.
+    """
+    zone_1 = inputs.ZoneSystemInfo(name="zone_1", shapefile=zone_1_shape, id_col="zone_1_id")
+    zone_2 = inputs.ZoneSystemInfo(name="zone_2", shapefile=zone_2_shape, id_col="zone_2_id")
+    params = inputs.ZoningTranslationInputs(
+        zone_1=zone_1,
+        zone_2=zone_2,
+        output_path=paths["output"],
+        cache_path=paths["cache"],
+        tolerance=0.99,
+        rounding=True,
+    )
+    return params
+
+
+@pytest.fixture(name="spatial_trans", scope="class")
+def fixture_spatial_trans(spatial_config) -> pd.DataFrame:
+    """
+    Creates a spatial zone translation to be used in tests.
+    Parameters
+    ----------
+    spatial_config: inherited from fixture
+
+    Returns
+    -------
+    A complete spatial zone translation stored in a dataframe
+
+    """
+    trans = zone_translation.ZoneTranslation(spatial_config).spatial_translation()
+    return trans
+
+
 @pytest.fixture(name="weighted_config", scope="session")
-def fixture_weighted_config(zone_1_shape: Path, zone_2_shape: Path, lower_zone: Path,
-                            lower_weighting: Path, paths: dict
-                            ) -> inputs.ZoningTranslationInputs:
+def fixture_weighted_config(
+    zone_1_shape: Path,
+    zone_2_shape: Path,
+    lower_zone: Path,
+    lower_weighting: Path,
+    paths: dict,
+) -> inputs.ZoningTranslationInputs:
     """
     The config for a test weighted translation. This config is used as
     a base for other weighted test cases.
@@ -200,12 +254,8 @@ def fixture_weighted_config(zone_1_shape: Path, zone_2_shape: Path, lower_zone: 
     -------
     An input config for running a basic weighted zone translation.
     """
-    zone_1 = inputs.ZoneSystemInfo(
-        name="zone_1", shapefile=zone_1_shape, id_col="zone_1_id"
-    )
-    zone_2 = inputs.ZoneSystemInfo(
-        name="zone_2", shapefile=zone_2_shape, id_col="zone_2_id"
-    )
+    zone_1 = inputs.ZoneSystemInfo(name="zone_1", shapefile=zone_1_shape, id_col="zone_1_id")
+    zone_2 = inputs.ZoneSystemInfo(name="zone_2", shapefile=zone_2_shape, id_col="zone_2_id")
     lower = inputs.LowerZoneSystemInfo(
         name="lower_zone",
         shapefile=lower_zone,
@@ -218,11 +268,11 @@ def fixture_weighted_config(zone_1_shape: Path, zone_2_shape: Path, lower_zone: 
         zone_1=zone_1,
         zone_2=zone_2,
         lower_zoning=lower,
-        output_path=paths['output'],
-        cache_path=paths['cache'],
+        output_path=paths["output"],
+        cache_path=paths["cache"],
         method="test",
         tolerance=0.99,
-        rounding=True
+        rounding=True,
     )
     return params
 
@@ -239,8 +289,10 @@ def fixture_weighted_trans(weighted_config) -> pd.DataFrame:
     -------
     A complete weighted zone translation stored in a dataframe
     """
-    trans = zone_translation.ZoneTranslation(weighted_config).zone_translation
+    trans = zone_translation.ZoneTranslation(weighted_config).weighted_translation()
     return trans
+
+
 # # # CLASSES # # #
 
 # # # FUNCTIONS # # #

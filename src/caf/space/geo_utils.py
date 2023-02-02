@@ -7,8 +7,9 @@ import logging
 import warnings
 from functools import reduce
 import pandas as pd
+# pylint: disable=import-error
 import geopandas as gpd
-
+# pylint: enable=import-error
 
 from caf.space import inputs as si
 
@@ -19,7 +20,7 @@ LOG = logging.getLogger(__name__)
 
 ##### FUNCTIONS #####
 def _weighted_lower(
-        params: si.ZoningTranslationInputs,
+    params: si.ZoningTranslationInputs,
 ) -> gpd.GeoDataFrame:
     """
     Joins weighting data to lower zoning shapefile ready to apply.
@@ -37,7 +38,8 @@ def _weighted_lower(
     weighted = lower_zoning.join(weighting)
     missing = weighted[params.lower_zoning.data_col].isna().sum()
     warnings.warn(
-        f"{missing} zones do not match up between the lower zoning and weighting data.")
+        f"{missing} zones do not match up between the lower zoning and weighting data."
+    )
     weighted["lower_area"] = weighted.area
     return weighted
 
@@ -82,9 +84,7 @@ def _create_tiles(params: si.ZoningTranslationInputs) -> pd.DataFrame:
     ]
 
 
-def return_totals(
-        frame: pd.DataFrame, id_col: str, data_col: str
-) -> pd.DataFrame:
+def return_totals(frame: pd.DataFrame, id_col: str, data_col: str) -> pd.DataFrame:
     """
     Groups df by dataframe and sums, keeping data_col
     Args:
@@ -100,7 +100,7 @@ def return_totals(
 
 
 def overlaps_and_totals(
-        params: si.ZoningTranslationInputs,
+    params: si.ZoningTranslationInputs,
 ) -> pd.DataFrame:
     """
     Creates overlap totals for each zone system, as well as totals for
@@ -143,13 +143,12 @@ def final_weighted(params: si.ZoningTranslationInputs) -> pd.DataFrame:
     """
     full_df = overlaps_and_totals(params)
     full_df[f"{params.zone_1.name}_to_{params.zone_2.name}"] = (
-            full_df[f"{params.lower_zoning.data_col}_overlap"]
-            / full_df[f"{params.lower_zoning.data_col}_1"]
+        full_df[f"{params.lower_zoning.data_col}_overlap"]
+        / full_df[f"{params.lower_zoning.data_col}_1"]
     )
     full_df[f"{params.zone_2.name}_to_{params.zone_1.name}"] = (
-            full_df[f"{params.lower_zoning.data_col}_overlap"]
-            / full_df[f"{params.lower_zoning.data_col}_2"]
+        full_df[f"{params.lower_zoning.data_col}_overlap"]
+        / full_df[f"{params.lower_zoning.data_col}_2"]
     )
-    full_df.index.names = [f'{params.zone_1.name}_id',
-                           f'{params.zone_2.name}_id']
+    full_df.index.names = [f"{params.zone_1.name}_id", f"{params.zone_2.name}_id"]
     return full_df

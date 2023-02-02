@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 import pandas as pd
 import geopandas as gpd
+
 # pylint: disable=import-error, wrong-import-position
 from caf.space import zone_translation
 from caf.space import inputs
@@ -28,49 +29,15 @@ def fixture_zone_2_moved(zone_2_shape, main_dir) -> Path:
     """
     gdf = gpd.read_file(zone_2_shape)
     gdf.affine_transform(1, 0, 0, 1, 4, 4)
-    file = main_dir / 'zone_2_altered.shp'
+    file = main_dir / "zone_2_altered.shp"
     gdf.to_file(file)
     return file
 
 
-
-
-
-@pytest.fixture(name="spatial_config", scope="class")
-def fixture_spatial_config(zone_1_shape: Path, zone_2_shape: Path, paths: dict
-                           ) -> inputs.ZoningTranslationInputs:
-    """
-    Config for a test case spatial translation.This config can be altered
-    for other test cases.
-    Parameters
-    ----------
-    All params are inherited from fixtures
-    zone_1_shape
-    zone_2_shape
-    Returns
-    -------
-    A spatial translation config.
-    """
-    zone_1 = inputs.ZoneSystemInfo(
-        name="zone_1", shapefile=zone_1_shape, id_col="zone_1_id"
-    )
-    zone_2 = inputs.ZoneSystemInfo(
-        name="zone_2", shapefile=zone_2_shape, id_col="zone_2_id"
-    )
-    params = inputs.ZoningTranslationInputs(
-        zone_1=zone_1,
-        zone_2=zone_2,
-        output_path=paths['output'],
-        cache_path=paths['cache'],
-        tolerance=0.99,
-        rounding=True
-    )
-    return params
-
-
 @pytest.fixture(name="dupe_shapes_config", scope="class")
-def fixture_dupe_shapes_config(weighted_config: inputs.ZoningTranslationInputs
-                               ) -> inputs.ZoningTranslationInputs:
+def fixture_dupe_shapes_config(
+    weighted_config: inputs.ZoningTranslationInputs,
+) -> inputs.ZoningTranslationInputs:
     """
     A config file for testing translations with one zone the same as
     lower zoning.
@@ -141,23 +108,6 @@ def fixture_expected_spatial() -> pd.DataFrame:
     return output
 
 
-@pytest.fixture(name="spatial_trans", scope="class")
-def fixture_spatial_trans(spatial_config) -> pd.DataFrame:
-    """
-    Creates a spatial zone translation to be used in tests.
-    Parameters
-    ----------
-    spatial_config: inherited from fixture
-
-    Returns
-    -------
-    A complete spatial zone translation stored in a dataframe
-
-    """
-    trans = zone_translation.ZoneTranslation(spatial_config).zone_translation
-    return trans
-
-
 @pytest.fixture(name="dupe_trans", scope="class")
 def fixture_dupe_trans(dupe_shapes_config):
     """
@@ -169,8 +119,7 @@ def fixture_dupe_trans(dupe_shapes_config):
     -------
 
     """
-    trans = zone_translation.ZoneTranslation(
-        dupe_shapes_config).zone_translation
+    trans = zone_translation.ZoneTranslation(dupe_shapes_config).weighted_translation()
     return trans
 
 
@@ -179,8 +128,9 @@ class TestZoneTranslation:
     Class containing tests for the ZoneTranslation class
     """
 
-    @pytest.mark.parametrize("translation_str",
-                             ["spatial_trans", "weighted_trans", "dupe_trans"])
+    @pytest.mark.parametrize(
+        "translation_str", ["spatial_trans", "weighted_trans", "dupe_trans"]
+    )
     @pytest.mark.parametrize("origin_zone", [1, 2])
     def test_sum_to_1(self, translation_str: str, origin_zone: int, request):
         """
@@ -198,11 +148,14 @@ class TestZoneTranslation:
         dic = {1: 2, 2: 1}
         trans = request.getfixturevalue(translation_str)
         summed = trans.groupby(f"zone_{origin_zone}_id").sum()
-        rounded = round(summed[f"zone_{origin_zone}_to_zone_{dic[origin_zone]}"], 5).astype("int")
+        rounded = round(summed[f"zone_{origin_zone}_to_zone_{dic[origin_zone]}"], 5).astype(
+            "int"
+        )
         assert (rounded == 1).all()
 
-    @pytest.mark.parametrize("translation_str",
-                             ["spatial_trans", "weighted_trans", "dupe_trans"])
+    @pytest.mark.parametrize(
+        "translation_str", ["spatial_trans", "weighted_trans", "dupe_trans"]
+    )
     @pytest.mark.parametrize("col", ["zone_1_to_zone_2", "zone_2_to_zone_1"])
     def test_positive(self, translation_str: str, col: str, request):
         """
@@ -229,12 +182,14 @@ class TestZoneTranslation:
             spatial_trans (_type_): The spatial translation being checked
             weighted_trans (_type_): Weighted translation being checked
         """
-        assert (sorted(spatial_trans[f"zone_{number}_id"]) == sorted(
-            weighted_trans[f"zone_{number}_id"]))
+        assert sorted(spatial_trans[f"zone_{number}_id"]) == sorted(
+            weighted_trans[f"zone_{number}_id"]
+        )
 
-    @pytest.mark.parametrize("expected_str,trans_str",
-                             [("expected_spatial", "spatial_trans"),
-                              ("expected_weighted", "weighted_trans")])
+    @pytest.mark.parametrize(
+        "expected_str,trans_str",
+        [("expected_spatial", "spatial_trans"), ("expected_weighted", "weighted_trans")],
+    )
     def test_output(self, trans_str: str, expected_str: str, request):
         """
         Test to see if generated test case zone translations match expected values calculated
@@ -252,8 +207,8 @@ class TestZoneTranslation:
         """
         trans = request.getfixturevalue(trans_str)
         expected = request.getfixturevalue(expected_str)
-        df_1 = trans.groupby(['zone_1_id', 'zone_2_id']).sum().round(3)
+        df_1 = trans.groupby(["zone_1_id", "zone_2_id"]).sum().round(3)
         df_1.sort_index(inplace=True)
-        df_2 = expected.groupby(['zone_1_id', 'zone_2_id']).sum()
+        df_2 = expected.groupby(["zone_1_id", "zone_2_id"]).sum()
         df_2.sort_index(inplace=True)
         pd.testing.assert_frame_equal(df_1, df_2)

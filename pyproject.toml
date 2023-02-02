@@ -18,6 +18,10 @@ disable = [
     "too-many-lines",
     "use-dict-literal",
     "use-list-literal",
+    "import-error",
+    "too-few-public-methods",
+    "abstract-class-instantiated",
+    "protected-access"
 ]
 
 # Pylint settings
@@ -25,7 +29,7 @@ disable = [
 good-names = ["df", "fn", "ca", "tp", "to", "x", "i", "f", "q"]
 
 [tool.pylint.main]
-ignore = ["__init__.py", "_version.py", "versioneer.py"]
+ignore = ["__init__.py", "_version.py", "versioneer.py", "inputs.py"]
 
 [tool.pylint.design]
 max-args = 10

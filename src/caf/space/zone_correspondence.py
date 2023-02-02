@@ -9,6 +9,7 @@ import warnings
 import geopandas as gpd
 import pandas as pd
 from caf.space import inputs as si
+
 ##### CONSTANTS #####
 LOG = logging.getLogger(__name__)
 logging.captureWarnings(True)
@@ -34,35 +35,35 @@ def read_zone_shapefiles(params: si.ZoningTranslationInputs) -> dict:
     """
 
     # create geodataframes from zone shapefiles
-    zone_1 = gpd.read_file(params.zone_1.shapefile)
-    zone_2 = gpd.read_file(params.zone_2.shapefile)
+    z_1 = gpd.read_file(params.zone_1.shapefile)
+    z_2 = gpd.read_file(params.zone_2.shapefile)
 
-    zone_1 = zone_1.dropna(axis=1, how="all")
-    zone_2 = zone_2.dropna(axis=1, how="all")
+    z_1 = z_1.dropna(axis=1, how="all")
+    z_2 = z_2.dropna(axis=1, how="all")
 
     LOG.info(
         "Count of %s zones: %s",
         params.zone_2.name,
-        zone_2.iloc[:, 0].count(),
+        z_2.iloc[:, 0].count(),
     )
     LOG.info(
         "Count of %s zones: %s",
         params.zone_1.name,
-        zone_1.iloc[:, 0].count(),
+        z_1.iloc[:, 0].count(),
     )
 
-    zone_1["area"] = zone_1.area
-    zone_1 = zone_1.dropna(subset=["area"])
-    zone_2["area"] = zone_2.area
-    zone_2 = zone_2.dropna(subset=["area"])
+    z_1["area"] = z_1.area
+    z_1 = z_1.dropna(subset=["area"])
+    z_2["area"] = z_2.area
+    z_2 = z_2.dropna(subset=["area"])
 
     zones = {
-        zone_1.name: {
-            "Zone": zone_1.drop("area", axis=1),
+        params.zone_1.name: {
+            "Zone": z_1.drop("area", axis=1),
             "ID_col": params.zone_1.id_col,
         },
-        zone_2.name: {
-            "Zone": zone_2.drop("area", axis=1),
+        params.zone_2.name: {
+            "Zone": z_2.drop("area", axis=1),
             "ID_col": params.zone_2.id_col,
         },
     }
@@ -114,15 +115,11 @@ def spatial_zone_correspondence(zones: dict, params: si.ZoningTranslationInputs)
     spatial_correspondence = zone_overlay.loc[:, column_list]
 
     # create geodataframe with spatial adjusted factors
-    spatial_correspondence.loc[
-        :, f"{params.zone_1.name}_to_{params.zone_2.name}"
-    ] = (
+    spatial_correspondence.loc[:, f"{params.zone_1.name}_to_{params.zone_2.name}"] = (
         zone_overlay.loc[:, "intersection_area"]
         / zone_overlay.loc[:, f"{params.zone_1.name}_area"]
     )
-    spatial_correspondence.loc[
-        :, f"{params.zone_2.name}_to_{params.zone_1.name}"
-    ] = (
+    spatial_correspondence.loc[:, f"{params.zone_2.name}_to_{params.zone_1.name}"] = (
         zone_overlay.loc[:, "intersection_area"]
         / zone_overlay.loc[:, f"{params.zone_2.name}_area"]
     )
@@ -157,19 +154,16 @@ def find_slithers(
     Returns
     -------
     GeoDataFrame, GeoDataFrame
-        slithers GeoDataFrame with all the small zone overlaps, and
-        no_slithers the zone correspondence GeoDataFrame with these zones
-        filtered out
+        slithers, GeoDataFrame with all the small zone overlaps, and
+        no_slithers, the zone correspondence GeoDataFrame with these zones
+        filtered out. slithers isn't usually required but is returned for
+        testing.
     """
     LOG.info("Finding Slithers")
 
     slither_filter = (
-        spatial_correspondence[f"{zone_names[0]}_to_{zone_names[1]}"]
-        < (1 - tolerance)
-    ) & (
-        spatial_correspondence[f"{zone_names[1]}_to_{zone_names[0]}"]
-        < (1 - tolerance)
-    )
+        spatial_correspondence[f"{zone_names[0]}_to_{zone_names[1]}"] < (1 - tolerance)
+    ) & (spatial_correspondence[f"{zone_names[1]}_to_{zone_names[0]}"] < (1 - tolerance))
     slithers = spatial_correspondence.loc[slither_filter]
     no_slithers = spatial_correspondence.loc[~slither_filter]
 
@@ -195,15 +189,11 @@ def rounding_correction(
     def calculate_differences(
         frame: pd.DataFrame,
     ) -> Tuple[pd.Series, pd.DataFrame]:
-        factor_totals = (
-            frame[[from_col, factor_col]].groupby(from_col).sum()
-        )
-        differences = (1 - factor_totals).rename(
-            columns={factor_col: "diff"}
-        )
+        totals = frame[[from_col, factor_col]].groupby(from_col).sum()
+        diffs = (1 - totals).rename(columns={factor_col: "diff"})
         # Convert totals to a Series
-        factor_totals = factor_totals.iloc[:, 0]
-        return factor_totals, differences
+        totals = totals.iloc[:, 0]
+        return totals, diffs
 
     from_col = f"{from_zone_name}_id"
     factor_col = f"{from_zone_name}_to_{to_zone_name}"
@@ -211,14 +201,10 @@ def rounding_correction(
     counts = zone_corr.groupby(from_col).size()
 
     # Set factor to 1 for one to one lookups
-    zone_corr.loc[
-        zone_corr[from_col].isin(counts[counts == 1].index), factor_col
-    ] = 1.0
+    zone_corr.loc[zone_corr[from_col].isin(counts[counts == 1].index), factor_col] = 1.0
 
     # calculate missing adjustments for those that don't have a one to one mapping
-    rest_to_round = zone_corr.loc[
-        zone_corr[from_col].isin(counts[counts > 1].index)
-    ]
+    rest_to_round = zone_corr.loc[zone_corr[from_col].isin(counts[counts > 1].index)]
     factor_totals, differences = calculate_differences(zone_corr)
 
     LOG.info(
@@ -233,9 +219,7 @@ def rounding_correction(
     )
 
     # Calculate factor to adjust the zone correspondence by
-    differences.loc[:, "correction"] = 1 + (
-        differences["diff"] / factor_totals
-    )
+    differences.loc[:, "correction"] = 1 + (differences["diff"] / factor_totals)
 
     # Multiply zone corresondence by the correction factor
     rest_to_round = rest_to_round.merge(
@@ -246,15 +230,12 @@ def rounding_correction(
     ).set_index(rest_to_round.index)
 
     rest_to_round.loc[:, factor_col] = (
-        rest_to_round.loc[:, factor_col]
-        * rest_to_round.loc[:, "correction"]
+        rest_to_round.loc[:, factor_col] * rest_to_round.loc[:, "correction"]
     )
 
     rest_to_round = rest_to_round.drop(labels="correction", axis=1)
 
-    zone_corr.loc[
-        zone_corr[from_col].isin(rest_to_round[from_col]), :
-    ] = rest_to_round
+    zone_corr.loc[zone_corr[from_col].isin(rest_to_round[from_col]), :] = rest_to_round
 
     # Recalculate differences after adjustment
     factor_totals, differences = calculate_differences(zone_corr)
@@ -273,14 +254,10 @@ def rounding_correction(
     # Check for negative zone correspondences
     negatives = (zone_corr[factor_col] < 0).sum()
     if negatives > 0:
-        raise ValueError(
-            f"{negatives} negative correspondence factors for {factor_col}"
-        )
+        raise ValueError(f"{negatives} negative correspondence factors for {factor_col}")
     too_big = (zone_corr[factor_col] > 1).sum()
     if too_big > 0:
-        raise ValueError(
-            f"{too_big} correspondence factors > 1 for {factor_col}"
-        )
+        raise ValueError(f"{too_big} correspondence factors > 1 for {factor_col}")
 
     return zone_corr
 
@@ -345,14 +322,14 @@ def round_zone_correspondence(
         right_on=zone_corr_rounded.index,
     )
 
-    zone_corr_rounded_both_ways = zone_corr_rounded_both_ways.drop(
-        labels="key_0", axis=1
-    )
+    zone_corr_rounded_both_ways = zone_corr_rounded_both_ways.drop(labels="key_0", axis=1)
 
     return zone_corr_rounded_both_ways
 
 
-def missing_zones_check(zones: dict, zone_correspondence: pd.DataFrame, params: si.ZoningTranslationInputs):
+def missing_zones_check(
+    zones: dict, zone_correspondence: pd.DataFrame, params: si.ZoningTranslationInputs
+):
     """Checks for zone 1 and zone 2 zones missing from zone correspondence.
 
     Parameters
@@ -374,17 +351,13 @@ def missing_zones_check(zones: dict, zone_correspondence: pd.DataFrame, params: 
     LOG.info("Checking for missing zones")
 
     missing_zone_1 = zones[params.zone_1.name]["Zone"].loc[
-        ~zones[params.zone_1.name]["Zone"][
-            f"{params.zone_1.name}_id"
-        ].isin(
+        ~zones[params.zone_1.name]["Zone"][f"{params.zone_1.name}_id"].isin(
             zone_correspondence[f"{params.zone_1.name}_id"]
         ),
         f"{params.zone_1.name}_id",
     ]
     missing_zone_2 = zones[params.zone_2.name]["Zone"].loc[
-        ~zones[params.zone_2.name]["Zone"][
-            f"{params.zone_2.name}_id"
-        ].isin(
+        ~zones[params.zone_2.name]["Zone"][f"{params.zone_2.name}_id"].isin(
             zone_correspondence[f"{params.zone_2.name}_id"]
         ),
         f"{params.zone_2.name}_id",

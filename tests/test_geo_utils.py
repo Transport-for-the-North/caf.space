@@ -1,53 +1,85 @@
+"""
+Module for testing the geo_utils module
+"""
+from copy import deepcopy
 import pytest
-from caf.space import geo_utils
 import pandas as pd
+from caf.space import geo_utils
+
 
 
 @pytest.fixture(name="weighted", scope="class")
 def fixture_weighted(weighted_config):
+    """
+    Fixture returning a lower zone system with a weighting vector attached to
+    it.
+    """
     weighted = geo_utils._weighted_lower(weighted_config)
     return weighted
 
 
 @pytest.fixture(name="tiles", scope="class")
 def fixture_tiles(weighted_config):
+    """
+    Fixture returning tiles from the _create_tiles function
+    """
     tiles = geo_utils._create_tiles(weighted_config)
     return tiles
 
 
 @pytest.fixture(name="overlaps", scope="class")
 def fixture_overlaps(weighted_config):
+    """
+    Fixture returning overlaps ond totals.
+    """
     overlaps = geo_utils.overlaps_and_totals(weighted_config)
     return overlaps
+
 
 class TestWeightedLower:
     """
     Class for testing the _weighted_lower function in geo_utils
     """
+
     def test_join(self, weighted):
+        """
+        Check that weighting is correct after join in the _weighted_lower
+        """
         summed = weighted.weight.sum()
         assert summed == 310
 
     def test_area(self, weighted):
+        """
+        Check area is correct in weighted lower
+        """
         assert (weighted.area == 4).all()
 
     def test_warning(self, weighted_config, main_dir):
+        """
+        Check the correct warning is raised from _weighted_lower
+        """
         weighting = pd.read_csv(weighted_config.lower_zoning.weight_data)
         weighting.lower_id = range(16)
-        weighting.to_csv(r"C:\Users\IsaacScott\Projects\geo_rewrite\test_cache\weighting.csv")
         weighting_path = main_dir / "mismatched_weighting.csv"
         weighting.to_csv(weighting_path)
-        mismatched_config = weighted_config.copy()
+        mismatched_config = deepcopy(weighted_config)
         mismatched_config.lower_zoning.weight_data = weighting_path
-        with pytest.warns(UserWarning,
-                          match="1 zones do not match up between the lower zoning and weighting data."):
+        with pytest.warns(
+            UserWarning,
+            match="1 zones do not match up between the lower zoning and weighting data.",
+        ):
             geo_utils._weighted_lower(mismatched_config)
+
 
 class TestCreateTiles:
     """
     Class for testing the _create_tiles function in geo_utils
     """
+
     def test_weight(self, tiles):
+        """
+        Test the weight of generated tiles.
+        """
         summed = tiles.weight.sum()
         assert summed == 310
 
@@ -56,28 +88,13 @@ class TestOverlapsTotals:
     """
     Class for testing the overlaps_and_totals function in geo_utils
     """
+
     def test_sums(self, overlaps):
+        """
+        Test the weight of overlaps output
+        """
         overlap_sum = overlaps.weight_overlap.sum()
         assert overlap_sum == 310
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 # class Test_Cols_In_Both:

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-    Module containing functionality for storing input parameters and 
+    Module containing functionality for storing input parameters and
     reading config file. Classes in this module inherit from the
     BaseConfig class, and are ultimately used as input parameters for
     the ZoneTranslation class.
@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 # Standard imports
+# pylint: disable=import-error
 import logging
 import datetime
 import fiona
@@ -20,14 +21,15 @@ from typing import Union
 from pydantic import validator
 
 # Third party imports
-from caf.space import config_base
+from caf.toolkit import BaseConfig
+# pylint: enable=import-error
 # Local imports
 
 ##### CONSTANTS #####
 LOG = logging.getLogger(__name__)
 
 
-class ZoneSystemInfo(config_base.BaseConfig):
+class ZoneSystemInfo(BaseConfig):
     """Base class for storing information about a shapefile input.
 
     Parameters
@@ -43,17 +45,20 @@ class ZoneSystemInfo(config_base.BaseConfig):
         can be any column as long as it is unique for each zone in the
         shapefile.
     """
+
     name: str
     shapefile: Path
     id_col: str
-    
+
     @validator("id_col")
     def _id_col_in_file(cls, v, values):
-        with fiona.collection(values['shapefile']) as source:
+        with fiona.collection(values["shapefile"]) as source:
             schema = source.schema
-            if v not in schema['properties'].keys():
-                raise ValueError(f"The id_col provided, {v}, does not appear"
-                f" in the given shapefile, {'shapefile'}.")
+            if v not in schema["properties"].keys():
+                raise ValueError(
+                    f"The id_col provided, {v}, does not appear"
+                    f" in the given shapefile, {'shapefile'}."
+                )
         return v
 
     @validator("shapefile")
@@ -67,8 +72,10 @@ class ZoneSystemInfo(config_base.BaseConfig):
             Unchanged path if no error is raised.
         """
         if os.path.isfile(v) is False:
-            raise ValueError(f"The path provided for {v} does not exist."
-            "If this path is on a network drive make sure you are connected")
+            raise ValueError(
+                f"The path provided for {v} does not exist."
+                "If this path is on a network drive make sure you are connected"
+            )
         return v
 
 
@@ -97,27 +104,23 @@ class LowerZoneSystemInfo(ZoneSystemInfo):
     weight_id_col: str
 
     def _lower_to_higher(self) -> ZoneSystemInfo:
-        return ZoneSystemInfo(
-            name=self.name, shapefile=self.shapefile, id_col=self.id_col
-        )
-    
+        return ZoneSystemInfo(name=self.name, shapefile=self.shapefile, id_col=self.id_col)
+
     @validator("weight_data")
     def _weight_data_exists(cls, v):
         if os.path.isfile(v) is False:
-            raise FileNotFoundError(
-                f"The weight data path provided for {v} does not exist."
-            )
+            raise FileNotFoundError(f"The weight data path provided for {v} does not exist.")
         return v
-    
+
     @validator("data_col", "weight_id_col")
     def _valid_data_col(cls, v, values):
-        cols = pd.read_csv(values['weight_data'], nrows=1).columns
+        cols = pd.read_csv(values["weight_data"], nrows=1).columns
         if v not in cols:
             raise ValueError(f"The given col, {v}, does not appear in the weight data.")
         return v
 
 
-class ZoningTranslationInputs(config_base.BaseConfig):
+class ZoningTranslationInputs(BaseConfig):
     """Class for storing and reading input parameters for
     `ZoneTranslation`.
 
@@ -164,7 +167,7 @@ class ZoningTranslationInputs(config_base.BaseConfig):
         automatically and shouldn't be included in the config yaml file.
     """
 
-    #TODO choose and set default path for cache path
+    # TODO choose and set default path for cache path
     zone_1: ZoneSystemInfo
     zone_2: ZoneSystemInfo
     output_path: Path
@@ -186,7 +189,6 @@ class ZoningTranslationInputs(config_base.BaseConfig):
         if value is None or value.strip() == "":
             return None
         return Path(value)
-
 
     def write_example(self, out_path: Path):
         """
@@ -222,6 +224,6 @@ class ZoningTranslationInputs(config_base.BaseConfig):
             lower_zoning=lower,
             output_path=r"path\to\output\folder",
             cache_path=r"path\to\cache\folder\defaults\to\ydrive",
-            method="OPTIONAL name of method"
+            method="OPTIONAL name of method",
         )
         ex.save_yaml(out_path / "example.yml")
