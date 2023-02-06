@@ -53,4 +53,4 @@ jobs:
       - name: Import
         run: |
           cd ..
-          python -c "import caf.toolkit; caf.toolkit.__version__;"
+          python -c "import caf.space; caf.space.__version__;"
