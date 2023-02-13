@@ -22,7 +22,9 @@ def fixture_tiles(weighted_config):
     """
     Fixture returning tiles from the _create_tiles function
     """
-    tiles = weighted_funcs._create_tiles(weighted_config.zone_1, weighted_config.zone_2, weighted_config.lower_zoning)
+    tiles = weighted_funcs._create_tiles(
+        weighted_config.zone_1, weighted_config.zone_2, weighted_config.lower_zoning
+    )
     return tiles
 
 
@@ -61,9 +63,7 @@ class TestWeightedLower:
         """
         Check the correct warning is raised from _weighted_lower
         """
-        weighting = pd.read_csv(
-            weighted_config.lower_zoning.weight_data
-        )
+        weighting = pd.read_csv(weighted_config.lower_zoning.weight_data)
         weighting.lower_id = range(16)
         weighting_path = main_dir / "mismatched_weighting.csv"
         weighting.to_csv(weighting_path)

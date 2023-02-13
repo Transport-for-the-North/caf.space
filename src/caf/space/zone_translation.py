@@ -55,9 +55,7 @@ class ZoneTranslation:
         self.run_date = params.run_date
         sorted_names = sorted([params.zone_1.name, params.zone_2.name])
         self.names = (sorted_names[0], sorted_names[1])
-        self.cacher = (
-            self.cache_path / f"{self.names[0]}_{self.names[1]}"
-        )
+        self.cacher = self.cache_path / f"{self.names[0]}_{self.names[1]}"
         self.cacher.mkdir(exist_ok=True, parents=True)
 
     def spatial_translation(self) -> pd.DataFrame:
@@ -74,26 +72,16 @@ class ZoneTranslation:
         -------
         Dataframe containing spatial zone translation.
         """
-        zones = zone_correspondence.read_zone_shapefiles(
-            self.zone_1, self.zone_2
+        zones = zone_correspondence.read_zone_shapefiles(self.zone_1, self.zone_2)
+        spatial_correspondence = zone_correspondence.spatial_zone_correspondence(
+            zones, self.zone_1, self.zone_2
         )
-        spatial_correspondence = (
-            zone_correspondence.spatial_zone_correspondence(
-                zones, self.zone_1, self.zone_2
-            )
-        )
-        final_zone_corr = self._slithers_and_rounding(
-            spatial_correspondence
-        )
+        final_zone_corr = self._slithers_and_rounding(spatial_correspondence)
         # Save correspondence output
         final_zone_corr_path = (
-            self.output_path
-            / f"{self.names[0]}_to_{self.names[1]}_correspondence.csv"
+            self.output_path / f"{self.names[0]}_to_{self.names[1]}_correspondence.csv"
         )
-        (
-            missing_zones_1,
-            missing_zones_2,
-        ) = zone_correspondence.missing_zones_check(
+        (missing_zones_1, missing_zones_2,) = zone_correspondence.missing_zones_check(
             zones, final_zone_corr, self.zone_1, self.zone_2
         )
 
@@ -150,13 +138,9 @@ class ZoneTranslation:
         LOG.info("Starting weighted translation")
         # Init
         if self.params.method is False:
-            raise ValueError(
-                "A method must be provided to perform a weighted translation."
-            )
+            raise ValueError("A method must be provided to perform a weighted translation.")
         if self.params.lower_zoning is False:
-            raise ValueError(
-                "Lower zoning data is required for a weighted translations."
-            )
+            raise ValueError("Lower zoning data is required for a weighted translations.")
         cacher_out = self.cacher / self.method
         cacher_out.mkdir(exist_ok=True, parents=False)
         weighted_translation = weighted_funcs.final_weighted(
@@ -170,25 +154,17 @@ class ZoneTranslation:
         ]
         weighted_translation.reset_index(inplace=True)
 
-        weighted_translation = self._slithers_and_rounding(
-            weighted_translation
-        )
+        weighted_translation = self._slithers_and_rounding(weighted_translation)
 
         column_list = list(weighted_translation.columns)
 
-        summary_table_1 = weighted_translation.groupby(column_list[0])[
-            column_list[2]
-        ].sum()
-        summary_table_2 = weighted_translation.groupby(column_list[1])[
-            column_list[3]
-        ].sum()
+        summary_table_1 = weighted_translation.groupby(column_list[0])[column_list[2]].sum()
+        summary_table_2 = weighted_translation.groupby(column_list[1])[column_list[3]].sum()
 
         under_1_zones_1 = summary_table_1[summary_table_1 < 0.999999]
         under_1_zones_2 = summary_table_2[summary_table_2 < 0.999999]
 
-        if len(pd.unique(weighted_translation[column_list[0]])) == sum(
-            summary_table_1
-        ):
+        if len(pd.unique(weighted_translation[column_list[0]])) == sum(summary_table_1):
             LOG.info("Split factors add up to 1 for %s", column_list[0])
         else:
             LOG.warning(
@@ -198,9 +174,7 @@ class ZoneTranslation:
                 under_1_zones_1,
             )
 
-        if len(pd.unique(weighted_translation[column_list[1]])) == sum(
-            summary_table_2
-        ):
+        if len(pd.unique(weighted_translation[column_list[1]])) == sum(summary_table_2):
             LOG.info("Split factors add up to 1 for %s", column_list[1])
         else:
             LOG.warning(
@@ -209,18 +183,12 @@ class ZoneTranslation:
                 column_list[1],
                 under_1_zones_2,
             )
-        weighted_translation.to_csv(
-            cacher_out / f"{self.params.run_date}.csv", index=False
-        )
-        self.params.save_yaml(
-            cacher_out / f"{self.params.run_date}.yml"
-        )
+        weighted_translation.to_csv(cacher_out / f"{self.params.run_date}.csv", index=False)
+        self.params.save_yaml(cacher_out / f"{self.params.run_date}.yml")
 
         return weighted_translation
 
-    def _slithers_and_rounding(
-        self, translation: pd.DataFrame
-    ) -> pd.DataFrame:
+    def _slithers_and_rounding(self, translation: pd.DataFrame) -> pd.DataFrame:
         """
         Process slithers and rounding parameters.
 
@@ -238,29 +206,22 @@ class ZoneTranslation:
         """
         if self.params.filter_slithers:
             LOG.info("Filtering out small overlaps.")
-            (
-                _,
-                spatial_correspondence_no_slithers,
-            ) = zone_correspondence.find_slithers(
+            (_, spatial_correspondence_no_slithers,) = zone_correspondence.find_slithers(
                 translation, self.names, self.params.tolerance
             )
 
             if self.params.rounding:
                 LOG.info("Checking all adjustment factors add to 1")
-                final_zone_corr = (
-                    zone_correspondence.round_zone_correspondence(
-                        spatial_correspondence_no_slithers, self.names
-                    )
+                final_zone_corr = zone_correspondence.round_zone_correspondence(
+                    spatial_correspondence_no_slithers, self.names
                 )
             else:
                 final_zone_corr = spatial_correspondence_no_slithers
         else:
             if self.params.rounding:
                 LOG.info("Checking all adjustment factors add to 1")
-                final_zone_corr = (
-                    zone_correspondence.round_zone_correspondence(
-                        translation, self.names
-                    )
+                final_zone_corr = zone_correspondence.round_zone_correspondence(
+                    translation, self.names
                 )
             else:
                 final_zone_corr = translation

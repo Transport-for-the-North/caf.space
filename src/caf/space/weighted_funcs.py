@@ -100,9 +100,7 @@ def _create_tiles(
     ]
 
 
-def return_totals(
-    frame: pd.DataFrame, id_col: str, data_col: str
-) -> pd.DataFrame:
+def return_totals(frame: pd.DataFrame, id_col: str, data_col: str) -> pd.DataFrame:
     """
     Group df by id_col and sums, keeping data_col.
 
@@ -145,12 +143,8 @@ def get_weighted_translation(
     # grouped in different ways to produce the translation.
     tiles = _create_tiles(zone_1, zone_2, lower_zoning)
     # produce total weights by each respective zone system.
-    totals_1 = return_totals(
-        tiles, zone_1.id_col, lower_zoning.data_col
-    ).to_frame()
-    totals_2 = return_totals(
-        tiles, zone_2.id_col, lower_zoning.data_col
-    ).to_frame()
+    totals_1 = return_totals(tiles, zone_1.id_col, lower_zoning.data_col).to_frame()
+    totals_2 = return_totals(tiles, zone_2.id_col, lower_zoning.data_col).to_frame()
     # get values of overlaps between zone systems by grouping by both
     # zone systems and summing.
     overlap = (
@@ -186,12 +180,10 @@ def final_weighted(
     """
     full_df = get_weighted_translation(zone_1, zone_2, lower_zoning)
     full_df[f"{zone_1.name}_to_{zone_2.name}"] = (
-        full_df[f"{lower_zoning.data_col}_overlap"]
-        / full_df[f"{lower_zoning.data_col}_1"]
+        full_df[f"{lower_zoning.data_col}_overlap"] / full_df[f"{lower_zoning.data_col}_1"]
     )
     full_df[f"{zone_2.name}_to_{zone_1.name}"] = (
-        full_df[f"{lower_zoning.data_col}_overlap"]
-        / full_df[f"{lower_zoning.data_col}_2"]
+        full_df[f"{lower_zoning.data_col}_overlap"] / full_df[f"{lower_zoning.data_col}_2"]
     )
     full_df.index.names = [f"{zone_1.name}_id", f"{zone_2.name}_id"]
     return full_df

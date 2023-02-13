@@ -18,9 +18,7 @@ logging.captureWarnings(True)
 ##### FUNCTIONS #####
 
 
-def read_zone_shapefiles(
-    zone_1: inputs.ZoneSystemInfo, zone_2: inputs.ZoneSystemInfo
-) -> dict:
+def read_zone_shapefiles(zone_1: inputs.ZoneSystemInfo, zone_2: inputs.ZoneSystemInfo) -> dict:
     """
     Read in zone system shapefiles.
 
@@ -83,9 +81,7 @@ def read_zone_shapefiles(
         zone["Zone"][f"{name}_area"] = zone["Zone"].area
 
         if not zone["Zone"].crs:
-            warnings.warn(
-                f"Zone {name} has no CRS, setting crs to EPSG:27700."
-            )
+            warnings.warn(f"Zone {name} has no CRS, setting crs to EPSG:27700.")
             zone["Zone"].crs = "EPSG:27700"
 
     return zones
@@ -136,12 +132,10 @@ def spatial_zone_correspondence(
 
     # create geodataframe with spatial adjusted factors
     spatial_correspondence.loc[:, f"{zone_1.name}_to_{zone_2.name}"] = (
-        zone_overlay.loc[:, "intersection_area"]
-        / zone_overlay.loc[:, f"{zone_1.name}_area"]
+        zone_overlay.loc[:, "intersection_area"] / zone_overlay.loc[:, f"{zone_1.name}_area"]
     )
     spatial_correspondence.loc[:, f"{zone_2.name}_to_{zone_1.name}"] = (
-        zone_overlay.loc[:, "intersection_area"]
-        / zone_overlay.loc[:, f"{zone_2.name}_area"]
+        zone_overlay.loc[:, "intersection_area"] / zone_overlay.loc[:, f"{zone_2.name}_area"]
     )
 
     LOG.info("Unfiltered Spatial Correspondence completed")
@@ -184,12 +178,8 @@ def find_slithers(
     LOG.info("Finding Slithers")
 
     slither_filter = (
-        spatial_correspondence[f"{zone_names[0]}_to_{zone_names[1]}"]
-        < (1 - tolerance)
-    ) & (
-        spatial_correspondence[f"{zone_names[1]}_to_{zone_names[0]}"]
-        < (1 - tolerance)
-    )
+        spatial_correspondence[f"{zone_names[0]}_to_{zone_names[1]}"] < (1 - tolerance)
+    ) & (spatial_correspondence[f"{zone_names[1]}_to_{zone_names[0]}"] < (1 - tolerance))
     slithers = spatial_correspondence.loc[slither_filter]
     no_slithers = spatial_correspondence.loc[~slither_filter]
 
@@ -231,14 +221,10 @@ def rounding_correction(
     counts = zone_corr.groupby(from_col).size()
 
     # Set factor to 1 for one to one lookups
-    zone_corr.loc[
-        zone_corr[from_col].isin(counts[counts == 1].index), factor_col
-    ] = 1.0
+    zone_corr.loc[zone_corr[from_col].isin(counts[counts == 1].index), factor_col] = 1.0
 
     # calculate missing adjustments for those that don't have a one to one mapping
-    rest_to_round = zone_corr.loc[
-        zone_corr[from_col].isin(counts[counts > 1].index)
-    ]
+    rest_to_round = zone_corr.loc[zone_corr[from_col].isin(counts[counts > 1].index)]
     factor_totals, differences = calculate_differences(zone_corr)
 
     LOG.info(
@@ -253,9 +239,7 @@ def rounding_correction(
     )
 
     # Calculate factor to adjust the zone correspondence by
-    differences.loc[:, "correction"] = 1 + (
-        differences["diff"] / factor_totals
-    )
+    differences.loc[:, "correction"] = 1 + (differences["diff"] / factor_totals)
 
     # Multiply zone corresondence by the correction factor
     rest_to_round = rest_to_round.merge(
@@ -266,15 +250,12 @@ def rounding_correction(
     ).set_index(rest_to_round.index)
 
     rest_to_round.loc[:, factor_col] = (
-        rest_to_round.loc[:, factor_col]
-        * rest_to_round.loc[:, "correction"]
+        rest_to_round.loc[:, factor_col] * rest_to_round.loc[:, "correction"]
     )
 
     rest_to_round = rest_to_round.drop(labels="correction", axis=1)
 
-    zone_corr.loc[
-        zone_corr[from_col].isin(rest_to_round[from_col]), :
-    ] = rest_to_round
+    zone_corr.loc[zone_corr[from_col].isin(rest_to_round[from_col]), :] = rest_to_round
 
     # Recalculate differences after adjustment
     factor_totals, differences = calculate_differences(zone_corr)
@@ -293,14 +274,10 @@ def rounding_correction(
     # Check for negative zone correspondences
     negatives = (zone_corr[factor_col] < 0).sum()
     if negatives > 0:
-        raise ValueError(
-            f"{negatives} negative correspondence factors for {factor_col}"
-        )
+        raise ValueError(f"{negatives} negative correspondence factors for {factor_col}")
     too_big = (zone_corr[factor_col] > 1).sum()
     if too_big > 0:
-        raise ValueError(
-            f"{too_big} correspondence factors > 1 for {factor_col}"
-        )
+        raise ValueError(f"{too_big} correspondence factors > 1 for {factor_col}")
 
     return zone_corr
 
@@ -368,9 +345,7 @@ def round_zone_correspondence(
         right_on=zone_corr_rounded.index,
     )
 
-    zone_corr_rounded_both_ways = zone_corr_rounded_both_ways.drop(
-        labels="key_0", axis=1
-    )
+    zone_corr_rounded_both_ways = zone_corr_rounded_both_ways.drop(labels="key_0", axis=1)
 
     return zone_corr_rounded_both_ways
 
