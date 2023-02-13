@@ -104,7 +104,7 @@ def return_totals(
     frame: pd.DataFrame, id_col: str, data_col: str
 ) -> pd.DataFrame:
     """
-    Group df by dataframe and sums, keeping data_col.
+    Group df by id_col and sums, keeping data_col.
 
     Parameters
     ----------
@@ -141,13 +141,18 @@ def get_weighted_translation(
     Dataframe with columns for overlap total, zone 1 total, zone 2 total
     weights.
     """
+    # create a set of spanning weighted, tiles. These tiles will be
+    # grouped in different ways to produce the translation.
     tiles = _create_tiles(zone_1, zone_2, lower_zoning)
+    # produce total weights by each respective zone system.
     totals_1 = return_totals(
         tiles, zone_1.id_col, lower_zoning.data_col
     ).to_frame()
     totals_2 = return_totals(
         tiles, zone_2.id_col, lower_zoning.data_col
     ).to_frame()
+    # get values of overlaps between zone systems by grouping by both
+    # zone systems and summing.
     overlap = (
         tiles.groupby([zone_1.id_col, zone_2.id_col])
         .sum()
