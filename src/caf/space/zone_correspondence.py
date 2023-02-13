@@ -9,7 +9,7 @@ import warnings
 
 import geopandas as gpd
 import pandas as pd
-from caf.space import inputs as si
+from caf.space import inputs
 
 ##### CONSTANTS #####
 LOG = logging.getLogger(__name__)
@@ -18,7 +18,9 @@ logging.captureWarnings(True)
 ##### FUNCTIONS #####
 
 
-def read_zone_shapefiles(zone_1: si.ZoneSystemInfo, zone_2: si.ZoneSystemInfo) -> dict:
+def read_zone_shapefiles(
+    zone_1: inputs.ZoneSystemInfo, zone_2: inputs.ZoneSystemInfo
+) -> dict:
     """
     Read in zone system shapefiles.
 
@@ -28,9 +30,9 @@ def read_zone_shapefiles(zone_1: si.ZoneSystemInfo, zone_2: si.ZoneSystemInfo) -
 
     Parameters
     ----------
-    zone_1: si.ZoneSystemInfo
+    zone_1: inputs.ZoneSystemInfo
         Info on first zone system
-    zone_2: si.ZoneSystemInfo
+    zone_2: inputs.ZoneSystemInfo
         Info on second zone system
 
     Returns
@@ -81,14 +83,19 @@ def read_zone_shapefiles(zone_1: si.ZoneSystemInfo, zone_2: si.ZoneSystemInfo) -
         zone["Zone"][f"{name}_area"] = zone["Zone"].area
 
         if not zone["Zone"].crs:
-            warnings.warn(f"Zone {name} has no CRS, setting crs to EPSG:27700.")
+            warnings.warn(
+                f"Zone {name} has no CRS, setting crs to EPSG:27700."
+            )
             zone["Zone"].crs = "EPSG:27700"
 
     return zones
 
 
-def spatial_zone_correspondence(zones: dict, zone_1: si.ZoneSystemInfo,
-                                zone_2: si.ZoneSystemInfo):
+def spatial_zone_correspondence(
+    zones: dict,
+    zone_1: inputs.ZoneSystemInfo,
+    zone_2: inputs.ZoneSystemInfo,
+):
     """
     Find the spatial zone correspondence.
 
@@ -98,9 +105,9 @@ def spatial_zone_correspondence(zones: dict, zone_1: si.ZoneSystemInfo,
     Parameters
     ----------
     zones: Return value from 'read_zone_shapefiles'.
-    zone_1: si.ZoneSystemInfo
+    zone_1: inputs.ZoneSystemInfo
         Info on first zone system
-    zone_2: si.ZoneSystemInfo
+    zone_2: inputs.ZoneSystemInfo
         Info on second zone system
 
     Returns
@@ -177,8 +184,12 @@ def find_slithers(
     LOG.info("Finding Slithers")
 
     slither_filter = (
-        spatial_correspondence[f"{zone_names[0]}_to_{zone_names[1]}"] < (1 - tolerance)
-    ) & (spatial_correspondence[f"{zone_names[1]}_to_{zone_names[0]}"] < (1 - tolerance))
+        spatial_correspondence[f"{zone_names[0]}_to_{zone_names[1]}"]
+        < (1 - tolerance)
+    ) & (
+        spatial_correspondence[f"{zone_names[1]}_to_{zone_names[0]}"]
+        < (1 - tolerance)
+    )
     slithers = spatial_correspondence.loc[slither_filter]
     no_slithers = spatial_correspondence.loc[~slither_filter]
 
@@ -204,6 +215,7 @@ def rounding_correction(
     -------
     pd.DataFrame: The input zone_corr dataframe adjusted to remove errors.
     """
+
     def calculate_differences(
         frame: pd.DataFrame,
     ) -> Tuple[pd.Series, pd.DataFrame]:
@@ -219,10 +231,14 @@ def rounding_correction(
     counts = zone_corr.groupby(from_col).size()
 
     # Set factor to 1 for one to one lookups
-    zone_corr.loc[zone_corr[from_col].isin(counts[counts == 1].index), factor_col] = 1.0
+    zone_corr.loc[
+        zone_corr[from_col].isin(counts[counts == 1].index), factor_col
+    ] = 1.0
 
     # calculate missing adjustments for those that don't have a one to one mapping
-    rest_to_round = zone_corr.loc[zone_corr[from_col].isin(counts[counts > 1].index)]
+    rest_to_round = zone_corr.loc[
+        zone_corr[from_col].isin(counts[counts > 1].index)
+    ]
     factor_totals, differences = calculate_differences(zone_corr)
 
     LOG.info(
@@ -237,7 +253,9 @@ def rounding_correction(
     )
 
     # Calculate factor to adjust the zone correspondence by
-    differences.loc[:, "correction"] = 1 + (differences["diff"] / factor_totals)
+    differences.loc[:, "correction"] = 1 + (
+        differences["diff"] / factor_totals
+    )
 
     # Multiply zone corresondence by the correction factor
     rest_to_round = rest_to_round.merge(
@@ -248,12 +266,15 @@ def rounding_correction(
     ).set_index(rest_to_round.index)
 
     rest_to_round.loc[:, factor_col] = (
-        rest_to_round.loc[:, factor_col] * rest_to_round.loc[:, "correction"]
+        rest_to_round.loc[:, factor_col]
+        * rest_to_round.loc[:, "correction"]
     )
 
     rest_to_round = rest_to_round.drop(labels="correction", axis=1)
 
-    zone_corr.loc[zone_corr[from_col].isin(rest_to_round[from_col]), :] = rest_to_round
+    zone_corr.loc[
+        zone_corr[from_col].isin(rest_to_round[from_col]), :
+    ] = rest_to_round
 
     # Recalculate differences after adjustment
     factor_totals, differences = calculate_differences(zone_corr)
@@ -272,10 +293,14 @@ def rounding_correction(
     # Check for negative zone correspondences
     negatives = (zone_corr[factor_col] < 0).sum()
     if negatives > 0:
-        raise ValueError(f"{negatives} negative correspondence factors for {factor_col}")
+        raise ValueError(
+            f"{negatives} negative correspondence factors for {factor_col}"
+        )
     too_big = (zone_corr[factor_col] > 1).sum()
     if too_big > 0:
-        raise ValueError(f"{too_big} correspondence factors > 1 for {factor_col}")
+        raise ValueError(
+            f"{too_big} correspondence factors > 1 for {factor_col}"
+        )
 
     return zone_corr
 
@@ -343,14 +368,18 @@ def round_zone_correspondence(
         right_on=zone_corr_rounded.index,
     )
 
-    zone_corr_rounded_both_ways = zone_corr_rounded_both_ways.drop(labels="key_0", axis=1)
+    zone_corr_rounded_both_ways = zone_corr_rounded_both_ways.drop(
+        labels="key_0", axis=1
+    )
 
     return zone_corr_rounded_both_ways
 
 
 def missing_zones_check(
-    zones: dict, zone_correspondence: pd.DataFrame, zone_1: si.ZoneSystemInfo,
-    zone_2: si.ZoneSystemInfo
+    zones: dict,
+    zone_correspondence: pd.DataFrame,
+    zone_1: inputs.ZoneSystemInfo,
+    zone_2: inputs.ZoneSystemInfo,
 ):
     """
     Find missing zones.
@@ -363,9 +392,9 @@ def missing_zones_check(
         Zone 1 and zone 2 GeoDataFrames.
     zone_correspondence : pd.DataFrame
         Zone correspondence between zone systems 1 and 2.
-    zone_1: si.ZoneSystemInfo
+    zone_1: inputs.ZoneSystemInfo
         Info on first zone system
-    zone_2: si.ZoneSystemInfo
+    zone_2: inputs.ZoneSystemInfo
         Info on second zone system
     Returns
     -------
