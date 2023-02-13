@@ -13,7 +13,7 @@ def fixture_weighted(weighted_config):
     Fixture returning a lower zone system with a weighting vector attached to
     it.
     """
-    weighted = weighted_funcs._weighted_lower(weighted_config)
+    weighted = weighted_funcs._weighted_lower(weighted_config.lower_zoning)
     return weighted
 
 
@@ -22,7 +22,7 @@ def fixture_tiles(weighted_config):
     """
     Fixture returning tiles from the _create_tiles function
     """
-    tiles = weighted_funcs._create_tiles(weighted_config)
+    tiles = weighted_funcs._create_tiles(weighted_config.zone_1, weighted_config.zone_2, weighted_config.lower_zoning)
     return tiles
 
 
@@ -73,7 +73,7 @@ class TestWeightedLower:
             UserWarning,
             match="1 zones do not match up between the lower zoning and weighting data.",
         ):
-            weighted_funcs._weighted_lower(mismatched_config)
+            weighted_funcs._weighted_lower(mismatched_config.lower_zoning)
 
 
 class TestCreateTiles:

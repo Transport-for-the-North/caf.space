@@ -36,13 +36,13 @@ def _weighted_lower(
     -------
     A lower zoning system with weighting joined to it.
     """
-    lower_zoning = gpd.read_file(lower_zoning.shapefile)
-    lower_zoning.set_index(lower_zoning.id_col, inplace=True)
+    lower_zone = gpd.read_file(lower_zoning.shapefile)
+    lower_zone.set_index(lower_zoning.id_col, inplace=True)
     weighting = pd.read_csv(
         lower_zoning.weight_data,
         index_col=lower_zoning.weight_id_col,
     )
-    weighted = lower_zoning.join(weighting)
+    weighted = lower_zone.join(weighting)
     missing = weighted[lower_zoning.data_col].isna().sum()
     warnings.warn(
         f"{missing} zones do not match up between the lower zoning and weighting data."
@@ -69,24 +69,24 @@ def _create_tiles(
     -------
     A set of weighted tiles used for weighted translation.
     """
-    zone_1 = gpd.read_file(zone_1.shapefile)
-    zone_2 = gpd.read_file(zone_2.shapefile)
+    zone_1_gdf = gpd.read_file(zone_1.shapefile)
+    zone_2_gdf = gpd.read_file(zone_2.shapefile)
 
     LOG.info(
         "Count of %s zone: %s",
         zone_2.name,
-        zone_2.iloc[:, 0].count(),
+        zone_2_gdf.iloc[:, 0].count(),
     )
     LOG.info(
         "Count of %s zones: %s",
         zone_1.name,
-        zone_1.iloc[:, 0].count(),
+        zone_1_gdf.iloc[:, 0].count(),
     )
 
     weighting = _weighted_lower(lower_zoning)
     tiles = reduce(
         lambda x, y: gpd.overlay(x, y, keep_geom_type=True),
-        [zone_1, zone_2, weighting],
+        [zone_1_gdf, zone_2_gdf, weighting],
     )
     tiles.overlay_area = tiles.area
     tiles.prop = tiles.overlay_area / tiles.lower_area
