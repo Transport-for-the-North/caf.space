@@ -31,7 +31,11 @@ def fixture_overlaps(weighted_config):
     """
     Fixture returning overlaps ond totals.
     """
-    overlaps = weighted_funcs.overlaps_and_totals(weighted_config.zone_1, weighted_config.zone_2, weighted_config.lower_zoning)
+    overlaps = weighted_funcs.get_weighted_translation(
+        weighted_config.zone_1,
+        weighted_config.zone_2,
+        weighted_config.lower_zoning,
+    )
     return overlaps
 
 
@@ -57,7 +61,9 @@ class TestWeightedLower:
         """
         Check the correct warning is raised from _weighted_lower
         """
-        weighting = pd.read_csv(weighted_config.lower_zoning.weight_data)
+        weighting = pd.read_csv(
+            weighted_config.lower_zoning.weight_data
+        )
         weighting.lower_id = range(16)
         weighting_path = main_dir / "mismatched_weighting.csv"
         weighting.to_csv(weighting_path)

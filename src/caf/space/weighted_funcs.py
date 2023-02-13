@@ -14,7 +14,7 @@ import geopandas as gpd
 
 # pylint: enable=import-error
 
-from caf.space import inputs as si
+from caf.space import inputs
 
 ##### CONSTANTS #####
 logging.captureWarnings(True)
@@ -23,7 +23,7 @@ LOG = logging.getLogger(__name__)
 
 ##### FUNCTIONS #####
 def _weighted_lower(
-    lower_zoning: si.LowerZoneSystemInfo,
+    lower_zoning: inputs.LowerZoneSystemInfo,
 ) -> gpd.GeoDataFrame:
     """
     Join weighting data to lower zoning shapefile ready to apply.
@@ -51,8 +51,11 @@ def _weighted_lower(
     return weighted
 
 
-def _create_tiles(zone_1: si.ZoneSystemInfo, zone_2: si.ZoneSystemInfo,
-                  lower_zoning: si.LowerZoneSystemInfo) -> pd.DataFrame:
+def _create_tiles(
+    zone_1: inputs.ZoneSystemInfo,
+    zone_2: inputs.ZoneSystemInfo,
+    lower_zoning: inputs.LowerZoneSystemInfo,
+) -> pd.DataFrame:
     """
     Create a spanning set of tiles for the weighted translation.
 
@@ -97,7 +100,9 @@ def _create_tiles(zone_1: si.ZoneSystemInfo, zone_2: si.ZoneSystemInfo,
     ]
 
 
-def return_totals(frame: pd.DataFrame, id_col: str, data_col: str) -> pd.DataFrame:
+def return_totals(
+    frame: pd.DataFrame, id_col: str, data_col: str
+) -> pd.DataFrame:
     """
     Group df by dataframe and sums, keeping data_col.
 
@@ -115,8 +120,11 @@ def return_totals(frame: pd.DataFrame, id_col: str, data_col: str) -> pd.DataFra
     return totals
 
 
-def overlaps_and_totals(zone_1: si.ZoneSystemInfo, zone_2: si.ZoneSystemInfo,
-                        lower_zoning: si.LowerZoneSystemInfo) -> pd.DataFrame:
+def get_weighted_translation(
+    zone_1: inputs.ZoneSystemInfo,
+    zone_2: inputs.ZoneSystemInfo,
+    lower_zoning: inputs.LowerZoneSystemInfo,
+) -> pd.DataFrame:
     """
     Create overlap totals for zone systems.
 
@@ -134,8 +142,8 @@ def overlaps_and_totals(zone_1: si.ZoneSystemInfo, zone_2: si.ZoneSystemInfo,
     weights.
     """
     tiles = _create_tiles(zone_1, zone_2, lower_zoning)
-    totals_1 = return_totals(tiles,
-        zone_1.id_col, lower_zoning.data_col
+    totals_1 = return_totals(
+        tiles, zone_1.id_col, lower_zoning.data_col
     ).to_frame()
     totals_2 = return_totals(
         tiles, zone_2.id_col, lower_zoning.data_col
@@ -151,8 +159,11 @@ def overlaps_and_totals(zone_1: si.ZoneSystemInfo, zone_2: si.ZoneSystemInfo,
     )
 
 
-def final_weighted(zone_1: si.ZoneSystemInfo, zone_2: si.ZoneSystemInfo,
-                   lower_zoning: si.LowerZoneSystemInfo) -> pd.DataFrame:
+def final_weighted(
+    zone_1: inputs.ZoneSystemInfo,
+    zone_2: inputs.ZoneSystemInfo,
+    lower_zoning: inputs.LowerZoneSystemInfo,
+) -> pd.DataFrame:
     """
     Run functions from module to produce a weighted translation.
 
@@ -168,7 +179,7 @@ def final_weighted(zone_1: si.ZoneSystemInfo, zone_2: si.ZoneSystemInfo,
     final output and will be passed through more checks for slither and
     rounding before being output, according to the input parameters.
     """
-    full_df = overlaps_and_totals(zone_1, zone_2, lower_zoning)
+    full_df = get_weighted_translation(zone_1, zone_2, lower_zoning)
     full_df[f"{zone_1.name}_to_{zone_2.name}"] = (
         full_df[f"{lower_zoning.data_col}_overlap"]
         / full_df[f"{lower_zoning.data_col}_1"]
