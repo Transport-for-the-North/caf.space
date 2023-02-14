@@ -177,7 +177,6 @@ class ZoningTranslationInputs(BaseConfig):
     # TODO choose and set default path for cache path
     zone_1: ZoneSystemInfo
     zone_2: ZoneSystemInfo
-    output_path: Path
     cache_path: Path
     method: Optional[str] = None
     lower_zoning: Optional[LowerZoneSystemInfo] = None

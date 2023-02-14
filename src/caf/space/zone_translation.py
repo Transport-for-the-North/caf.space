@@ -43,7 +43,6 @@ class ZoneTranslation:
         self.params = params
         self.zone_1 = params.zone_1
         self.zone_2 = params.zone_2
-        self.output_path = params.output_path
         self.cache_path = params.cache_path
         if params.lower_zoning:
             self.lower_zoning = params.lower_zoning
@@ -78,9 +77,6 @@ class ZoneTranslation:
         )
         final_zone_corr = self._slithers_and_rounding(spatial_correspondence)
         # Save correspondence output
-        final_zone_corr_path = (
-            self.output_path / f"{self.names[0]}_to_{self.names[1]}_correspondence.csv"
-        )
         (
             missing_zones_1,
             missing_zones_2,
@@ -109,10 +105,6 @@ class ZoneTranslation:
         LOG.info(
             "List of missing zones can be found in log file found here: %s",
             log_file,
-        )
-        LOG.info(
-            "Zone correspondence finished, file saved here: %s",
-            final_zone_corr_path,
         )
         final_zone_corr.to_csv(self.cacher / f"{self.run_date}.csv")
         self.params.save_yaml(self.cacher / f"{self.run_date}.yml")
