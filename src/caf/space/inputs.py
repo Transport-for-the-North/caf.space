@@ -18,7 +18,7 @@ import fiona
 import os
 from pathlib import Path
 import pandas as pd
-from typing import Union
+from typing import Optional
 from pydantic import validator
 
 # Third party imports
@@ -179,8 +179,8 @@ class ZoningTranslationInputs(BaseConfig):
     zone_2: ZoneSystemInfo
     output_path: Path
     cache_path: Path
-    lower_zoning: LowerZoneSystemInfo = None
-    method: str = None
+    method: Optional[str] = None
+    lower_zoning: Optional[LowerZoneSystemInfo] = None
     tolerance: float = 0.98
     rounding: bool = True
     filter_slithers: bool = True
