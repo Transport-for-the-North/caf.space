@@ -81,3 +81,5 @@ cross higher zone boundaries as rarely as possible for best results.
 
    *figure 3* - Example tables to go with the schematic example above. The rightmost two columns in the final
    table are the actual zone translation outputs.
+
+The inputs used in this example are included in the examples folder in the repo.

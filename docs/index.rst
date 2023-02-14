@@ -37,7 +37,6 @@ Contents
 
    input
    zonesystem
-   base_conf
    zone_trans
    weighted_trans
    op_model

@@ -141,11 +141,7 @@ class ZoningTranslationInputs(BaseConfig):
         Information about the lower zone system, used for performing
         weighted translations. This should be as small a zone system as
         possible relative to zone_1 and zone_2. For spatially weighted
-        translations this isn't needed.
-    output_path: Path
-        File path to where you want your translation saved. If the path
-        provided doesn't exist it will be created, but it's best to
-        check first to avoid surprises.
+        translations this isn't needed
     cache_path: Path
         File path to a cache of existing translations. This defaults to
         a location on a network drive, and it is best to keep it there,
@@ -209,7 +205,6 @@ class ZoningTranslationInputs(BaseConfig):
                 name=f"zone_{i}_name",
                 shapefile=Path(f"path/to/shapefile_{i}"),
                 id_col=f"id_col_for_zone_{i}",
-                lower_translation=Path(f"path/to/lower_trans_{i}"),
             )
         lower = LowerZoneSystemInfo(
             name="lower_zone_name",

@@ -111,7 +111,7 @@ class ZoneTranslation:
 
         return final_zone_corr
 
-    def weighted_translation(self):
+    def weighted_translation(self) -> pd.DataFrame:
         """
         Create a weighted zone translation.
 
@@ -122,8 +122,7 @@ class ZoneTranslation:
 
         Parameters
         ----------
-        self: for this to run self.params must contain lower zoning and a
-        method.
+        self: for this to run self.params must contain lower zoning and a method.
 
         Returns
         -------
