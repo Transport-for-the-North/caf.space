@@ -81,7 +81,10 @@ class ZoneTranslation:
         final_zone_corr_path = (
             self.output_path / f"{self.names[0]}_to_{self.names[1]}_correspondence.csv"
         )
-        (missing_zones_1, missing_zones_2,) = zone_correspondence.missing_zones_check(
+        (
+            missing_zones_1,
+            missing_zones_2,
+        ) = zone_correspondence.missing_zones_check(
             zones, final_zone_corr, self.zone_1, self.zone_2
         )
 
@@ -206,7 +209,10 @@ class ZoneTranslation:
         """
         if self.params.filter_slithers:
             LOG.info("Filtering out small overlaps.")
-            (_, spatial_correspondence_no_slithers,) = zone_correspondence.find_slithers(
+            (
+                _,
+                spatial_correspondence_no_slithers,
+            ) = zone_correspondence.find_slithers(
                 translation, self.names, self.params.tolerance
             )
 
