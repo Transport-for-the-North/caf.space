@@ -191,13 +191,6 @@ class ZoningTranslationInputs(BaseConfig):
         self.output_path.mkdir(exist_ok=True, parents=True)
         self.cache_path.mkdir(exist_ok=True, parents=True)
 
-    @staticmethod
-    def _path_none(value: str) -> Union[Path, None]:
-        """Convert string to Path, or None if empty."""
-        if value is None or value.strip() == "":
-            return None
-        return Path(value)
-
     def write_example(self, out_path: Path):
         """
         Write out an example config file.
