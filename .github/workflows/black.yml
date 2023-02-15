@@ -1,15 +1,13 @@
-name: Lint
+name: Black Formatting
 
 on:
   push:
-    branches:
-      - main
+    branches: main
   pull_request:
-    branches:
-      - main
+    branches: main
 
 jobs:
-  lint:
+  format:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2

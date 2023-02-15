@@ -12,5 +12,32 @@
 Common Analytical Framework (CAF) Space contain geo-processing functionality useful
 for transport planners. Primarily it is a tool for generating standard weighting
 translations in `.csv` format describing how to convert between different zoning systems.
-The aim is to free tools up from directly having to do their own geo-processing, and
+The aim is to free tools up from directly having to do their own geo-processing, and    
 instead have a single source of truth to get them from!
+
+<u><h3> Tool info </h3></u>
+The tool has two main options for running a translation, either a purely spatial translation (where overlapping zones are split by area), or a weighted translation where overlapping zones are split by some other type of weighting data like population or employment data. For most purposes a weighted translation will be more accurate, and it is up to the user to decide the most appropriate weighting data to use. For both types of translation the tool runs from a config file (in yaml format). These files can be created using the inputs module, or there is an example config file in the examples folder called test.yml. Parameters for this config are described below.
+
+<u><h4> Spatial Correspondence </h4></u>
+For a spatial correspondence, the only user inputs needed are shapefiles for the two zone systems you want a translation between. The parameters required for a spatial translation are as follows:
+
+<b> zone_1:<br>
+    name:</b> The name of the first zone system you are providing. This should be as simple as possible, so for an MSOA shapefile, name should simply be MSOA.<br>
+    <b>shapefile:</b> A file path to the shapefile you want a translation for.<br>
+    <b>id_col:</b> The name of the unique ID column in your chosen shapefile. This can be any column as long as it is unique for each zone in the shapefile.<br>
+<b> zone_2: Parameters the same as for zone_1, it doesn't matter which order these are in, a two-way translation will be created.</b><br>
+<b>cache_path:</b> File path to a cache of existing translations. This defaults to a location on a network drive, and it is best to keep it there if you have access to it.<br>
+<b>tolerance:</b> This is a float less than 1, and defaults to 0.98. If filter_slivers (explained below) is chosen, tolerance controls how big or small the slithers need to be to be rounded away. For most users this can be kept as is.<br>
+<b>rounding:</b> True or False. Select whether or not zone totals will be rounded to 1 after the translation is performed. Recommended to keep as True.<br>
+<b>filter_slithers:</b> True or False. Select whether very small overlaps between zones will be filtered out. This accounts for zone boundaries not aligning perfectly when they should between shapefiles, and the tolerance for this is controlled by the tolerance parameter. With this parameter set to false translations can be a bit messy.<br>
+<br>
+The translation will be output as a csv to your output path location, in a folder named by the names selected for each zone system. Along with the csv will be a yml file containing the parameters the translation was run with, along with the date of the run.<br>
+<br>
+<u><h4> Weighted Correspondence </h4></u>
+For a weighted translation more parameters must be provided. The tool creates a weighted translation by first joining weighting data to a lower zone system - this is a zone system smaller than the two primary zone systems. Overlaps are then found between the three zone systems to create a set of weighted tiles across the extent of the zones. These tiles are then used to create the translation. There is a more detailed explanation of this process in the documentation. Below are the additional parameters required for a weighted translation rather than a spatial one.<br>
+
+<b>lower_zoning:</b> lower_zoning is a subclass of the class used for zones 1 and 2, the first three parameters for this are the same as for zones 1 and 2. The additional parameters required for lower zoning are:<br>
+    weight_data: File path to the weighting data for the lower zone system. This should be saved as a csv, and only needs two columns (an ID column and a column of weighting data)<br>
+    <b>data_col:</b> The name of the column in the weighting data csv containing the weight data.<br>
+    <b>weight_id_col:</b> The name of the columns in the weighting data containing the zone ids. This will be used to join the weighting data to the lower zoning, so the IDs must match, but the names of the ID columns may be different.<br>
+<b>method:</b> The name of the method used for weighting (e.g. pop or emp). This can be anything, but must be included as the tool checks if this parameter exists to decide whether a weighted translation can be performed.
