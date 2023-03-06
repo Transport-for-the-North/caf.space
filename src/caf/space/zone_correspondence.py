@@ -277,8 +277,10 @@ def rounding_correction(
         raise ValueError(f"{negatives} negative correspondence factors for {factor_col}")
     too_big = (zone_corr[factor_col].round(3) > 1).count()
     if too_big > 0:
-        warnings.warn(f"{too_big} correspondence factors > 1 for {factor_col}. "
-                      f"The translation will complete but check the output.")
+        warnings.warn(
+            f"{too_big} correspondence factors > 1 for {factor_col}. "
+            f"The translation will complete but check the output."
+        )
 
     return zone_corr
 
