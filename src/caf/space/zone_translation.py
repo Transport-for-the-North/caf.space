@@ -69,7 +69,8 @@ class ZoneTranslation:
 
         Returns
         -------
-        Dataframe containing spatial zone translation.
+        spatial_translation: pd.DataFrame
+            Dataframe containing spatial zone translation between zone 1 and zone 2.
         """
         zones = zone_correspondence.read_zone_shapefiles(self.zone_1, self.zone_2)
         spatial_correspondence = zone_correspondence.spatial_zone_correspondence(
@@ -127,7 +128,7 @@ class ZoneTranslation:
         Returns
         -------
         weighted_translation: pd.DataFrame
-            Weighted Translation between Zone 1 and Zone 2
+            Dataframe containing weighted zone translation between zone 1 and zone 2.
         """
         LOG.info("Starting weighted translation")
         # Init
