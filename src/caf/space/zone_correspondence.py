@@ -272,10 +272,10 @@ def rounding_correction(
     )
 
     # Check for negative zone correspondences
-    negatives = (zone_corr[factor_col] < 0).count()
+    negatives = (zone_corr[factor_col] < 0).sum()
     if negatives > 0:
         raise ValueError(f"{negatives} negative correspondence factors for {factor_col}")
-    too_big = (zone_corr[factor_col].round(3) > 1).count()
+    too_big = (zone_corr[factor_col].round(3) > 1).sum()
     if too_big > 0:
         warnings.warn(
             f"{too_big} correspondence factors > 1 for {factor_col}. "
