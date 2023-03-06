@@ -170,12 +170,11 @@ class ZoningTranslationInputs(BaseConfig):
         automatically and shouldn't be included in the config yaml file.
     """
 
-    # TODO choose and set default path for cache path
     zone_1: ZoneSystemInfo
     zone_2: ZoneSystemInfo
-    cache_path: Path
-    method: Optional[str] = None
     lower_zoning: Optional[LowerZoneSystemInfo] = None
+    cache_path: Path = Path(r"I:\Data\Zone Translations\cache")
+    method: Optional[str] = None
     tolerance: float = 0.98
     rounding: bool = True
     filter_slithers: bool = True
