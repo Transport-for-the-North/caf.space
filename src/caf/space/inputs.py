@@ -227,7 +227,7 @@ class ZoningTranslationInputs(BaseConfig):
             weight_data=Path("path/to/lower/weight/data"),
             data_col="data_col_name",
             weight_id_col="id_col_in_weighting_data",
-            weight_data_year=2018
+            weight_data_year=2018,
         )
         ex = ZoningTranslationInputs(
             zone_1=zones[1],
