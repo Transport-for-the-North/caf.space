@@ -130,7 +130,9 @@ def fixture_point_zones(main_dir) -> Path:
     """
     true_point = Point(5, 7)
     pseudo_point = Polygon([(0, 0), (0, 1), (1, 1), (1, 0)])
-    points_df = pd.DataFrame(data=["true_point", "pseudo_point", "W", "X", "Y", "Z"], columns=["zone_2_id"])
+    points_df = pd.DataFrame(
+        data=["true_point", "pseudo_point", "W", "X", "Y", "Z"], columns=["zone_2_id"]
+    )
     points = gpd.GeoDataFrame(
         data=points_df,
         geometry=[
@@ -140,7 +142,7 @@ def fixture_point_zones(main_dir) -> Path:
             Polygon([(3, 4), (3, 8), (8, 8), (8, 4)]),
             Polygon([(0, 1), (0, 4), (3, 4), (3, 0), (1, 0), (1, 1)]),
             Polygon([(3, 0), (3, 4), (8, 4), (8, 0)]),
-        ]
+        ],
     )
     return points
 
@@ -287,7 +289,7 @@ def fixture_weighted_config(
         weight_data=lower_weighting,
         data_col="weight",
         weight_id_col="lower_id",
-        weight_data_year=2018
+        weight_data_year=2018,
     )
     params = inputs.ZoningTranslationInputs(
         zone_1=zone_1,
@@ -316,6 +318,8 @@ def fixture_weighted_trans(weighted_config) -> pd.DataFrame:
     """
     trans = zone_translation.ZoneTranslation(weighted_config).weighted_translation()
     return trans
+
+
 # # # CLASSES # # #
 
 # # # FUNCTIONS # # #

@@ -227,13 +227,13 @@ class ZoningTranslationInputs(BaseConfig):
             weight_data=Path("path/to/lower/weight/data"),
             data_col="data_col_name",
             weight_id_col="id_col_in_weighting_data",
+            weight_data_year=2018
         )
         ex = ZoningTranslationInputs(
             zone_1=zones[1],
             zone_2=zones[2],
             lower_zoning=lower,
-            output_path=r"path\to\output\folder",
-            cache_path=r"path\to\cache\folder\defaults\to\ydrive",
+            cache_path=Path(r"path\to\cache\folder\defaults\to\ydrive"),
             method="OPTIONAL name of method",
         )
         ex.save_yaml(out_path / "example.yml")

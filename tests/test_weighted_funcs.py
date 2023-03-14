@@ -24,7 +24,11 @@ def fixture_tiles(weighted_config):
     Fixture returning tiles from the _create_tiles function
     """
     tiles = weighted_funcs._create_tiles(
-        weighted_config.zone_1, weighted_config.zone_2, weighted_config.lower_zoning, point_handling=False, point_tolerance=1
+        weighted_config.zone_1,
+        weighted_config.zone_2,
+        weighted_config.lower_zoning,
+        point_handling=False,
+        point_tolerance=1,
     )
     return tiles
 
@@ -35,11 +39,7 @@ def fixture_overlaps(weighted_config):
     Fixture returning overlaps ond totals.
     """
     overlaps = weighted_funcs.get_weighted_translation(
-        weighted_config.zone_1,
-        weighted_config.zone_2,
-        weighted_config.lower_zoning,
-        False,
-        1
+        weighted_config.zone_1, weighted_config.zone_2, weighted_config.lower_zoning, False, 1
     )
     return overlaps
 
@@ -58,6 +58,7 @@ def fixture_point_handling(weighted_config):
 
     return adjusted, zone
 
+
 @pytest.fixture(name="points_handled", scope="class")
 def fixture_no_points(point_zones, weighted_config):
     zone = point_zones
@@ -67,9 +68,10 @@ def fixture_no_points(point_zones, weighted_config):
         zone_id=weighted_config.zone_2.id_col,
         lower=lower,
         lower_id=weighted_config.lower_zoning.id_col,
-        tolerance=2
+        tolerance=2,
     )
     return adjusted
+
 
 class TestWeightedLower:
     """
@@ -144,10 +146,9 @@ class TestPointHandling:
     @pytest.mark.parametrize("column", ["true_point", "pseudo_point"])
     def test_point(self, points_handled, column):
         handled = points_handled
-        assert (handled.loc[handled['zone_2_id'] == column, 'geometry'].area == 4).all()
+        assert (handled.loc[handled["zone_2_id"] == column, "geometry"].area == 4).all()
 
     @pytest.mark.parametrize("column, area", [("Y", 8), ("X", 16)])
     def test_cutout(self, points_handled, column, area):
         handled = points_handled
-        assert (handled.loc[handled['zone_2_id'] == column, 'geometry'].area == area).all()
-
+        assert (handled.loc[handled["zone_2_id"] == column, "geometry"].area == area).all()
