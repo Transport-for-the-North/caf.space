@@ -109,9 +109,7 @@ class ZoneTranslation:
         )
         out_name = f"{self.names[0]}_to_{self.names[1]}_spatial"
         final_zone_corr.to_csv(out_path / f"{out_name}.csv", index=False)
-        self.params.save_yaml(
-            out_path / f"{out_name}.yml"
-        )
+        self.params.save_yaml(out_path / f"{out_name}.yml")
 
         return final_zone_corr
 
