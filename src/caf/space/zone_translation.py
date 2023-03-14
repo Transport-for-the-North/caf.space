@@ -48,14 +48,14 @@ class ZoneTranslation:
             self.lower_zoning = params.lower_zoning
         if params.method:
             self.method = params.method
-        self.tolerance = params.tolerance
+        self.slither_tolerance = params.slither_tolerance
         self.rounding = params.rounding
         self.filter_slithers = params.filter_slithers
+        self.point_handling = params.point_handling
+        self.point_tolerance = params.point_tolerance
         self.run_date = params.run_date
         sorted_names = sorted([params.zone_1.name, params.zone_2.name])
         self.names = (sorted_names[0], sorted_names[1])
-        self.cacher = self.cache_path / f"{self.names[0]}_{self.names[1]}"
-        self.cacher.mkdir(exist_ok=True, parents=True)
 
     def spatial_translation(self) -> pd.DataFrame:
         """
@@ -87,9 +87,9 @@ class ZoneTranslation:
 
         warnings.warn(f"Missing Zones from 1 : {len(missing_zones_1)}")
         warnings.warn(f"Missing Zones from 2 : {len(missing_zones_2)}")
-        log_path = self.cache_path / f"{self.names[0]}_{self.names[1]}"
-        log_path.mkdir(exist_ok=True, parents=True)
-        log_file = log_path / "missing_zones_log.xlsx"
+        out_path = self.cache_path / f"{self.names[0]}_{self.names[1]}"
+        out_path.mkdir(exist_ok=True, parents=True)
+        log_file = out_path / "missing_zones_log.xlsx"
         with pd.ExcelWriter(
             log_file, engine="openpyxl"
         ) as writer:  # pylint: disable=abstract-class-instantiated
@@ -107,8 +107,11 @@ class ZoneTranslation:
             "List of missing zones can be found in log file found here: %s",
             log_file,
         )
-        final_zone_corr.to_csv(self.cacher / f"{self.run_date}.csv")
-        self.params.save_yaml(self.cacher / f"{self.run_date}.yml")
+        out_name = f"{self.names[0]}_to_{self.names[1]}_spatial"
+        final_zone_corr.to_csv(out_path / f"{out_name}.csv", index=False)
+        self.params.save_yaml(
+            out_path / f"{out_name}.yml"
+        )
 
         return final_zone_corr
 
@@ -136,10 +139,12 @@ class ZoneTranslation:
             raise ValueError("A method must be provided to perform a weighted translation.")
         if self.params.lower_zoning is False:
             raise ValueError("Lower zoning data is required for a weighted translations.")
-        cacher_out = self.cacher / self.method
-        cacher_out.mkdir(exist_ok=True, parents=False)
         weighted_translation = weighted_funcs.final_weighted(
-            self.zone_1, self.zone_2, self.lower_zoning
+            self.zone_1,
+            self.zone_2,
+            self.lower_zoning,
+            self.point_handling,
+            self.point_tolerance,
         )
         weighted_translation = weighted_translation[
             [
@@ -178,9 +183,11 @@ class ZoneTranslation:
                 column_list[1],
                 under_1_zones_2,
             )
-        weighted_translation.to_csv(cacher_out / f"{self.params.run_date}.csv", index=False)
-        self.params.save_yaml(cacher_out / f"{self.params.run_date}.yml")
-
+        out_path = self.cache_path / f"{self.names[0]}_{self.names[1]}"
+        out_path.mkdir(exist_ok=True, parents=True)
+        out_name = f"{self.names[0]}_to_{self.names[1]}_{self.method}_{self.lower_zoning.weight_data_year}"
+        weighted_translation.to_csv(out_path / f"{out_name}.csv", index=False)
+        self.params.save_yaml(out_path / f"{out_name}.yml")
         return weighted_translation
 
     def _slithers_and_rounding(self, translation: pd.DataFrame) -> pd.DataFrame:
@@ -205,7 +212,7 @@ class ZoneTranslation:
                 _,
                 spatial_correspondence_no_slithers,
             ) = zone_correspondence.find_slithers(
-                translation, self.names, self.params.tolerance
+                translation, self.names, self.params.slither_tolerance
             )
 
             if self.params.rounding:

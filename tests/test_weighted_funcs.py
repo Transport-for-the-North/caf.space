@@ -4,6 +4,7 @@ Module for testing the weighted_funcs module
 from copy import deepcopy
 import pytest
 import pandas as pd
+import geopandas as gpd
 from caf.space import weighted_funcs
 
 
@@ -23,7 +24,7 @@ def fixture_tiles(weighted_config):
     Fixture returning tiles from the _create_tiles function
     """
     tiles = weighted_funcs._create_tiles(
-        weighted_config.zone_1, weighted_config.zone_2, weighted_config.lower_zoning
+        weighted_config.zone_1, weighted_config.zone_2, weighted_config.lower_zoning, point_handling=False, point_tolerance=1
     )
     return tiles
 
@@ -37,9 +38,38 @@ def fixture_overlaps(weighted_config):
         weighted_config.zone_1,
         weighted_config.zone_2,
         weighted_config.lower_zoning,
+        False,
+        1
     )
     return overlaps
 
+
+@pytest.fixture(name="point_handling_no_points", scope="class")
+def fixture_point_handling(weighted_config):
+    zone = gpd.read_file(weighted_config.zone_2.shapefile)
+    lower = gpd.read_file(weighted_config.lower_zoning.shapefile)
+    adjusted = weighted_funcs._point_handling(
+        zone=zone,
+        zone_id=weighted_config.zone_2.id_col,
+        lower=lower,
+        lower_id=weighted_config.lower_zoning.id_col,
+        tolerance=weighted_config.point_tolerance,
+    )
+
+    return adjusted, zone
+
+@pytest.fixture(name="points_handled", scope="class")
+def fixture_no_points(point_zones, weighted_config):
+    zone = point_zones
+    lower = gpd.read_file(weighted_config.lower_zoning.shapefile)
+    adjusted = weighted_funcs._point_handling(
+        zone=zone,
+        zone_id=weighted_config.zone_2.id_col,
+        lower=lower,
+        lower_id=weighted_config.lower_zoning.id_col,
+        tolerance=2
+    )
+    return adjusted
 
 class TestWeightedLower:
     """
@@ -102,39 +132,22 @@ class TestOverlapsTotals:
         assert overlap_sum == 310
 
 
-# class Test_Cols_In_Both:
-#     def __init__(self, right_in: pd.DataFrame, left_in: pd.DataFrame,
-#     cols: list, lower_cols_left: list, lower_cols_right: list):
-#         self.left_in = left_in
-#         self.right_in = right_in
-#         self.cols = cols
-#         self.lower_cols_left = lower_cols_left
-#         self.lower_cols_right = lower_cols_right
-#         self.lis, self.left, self.right,  = weighted_funcs._cols_in_both(left_in, right_in)
-#
-#     def test_returns_lower(self):
-#         assert self.left.columns, self.right.columns == self.lower_cols_left, self.lower_cols_right
-#
-#     def test_returns_matching(self):
-#         assert self.list == self.cols
-#
-# class Test_Var_Appy:
-#     def __init__(self, corr_path: str, weight_path: str, area_corr: pd.DataFrame,
-#     missing_zones: int):
-#         self.corr_path = corr_path
-#         self.weight_path = weight_path
-#         self.area_corr = area_corr
-#         self.output_corr = weighted_funcs._var_apply(corr_path, weight_path,
-#         'var','zone_id','lower_name')
-#
-#     def test_join(self):
-#         assert self.output_corr == self.area_corr
-#
-#     def test_logging(self):
-#         with pytest.warns(UserWarning, match="3 zones are not intersected by target zones"):
-#             weighted_funcs._var_apply(self.corr_path, self.weight_path_missing, 'var','zone_id','lower_name'
-#             )
-#
-# class Test_Zone_Split:
-#     def __init__(self):
-#
+class TestPointHandling:
+    """
+    Class for testing _point_handling
+    """
+
+    def test_no_points(self, point_handling_no_points):
+        handled, zone = point_handling_no_points
+        pd.testing.assert_frame_equal(handled, zone)
+
+    @pytest.mark.parametrize("column", ["true_point", "pseudo_point"])
+    def test_point(self, points_handled, column):
+        handled = points_handled
+        assert (handled.loc[handled['zone_2_id'] == column, 'geometry'].area == 4).all()
+
+    @pytest.mark.parametrize("column, area", [("Y", 8), ("X", 16)])
+    def test_cutout(self, points_handled, column, area):
+        handled = points_handled
+        assert (handled.loc[handled['zone_2_id'] == column, 'geometry'].area == area).all()
+

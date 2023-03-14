@@ -1,14 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on: 27/01/2023
-Updated on:
-
-Original author: Isaac Scott
-Last update made by:
-Other updates made by:
-
-File purpose:
-
+Fixtures used across multiple test modules.
 """
 # Built-Ins
 from pathlib import Path
@@ -17,7 +9,7 @@ from pathlib import Path
 import pytest
 
 # pylint: disable=import-error
-from shapely.geometry import Polygon
+from shapely.geometry import Polygon, Point
 import geopandas as gpd
 
 # pylint: enable=import-error
@@ -127,8 +119,30 @@ def fixture_zone_2_shape(main_dir) -> Path:
         crs="EPSG:27700",
     )
     file = main_dir / "zone_2.shp"
-    zone_2.to_file(main_dir / "zone_2.shp")
+    zone_2.to_file(file)
     return file
+
+
+@pytest.fixture(name="point_zones", scope="session")
+def fixture_point_zones(main_dir) -> Path:
+    """
+    Fixture for zone_2 with some point zones included.
+    """
+    true_point = Point(5, 7)
+    pseudo_point = Polygon([(0, 0), (0, 1), (1, 1), (1, 0)])
+    points_df = pd.DataFrame(data=["true_point", "pseudo_point", "W", "X", "Y", "Z"], columns=["zone_2_id"])
+    points = gpd.GeoDataFrame(
+        data=points_df,
+        geometry=[
+            true_point,
+            pseudo_point,
+            Polygon([(0, 8), (0, 4), (3, 4), (3, 8)]),
+            Polygon([(3, 4), (3, 8), (8, 8), (8, 4)]),
+            Polygon([(0, 1), (0, 4), (3, 4), (3, 0), (1, 0), (1, 1)]),
+            Polygon([(3, 0), (3, 4), (8, 4), (8, 0)]),
+        ]
+    )
+    return points
 
 
 @pytest.fixture(name="lower_weighting", scope="session")
@@ -301,8 +315,6 @@ def fixture_weighted_trans(weighted_config) -> pd.DataFrame:
     """
     trans = zone_translation.ZoneTranslation(weighted_config).weighted_translation()
     return trans
-
-
 # # # CLASSES # # #
 
 # # # FUNCTIONS # # #

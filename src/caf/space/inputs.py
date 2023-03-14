@@ -59,7 +59,8 @@ class ZoneSystemInfo(BaseConfig):
             if v not in schema["properties"].keys():
                 raise ValueError(
                     f"The id_col provided, {v}, does not appear"
-                    f" in the given shapefile, {'shapefile'}."
+                    f" in the given shapefile. Please choose from:"
+                    f"{schema['properties'].keys()}."
                 )
         return v
 
@@ -104,11 +105,16 @@ class LowerZoneSystemInfo(ZoneSystemInfo):
         zone ids. This will be used to join the weighting data to the
         lower zoning, so the IDs must match, but the names of the ID
         columns may be different.
+    weight_data_year: int
+        The year the weighting data comes from. This is used for writing files
+        to the cache and is important for logging. If you don't know this you
+        should consider whether your weighting data is appropriate.
     """
 
     weight_data: Path
     data_col: str
     weight_id_col: str
+    weight_data_year: int
 
     def _lower_to_higher(self) -> ZoneSystemInfo:
         return ZoneSystemInfo(name=self.name, shapefile=self.shapefile, id_col=self.id_col)
@@ -151,7 +157,7 @@ class ZoningTranslationInputs(BaseConfig):
         This can be anything, but must be included as the tool checks if
         this parameter exists to decide whether to perform a spatial or
         weighted translation.
-    tolerance: float, default 0.98
+    slither_tolerance: float, default 0.98
         This is a float less than 1, and defaults to 0.98. If
         filter_slivers (explained below) is chosen, tolerance controls
         how big or small the slithers need to be to be rounded away. For
@@ -165,6 +171,14 @@ class ZoningTranslationInputs(BaseConfig):
         perfectly when they should between shapefiles, and the tolerance
         for this is controlled by the tolerance parameter. With this
         parameter set to false translations can be a bit messy.
+    point_handling: bool, False
+        Select whether point zones should be handled specially. If this is set
+        to True a 'point_tolerance' parameter must also be provided. By default,
+        this is set to 1 which would only class true points as point zones.
+        This also only works for weighted translations.
+    point_tolerance: Optional[float]
+        The area of zone below which zones will be treated as point zones. Point
+        zones have their geometry adjusted to the lower zone they sit within.
     run_date: str, datetime.datetime.now().strftime("%d_%m_%y")
         When the tool is being run. This is always generated
         automatically and shouldn't be included in the config yaml file.
@@ -175,9 +189,11 @@ class ZoningTranslationInputs(BaseConfig):
     lower_zoning: Optional[LowerZoneSystemInfo] = None
     cache_path: Path = Path(r"I:\Data\Zone Translations\cache")
     method: Optional[str] = None
-    tolerance: float = 0.98
+    slither_tolerance: float = 0.98
     rounding: bool = True
     filter_slithers: bool = True
+    point_handling: bool = False
+    point_tolerance: float = 1
     run_date: str = datetime.datetime.now().strftime("%d_%m_%y")
 
     def __post_init__(self) -> None:
