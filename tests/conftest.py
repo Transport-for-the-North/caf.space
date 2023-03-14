@@ -287,6 +287,7 @@ def fixture_weighted_config(
         weight_data=lower_weighting,
         data_col="weight",
         weight_id_col="lower_id",
+        weight_data_year=2018
     )
     params = inputs.ZoningTranslationInputs(
         zone_1=zone_1,
