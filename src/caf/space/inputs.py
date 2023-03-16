@@ -239,7 +239,7 @@ class ZoningTranslationInputs(BaseConfig):
                 name=f"zone_{i}_name",
                 shapefile=Path(f"path/to/shapefile_{i}"),
                 id_col=f"id_col_for_zone_{i}",
-                point_shapefile=f"path/to/point/shapefile"
+                point_shapefile=f"path/to/point/shapefile",
             )
         lower = LowerZoneSystemInfo(
             name="lower_zone_name",
