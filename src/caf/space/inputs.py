@@ -136,7 +136,7 @@ class LowerZoneSystemInfo(ZoneSystemInfo):
 
     def _lower_to_higher(self) -> TransZoneSystemInfo:
         return TransZoneSystemInfo(
-            name=self.name, shapefile=self.shapefile, id_col=self.id_col
+            name=self.name, shapefile=self.shapefile, id_col=self.id_col, point_shapefile=None
         )
 
     @validator("weight_data")
@@ -239,6 +239,7 @@ class ZoningTranslationInputs(BaseConfig):
                 name=f"zone_{i}_name",
                 shapefile=Path(f"path/to/shapefile_{i}"),
                 id_col=f"id_col_for_zone_{i}",
+                point_shapefile=f"path/to/point/shapefile"
             )
         lower = LowerZoneSystemInfo(
             name="lower_zone_name",
