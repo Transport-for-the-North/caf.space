@@ -82,6 +82,25 @@ def fixture_expected_weighted() -> pd.DataFrame:
     return output
 
 
+@pytest.fixture(name="expected_points", scope="class")
+def fixture_expected_points() -> pd.DataFrame:
+    # fmt: off
+    output = pd.DataFrame(
+        {
+            "zone_1_id": ["A", "A", "A", "A", "B", "B", "B", "C", "C", "C"],
+            "zone_2_id": ["W", "X", "Y", "Z", "X", "Z", "true_point", "Y", "Z", "pseudo_point"],
+            "zone_1_to_zone_2": [
+                0.529, 0.176, 0.235, 0.059, 0.526, 0.263, 0.211, 0.269, 0.5, 0.231
+            ],
+            "zone_2_to_zone_1": [
+                1, 0.231, 0.364, 0.053, 0.769, 0.263, 1, 0.636, 0.684, 1
+            ],
+        }
+    )
+    # fmt: on
+    return output
+
+
 @pytest.fixture(name="expected_spatial", scope="class")
 def fixture_expected_spatial() -> pd.DataFrame:
     """
@@ -129,7 +148,7 @@ class TestZoneTranslation:
     """
 
     @pytest.mark.parametrize(
-        "translation_str", ["spatial_trans", "weighted_trans", "dupe_trans"]
+        "translation_str", ["spatial_trans", "weighted_trans", "dupe_trans", "point_trans"]
     )
     @pytest.mark.parametrize("origin_zone", [1, 2])
     def test_sum_to_1(self, translation_str: str, origin_zone: int, request):
@@ -154,7 +173,7 @@ class TestZoneTranslation:
         assert (rounded == 1).all()
 
     @pytest.mark.parametrize(
-        "translation_str", ["spatial_trans", "weighted_trans", "dupe_trans"]
+        "translation_str", ["spatial_trans", "weighted_trans", "dupe_trans", "point_trans"]
     )
     @pytest.mark.parametrize("col", ["zone_1_to_zone_2", "zone_2_to_zone_1"])
     def test_positive(self, translation_str: str, col: str, request):
@@ -188,7 +207,11 @@ class TestZoneTranslation:
 
     @pytest.mark.parametrize(
         "expected_str,trans_str",
-        [("expected_spatial", "spatial_trans"), ("expected_weighted", "weighted_trans")],
+        [
+            ("expected_spatial", "spatial_trans"),
+            ("expected_weighted", "weighted_trans"),
+            ("expected_points", "point_trans"),
+        ],
     )
     def test_output(self, trans_str: str, expected_str: str, request):
         """

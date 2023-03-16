@@ -45,7 +45,7 @@ def fixture_overlaps(weighted_config):
 
 
 @pytest.fixture(name="point_handling_no_points", scope="class")
-def fixture_point_handling(weighted_config):
+def fixture_no_points(weighted_config):
     zone = gpd.read_file(weighted_config.zone_2.shapefile)
     lower = gpd.read_file(weighted_config.lower_zoning.shapefile)
     adjusted = weighted_funcs._point_handling(
@@ -60,8 +60,10 @@ def fixture_point_handling(weighted_config):
 
 
 @pytest.fixture(name="points_handled", scope="class")
-def fixture_no_points(point_zones, weighted_config):
-    zone = point_zones
+def fixture_points(point_zones, point_shapefile, weighted_config):
+    polygons = gpd.read_file(point_zones)
+    points = gpd.read_file(point_shapefile)
+    zone = pd.concat([polygons, points])
     lower = gpd.read_file(weighted_config.lower_zoning.shapefile)
     adjusted = weighted_funcs._point_handling(
         zone=zone,

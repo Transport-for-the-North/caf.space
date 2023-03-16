@@ -14,7 +14,7 @@ import geopandas as gpd
 
 # pylint: enable=import-error
 
-from caf.space import inputs
+from caf.space import inputs, zone_correspondence
 
 ##### CONSTANTS #####
 logging.captureWarnings(True)
@@ -97,8 +97,8 @@ def _point_handling(
 
 
 def _create_tiles(
-    zone_1: inputs.ZoneSystemInfo,
-    zone_2: inputs.ZoneSystemInfo,
+    zone_1: inputs.TransZoneSystemInfo,
+    zone_2: inputs.TransZoneSystemInfo,
     lower_zoning: inputs.LowerZoneSystemInfo,
     point_handling: bool,
     point_tolerance: float,
@@ -116,26 +116,24 @@ def _create_tiles(
     -------
     A set of weighted tiles used for weighted translation.
     """
-    zone_1_gdf = gpd.read_file(zone_1.shapefile)
-    zone_2_gdf = gpd.read_file(zone_2.shapefile)
-    LOG.info(
-        "Count of %s zone: %s",
-        zone_2.name,
-        zone_2_gdf.iloc[:, 0].count(),
-    )
-    LOG.info(
-        "Count of %s zones: %s",
-        zone_1.name,
-        zone_1_gdf.iloc[:, 0].count(),
-    )
-
+    zones = zone_correspondence.read_zone_shapefiles(zone_1, zone_2)
+    zone_1_gdf = zones[zone_1.name]["Zone"][[f"{zone_1.name}_id", "geometry"]]
+    zone_2_gdf = zones[zone_2.name]["Zone"][[f"{zone_2.name}_id", "geometry"]]
     weighting = _weighted_lower(lower_zoning)
     if point_handling:
+        if zone_1.point_shapefile:
+            zone_1_points = gpd.read_file(zone_1.point_shapefile)[[zone_1.id_col, "geometry"]]
+            zone_1_points.rename(columns={zone_1.id_col: f"{zone_1.name}_id"}, inplace=True)
+            zone_1_gdf = pd.concat([zone_1_gdf, zone_1_points])
         zone_1_gdf = _point_handling(
-            zone_1_gdf, zone_1.id_col, weighting, lower_zoning.id_col, point_tolerance
+            zone_1_gdf, f"{zone_1.name}_id", weighting, lower_zoning.id_col, point_tolerance
         )
+        if zone_2.point_shapefile:
+            zone_2_points = gpd.read_file(zone_2.point_shapefile)[[zone_2.id_col, "geometry"]]
+            zone_2_points.rename(columns={zone_2.id_col: f"{zone_2.name}_id"}, inplace=True)
+            zone_2_gdf = pd.concat([zone_2_gdf, zone_2_points])
         zone_2_gdf = _point_handling(
-            zone_2_gdf, zone_2.id_col, weighting, lower_zoning.id_col, point_tolerance
+            zone_2_gdf, f"{zone_2.name}_id", weighting, lower_zoning.id_col, point_tolerance
         )
     tiles = reduce(
         lambda x, y: gpd.overlay(x, y, keep_geom_type=True),
@@ -146,8 +144,8 @@ def _create_tiles(
     tiles[lower_zoning.data_col] *= tiles.prop
     return tiles[
         [
-            zone_1.id_col,
-            zone_2.id_col,
+            f"{zone_1.name}_id",
+            f"{zone_2.name}_id",
             lower_zoning.data_col,
         ]
     ]
@@ -172,8 +170,8 @@ def return_totals(frame: pd.DataFrame, id_col: str, data_col: str) -> pd.DataFra
 
 
 def get_weighted_translation(
-    zone_1: inputs.ZoneSystemInfo,
-    zone_2: inputs.ZoneSystemInfo,
+    zone_1: inputs.TransZoneSystemInfo,
+    zone_2: inputs.TransZoneSystemInfo,
     lower_zoning: inputs.LowerZoneSystemInfo,
     point_handling: bool,
     point_tolerance: float,
@@ -200,12 +198,12 @@ def get_weighted_translation(
     # grouped in different ways to produce the translation.
     tiles = _create_tiles(zone_1, zone_2, lower_zoning, point_handling, point_tolerance)
     # produce total weights by each respective zone system.
-    totals_1 = return_totals(tiles, zone_1.id_col, lower_zoning.data_col).to_frame()
-    totals_2 = return_totals(tiles, zone_2.id_col, lower_zoning.data_col).to_frame()
+    totals_1 = return_totals(tiles, f"{zone_1.name}_id", lower_zoning.data_col).to_frame()
+    totals_2 = return_totals(tiles, f"{zone_2.name}_id", lower_zoning.data_col).to_frame()
     # get values of overlaps between zone systems by grouping by both
     # zone systems and summing.
     overlap = (
-        tiles.groupby([zone_1.id_col, zone_2.id_col])
+        tiles.groupby([f"{zone_1.name}_id", f"{zone_2.name}_id"])
         .sum()
         .loc[:, lower_zoning.data_col]
         .to_frame()
@@ -216,8 +214,8 @@ def get_weighted_translation(
 
 
 def final_weighted(
-    zone_1: inputs.ZoneSystemInfo,
-    zone_2: inputs.ZoneSystemInfo,
+    zone_1: inputs.TransZoneSystemInfo,
+    zone_2: inputs.TransZoneSystemInfo,
     lower_zoning: inputs.LowerZoneSystemInfo,
     point_handling: bool,
     point_tolerance: float,

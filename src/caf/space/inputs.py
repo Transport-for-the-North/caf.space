@@ -85,11 +85,29 @@ class ZoneSystemInfo(BaseConfig):
         return v
 
 
+class TransZoneSystemInfo(ZoneSystemInfo):
+    """
+    Input data for primary zone systems in translation.
+
+    Inherits from ZoneSystemInfo.
+
+    Parameters
+    ----------
+    point_shapefile: Optional[Path]
+        A shapefile of point zones to be joined to the main shapefile. This
+        shapefile must contain the same id_col as the main shapefile as the two
+        will be concatenated on this column. If this is provided set 'point_handling'
+        to True in the main config class or it will be effectively ignored.
+    """
+
+    point_shapefile: Optional[Path]
+
+
 class LowerZoneSystemInfo(ZoneSystemInfo):
     """
     Lower level zone system input data for `ZoneTranslationInputs`.
 
-    Inherits from ShapefileInfo.
+    Inherits from ZoneSystemInfo.
 
     Parameters
     ----------
@@ -116,8 +134,10 @@ class LowerZoneSystemInfo(ZoneSystemInfo):
     weight_id_col: str
     weight_data_year: int
 
-    def _lower_to_higher(self) -> ZoneSystemInfo:
-        return ZoneSystemInfo(name=self.name, shapefile=self.shapefile, id_col=self.id_col)
+    def _lower_to_higher(self) -> TransZoneSystemInfo:
+        return TransZoneSystemInfo(
+            name=self.name, shapefile=self.shapefile, id_col=self.id_col
+        )
 
     @validator("weight_data")
     def _weight_data_exists(cls, v):
@@ -139,9 +159,9 @@ class ZoningTranslationInputs(BaseConfig):
 
     Parameters
     ----------
-    zone_1: ZoneSystemInfo
+    zone_1: TransZoneSystemInfo
         Zone system 1 information
-    zone_2: ZoneSystemInfo
+    zone_2: TransZoneSystemInfo
         Zone system 2 information
     lower_zoning: LowerZoneSystemInfo
         Information about the lower zone system, used for performing
@@ -184,8 +204,8 @@ class ZoningTranslationInputs(BaseConfig):
         automatically and shouldn't be included in the config yaml file.
     """
 
-    zone_1: ZoneSystemInfo
-    zone_2: ZoneSystemInfo
+    zone_1: TransZoneSystemInfo
+    zone_2: TransZoneSystemInfo
     lower_zoning: Optional[LowerZoneSystemInfo] = None
     cache_path: Path = Path(r"I:\Data\Zone Translations\cache")
     method: Optional[str] = None
@@ -215,7 +235,7 @@ class ZoningTranslationInputs(BaseConfig):
         """
         zones = {}
         for i in range(1, 3):
-            zones[i] = ZoneSystemInfo(
+            zones[i] = TransZoneSystemInfo(
                 name=f"zone_{i}_name",
                 shapefile=Path(f"path/to/shapefile_{i}"),
                 id_col=f"id_col_for_zone_{i}",
