@@ -31,6 +31,7 @@ from caf.toolkit import BaseConfig
 LOG = logging.getLogger(__name__)
 CACHE_PATH = r"I:\Data\Zone Translations\cache"
 
+
 class ZoneSystemInfo(BaseConfig):
     """Base class for storing information about a shapefile input.
 

@@ -6,6 +6,7 @@ User interface for caf.space
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from pathlib import Path
+
 # Third Party
 from caf.space import inputs, zone_translation
 
@@ -15,13 +16,23 @@ from caf.space import inputs, zone_translation
 # pylint: enable=import-error,wrong-import-position
 
 # # # CONSTANTS # # #
+SHAPE_FILEFILTER = (("Shapefiles", "*.shp"), ("All files", "*.*"))
+CSV_FILEFILTER = (("CSV", "*.csv"), ("All files", "*.*"))
 
 
 # # # CLASSES # # #
 class FileWidget(ttk.Frame):
     """Tkinter widget for an entry box to select a file."""
 
-    def __init__(self, parent, label="", browse="open", path_width=20, label_width=20):
+    def __init__(
+        self,
+        parent,
+        label="",
+        browse="open",
+        path_width=20,
+        label_width=20,
+        file_filter=(("All files", "*.*")),
+    ):
         """
         Parameters
         ----------
@@ -43,7 +54,7 @@ class FileWidget(ttk.Frame):
 
         # Create label if needed as either entry or label widget
         self.label = ttk.Label(self, text=label, width=label_width)
-
+        self.file_filter = file_filter
         # Create entry box and browse button
         self.path = ttk.Entry(self, width=path_width)
         self.button = ttk.Button(self, text="...", width=3, command=self.browse)
@@ -62,7 +73,7 @@ class FileWidget(ttk.Frame):
     def browse(self):
         """Method to open filedialog for selecting a file."""
         if self.browseType == "open":
-            path = filedialog.askopenfilename()
+            path = filedialog.askopenfilename(filetypes=self.file_filter)
         elif self.browseType == "save":
             path = filedialog.asksaveasfilename()
         elif self.browseType == "directory":
@@ -100,7 +111,14 @@ class FileWidget(ttk.Frame):
 
 
 class LabelledTextEntry(ttk.Frame):
-    def __init__(self, parent, label: str, label_width: int = 20, text_width=20, variable: tk.StringVar = None):
+    def __init__(
+        self,
+        parent,
+        label: str,
+        label_width: int = 20,
+        text_width=20,
+        variable: tk.StringVar = None,
+    ):
         """
         Simple text input box with a label
         Parameters
@@ -141,7 +159,11 @@ class NumberScroller(ttk.Frame):
         self.link_var = tk.IntVar(value=default_value)
         self.label = ttk.Label(self, text=label, width=label_width)
         self.scroller = ttk.Spinbox(
-            self, from_=scroll_range[0], to=scroll_range[-1], width=10, textvariable=self.link_var
+            self,
+            from_=scroll_range[0],
+            to=scroll_range[-1],
+            width=10,
+            textvariable=self.link_var,
         )
         self.label.pack(side="left", fill="x", padx=5)
         self.scroller.pack(side="right", fill="x", padx=5)
@@ -163,11 +185,23 @@ class NumberScroller(ttk.Frame):
 class ZoneFrame(ttk.LabelFrame):
     def __init__(self, parent, label):
         super().__init__(parent, text=label)
-        self.shapefile = FileWidget(self, label="Shapefile", browse="open", label_width=15, path_width=30)
+        self.shapefile = FileWidget(
+            self,
+            label="Shapefile",
+            browse="open",
+            label_width=15,
+            path_width=30,
+            file_filter=SHAPE_FILEFILTER,
+        )
         self.name = LabelledTextEntry(self, label="Zone system name", text_width=10)
         self.id_col = LabelledTextEntry(self, label="ID column name", text_width=10)
         self.point_shapefile = FileWidget(
-            self, label="Point shapefile", browse="open", label_width=15, path_width=30
+            self,
+            label="Point shapefile",
+            browse="open",
+            label_width=15,
+            path_width=30,
+            file_filter=SHAPE_FILEFILTER,
         )
 
         self.shapefile.grid(column=0, row=0, columnspan=3, sticky="ew", pady=5)
@@ -200,13 +234,33 @@ class ZoneFrame(ttk.LabelFrame):
 class LowerZoneFrame(ttk.LabelFrame):
     def __init__(self, parent):
         super().__init__(parent, text="Lower Zone")
-        self.shapefile = FileWidget(self, label="Shapefile", browse="open", label_width=15, path_width=30)
+        self.shapefile = FileWidget(
+            self,
+            label="Shapefile",
+            browse="open",
+            label_width=15,
+            path_width=30,
+            file_filter=SHAPE_FILEFILTER,
+        )
         self.name = LabelledTextEntry(self, label="Zone system name")
         self.id_col = LabelledTextEntry(self, label="ID column name")
-        self.weight_data = FileWidget(self, label="Weight data", browse="open", label_width=15, path_width=30)
-        self.data_col = LabelledTextEntry(self, label="Weight data column", label_width=30, text_width=10)
-        self.weight_id_col = LabelledTextEntry(self, label="Weight id col", label_width=30, text_width=10)
-        self.weight_data_year = LabelledTextEntry(self, label="Year of weight data", label_width=30, text_width=10)
+        self.weight_data = FileWidget(
+            self,
+            label="Weight data",
+            browse="open",
+            label_width=15,
+            path_width=30,
+            file_filter=CSV_FILEFILTER,
+        )
+        self.data_col = LabelledTextEntry(
+            self, label="Weight data column", label_width=30, text_width=10
+        )
+        self.weight_id_col = LabelledTextEntry(
+            self, label="Weight id col", label_width=30, text_width=10
+        )
+        self.weight_data_year = LabelledTextEntry(
+            self, label="Year of weight data", label_width=30, text_width=10
+        )
 
         self.shapefile.grid(column=0, row=0, columnspan=3, sticky="ew", pady=5)
         self.name.grid(column=0, row=1, columnspan=3, sticky="ew", pady=5)
@@ -254,10 +308,16 @@ class ParametersFrame(ttk.LabelFrame):
         self.handling_var = tk.BooleanVar()
         self.rounding_var = tk.BooleanVar(value=True)
         self.slivers_var = tk.BooleanVar(value=True)
-        self.cache_folder = FileWidget(self, label="Cache Path", browse="directory", label_width=15)
+        self.cache_folder = FileWidget(
+            self, label="Cache Path", browse="directory", label_width=15
+        )
         self.cache_folder.set(inputs.CACHE_PATH)
-        self.output_folder = FileWidget(self, label="Output Folder", browse="directory", label_width=15)
-        self.method = LabelledTextEntry(self, label="Method name", variable=self.method_var, label_width=15, text_width=10)
+        self.output_folder = FileWidget(
+            self, label="Output Folder", browse="directory", label_width=15
+        )
+        self.method = LabelledTextEntry(
+            self, label="Method name", variable=self.method_var, label_width=15, text_width=10
+        )
         self.method_var.trace_add("write", self.activateLower)
         self.lower = LowerZoneFrame(self)
         self.lower.disable()
@@ -265,10 +325,18 @@ class ParametersFrame(ttk.LabelFrame):
         self.zone_2 = ZoneFrame(self, "zone 2")
 
         self.slither_tolerance = NumberScroller(
-            self, scroll_range=(1, 100), label="Percentage sliver tolerance", default_value=98, label_width=30
+            self,
+            scroll_range=(1, 100),
+            label="Percentage sliver tolerance",
+            default_value=98,
+            label_width=30,
         )
         self.point_tolerance = NumberScroller(
-            self, scroll_range=(1, 1e06), label="Area threshold for point zones", default_value=1, label_width=30
+            self,
+            scroll_range=(1, 1e06),
+            label="Area threshold for point zones",
+            default_value=1,
+            label_width=30,
         )
         self.point_tolerance.disable()
         self.rounding = ttk.Checkbutton(
@@ -281,14 +349,14 @@ class ParametersFrame(ttk.LabelFrame):
             self,
             text="Do you want point zones handled?",
             variable=self.handling_var,
-            command=self.activateHandling
+            command=self.activateHandling,
         )
 
         self.filter_slithers = ttk.Checkbutton(
             self,
             text="Filter out slivers?",
             variable=self.slivers_var,
-            command=self.activateSlivers
+            command=self.activateSlivers,
         )
 
         self.cache_folder.grid(column=0, row=0, columnspan=3, sticky="ew", pady=5)
@@ -320,6 +388,7 @@ class ParametersFrame(ttk.LabelFrame):
             self.lower.enable()
         else:
             self.lower.disable()
+
     def get(self):
         if len(self.method_var.get()) > 0:
             lower = self.lower.get()
@@ -334,9 +403,10 @@ class ParametersFrame(ttk.LabelFrame):
             "sliver_tolerance": self.slither_tolerance.get() / 100,
             "point_tolerance": self.point_tolerance.get(),
             "method": self.method_var.get(),
-            "lower": lower
+            "lower": lower,
         }
         return params
+
 
 class Main(tk.Tk):
     def __init__(self):
@@ -344,16 +414,18 @@ class Main(tk.Tk):
         self.main_params = ParametersFrame(self)
         # self.zone_1 = ZoneFrame(self, "zone 1")
         # self.zone_2 = ZoneFrame(self, "zone 2")
-        self.weighted_button = ttk.Button(self, text="Weighted translation", command=self.run_weighted)
-        self.spatial_button = ttk.Button(self, text="Spatial translation", command=self.run_spatial)
+        self.weighted_button = ttk.Button(
+            self, text="Weighted translation", command=self.run_weighted
+        )
+        self.spatial_button = ttk.Button(
+            self, text="Spatial translation", command=self.run_spatial
+        )
 
         self.main_params.grid(column=0, row=0, rowspan=3, columnspan=2, sticky="ew", pady=5)
         # self.zone_1.grid(column=1, row=0, sticky="ew", pady=5)
         # self.zone_2.grid(column=1, row=1, sticky="ew", pady=5)
         self.weighted_button.grid(column=0, columnspan=1, row=3, sticky="ew", pady=5)
         self.spatial_button.grid(column=1, columnspan=1, row=3, sticky="ew", pady=5)
-
-
 
     def run_weighted(self):
         main_params = self.main_params.get()
@@ -370,10 +442,13 @@ class Main(tk.Tk):
             sliver_tolerance=main_params["sliver_tolerance"],
             point_tolerance=main_params["point_tolerance"],
             method=main_params["method"],
-            lower_zoning=lower
+            lower_zoning=lower,
         )
         zt = zone_translation.ZoneTranslation(config)
-        zt.weighted_translation().to_csv(main_params['output_path'] / f"{config.zone_1.name}_{config.zone_2.name}_{config.method}.csv")
+        zt.weighted_translation().to_csv(
+            main_params["output_path"]
+            / f"{config.zone_1.name}_{config.zone_2.name}_{config.method}.csv"
+        )
         return
 
     def run_spatial(self):
@@ -388,17 +463,19 @@ class Main(tk.Tk):
             rounding=main_params["rounding"],
             point_handling=main_params["point_handling"],
             sliver_tolerance=main_params["sliver_tolerance"],
-            point_tolerance=main_params["point_tolerance"]
+            point_tolerance=main_params["point_tolerance"],
         )
         zt = zone_translation.ZoneTranslation(config)
-        zt.spatial_translation().to_csv(main_params['output_path'] / f"{config.zone_1.name}_{config.zone_2.name}_spatial.csv")
+        zt.spatial_translation().to_csv(
+            main_params["output_path"]
+            / f"{config.zone_1.name}_{config.zone_2.name}_spatial.csv"
+        )
         return
 
 
 if __name__ == "__main__":
     app = Main()
     app.mainloop()
-
 
 
 # # # FUNCTIONS # # #
