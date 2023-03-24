@@ -29,7 +29,7 @@ from caf.toolkit import BaseConfig
 
 ##### CONSTANTS #####
 LOG = logging.getLogger(__name__)
-
+CACHE_PATH = r"I:\Data\Zone Translations\cache"
 
 class ZoneSystemInfo(BaseConfig):
     """Base class for storing information about a shapefile input.
@@ -207,7 +207,7 @@ class ZoningTranslationInputs(BaseConfig):
     zone_1: TransZoneSystemInfo
     zone_2: TransZoneSystemInfo
     lower_zoning: Optional[LowerZoneSystemInfo] = None
-    cache_path: Path = Path(r"I:\Data\Zone Translations\cache")
+    cache_path: Path = Path(CACHE_PATH)
     method: Optional[str] = None
     slither_tolerance: float = 0.98
     rounding: bool = True
