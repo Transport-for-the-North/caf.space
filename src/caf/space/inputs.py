@@ -59,7 +59,8 @@ class ZoneSystemInfo(BaseConfig):
             if v not in schema["properties"].keys():
                 raise ValueError(
                     f"The id_col provided, {v}, does not appear"
-                    f" in the given shapefile, {'shapefile'}."
+                    f" in the given shapefile. Please choose from:"
+                    f"{schema['properties'].keys()}."
                 )
         return v
 
@@ -84,11 +85,29 @@ class ZoneSystemInfo(BaseConfig):
         return v
 
 
+class TransZoneSystemInfo(ZoneSystemInfo):
+    """
+    Input data for primary zone systems in translation.
+
+    Inherits from ZoneSystemInfo.
+
+    Parameters
+    ----------
+    point_shapefile: Optional[Path]
+        A shapefile of point zones to be joined to the main shapefile. This
+        shapefile must contain the same id_col as the main shapefile as the two
+        will be concatenated on this column. If this is provided set 'point_handling'
+        to True in the main config class or it will be effectively ignored.
+    """
+
+    point_shapefile: Optional[Path]
+
+
 class LowerZoneSystemInfo(ZoneSystemInfo):
     """
     Lower level zone system input data for `ZoneTranslationInputs`.
 
-    Inherits from ShapefileInfo.
+    Inherits from ZoneSystemInfo.
 
     Parameters
     ----------
@@ -104,14 +123,21 @@ class LowerZoneSystemInfo(ZoneSystemInfo):
         zone ids. This will be used to join the weighting data to the
         lower zoning, so the IDs must match, but the names of the ID
         columns may be different.
+    weight_data_year: int
+        The year the weighting data comes from. This is used for writing files
+        to the cache and is important for logging. If you don't know this you
+        should consider whether your weighting data is appropriate.
     """
 
     weight_data: Path
     data_col: str
     weight_id_col: str
+    weight_data_year: int
 
-    def _lower_to_higher(self) -> ZoneSystemInfo:
-        return ZoneSystemInfo(name=self.name, shapefile=self.shapefile, id_col=self.id_col)
+    def _lower_to_higher(self) -> TransZoneSystemInfo:
+        return TransZoneSystemInfo(
+            name=self.name, shapefile=self.shapefile, id_col=self.id_col, point_shapefile=None
+        )
 
     @validator("weight_data")
     def _weight_data_exists(cls, v):
@@ -133,9 +159,9 @@ class ZoningTranslationInputs(BaseConfig):
 
     Parameters
     ----------
-    zone_1: ZoneSystemInfo
+    zone_1: TransZoneSystemInfo
         Zone system 1 information
-    zone_2: ZoneSystemInfo
+    zone_2: TransZoneSystemInfo
         Zone system 2 information
     lower_zoning: LowerZoneSystemInfo
         Information about the lower zone system, used for performing
@@ -151,7 +177,7 @@ class ZoningTranslationInputs(BaseConfig):
         This can be anything, but must be included as the tool checks if
         this parameter exists to decide whether to perform a spatial or
         weighted translation.
-    tolerance: float, default 0.98
+    slither_tolerance: float, default 0.98
         This is a float less than 1, and defaults to 0.98. If
         filter_slivers (explained below) is chosen, tolerance controls
         how big or small the slithers need to be to be rounded away. For
@@ -165,19 +191,29 @@ class ZoningTranslationInputs(BaseConfig):
         perfectly when they should between shapefiles, and the tolerance
         for this is controlled by the tolerance parameter. With this
         parameter set to false translations can be a bit messy.
+    point_handling: bool, False
+        Select whether point zones should be handled specially. If this is set
+        to True a 'point_tolerance' parameter must also be provided. By default,
+        this is set to 1 which would only class true points as point zones.
+        This also only works for weighted translations.
+    point_tolerance: Optional[float]
+        The area of zone below which zones will be treated as point zones. Point
+        zones have their geometry adjusted to the lower zone they sit within.
     run_date: str, datetime.datetime.now().strftime("%d_%m_%y")
         When the tool is being run. This is always generated
         automatically and shouldn't be included in the config yaml file.
     """
 
-    zone_1: ZoneSystemInfo
-    zone_2: ZoneSystemInfo
+    zone_1: TransZoneSystemInfo
+    zone_2: TransZoneSystemInfo
     lower_zoning: Optional[LowerZoneSystemInfo] = None
     cache_path: Path = Path(r"I:\Data\Zone Translations\cache")
     method: Optional[str] = None
-    tolerance: float = 0.98
+    slither_tolerance: float = 0.98
     rounding: bool = True
     filter_slithers: bool = True
+    point_handling: bool = False
+    point_tolerance: float = 1
     run_date: str = datetime.datetime.now().strftime("%d_%m_%y")
 
     def __post_init__(self) -> None:
@@ -199,10 +235,11 @@ class ZoningTranslationInputs(BaseConfig):
         """
         zones = {}
         for i in range(1, 3):
-            zones[i] = ZoneSystemInfo(
+            zones[i] = TransZoneSystemInfo(
                 name=f"zone_{i}_name",
                 shapefile=Path(f"path/to/shapefile_{i}"),
                 id_col=f"id_col_for_zone_{i}",
+                point_shapefile=Path(f"path/to/point/shapefile"),
             )
         lower = LowerZoneSystemInfo(
             name="lower_zone_name",
@@ -211,13 +248,13 @@ class ZoningTranslationInputs(BaseConfig):
             weight_data=Path("path/to/lower/weight/data"),
             data_col="data_col_name",
             weight_id_col="id_col_in_weighting_data",
+            weight_data_year=2018,
         )
         ex = ZoningTranslationInputs(
             zone_1=zones[1],
             zone_2=zones[2],
             lower_zoning=lower,
-            output_path=r"path\to\output\folder",
-            cache_path=r"path\to\cache\folder\defaults\to\ydrive",
+            cache_path=Path(r"path\to\cache\folder\defaults\to\ydrive"),
             method="OPTIONAL name of method",
         )
         ex.save_yaml(out_path / "example.yml")

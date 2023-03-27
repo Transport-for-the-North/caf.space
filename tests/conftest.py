@@ -1,23 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-Created on: 27/01/2023
-Updated on:
-
-Original author: Isaac Scott
-Last update made by:
-Other updates made by:
-
-File purpose:
-
+Fixtures used across multiple test modules.
 """
 # Built-Ins
 from pathlib import Path
+from copy import deepcopy
 
 # Third Party
 import pytest
 
 # pylint: disable=import-error
-from shapely.geometry import Polygon
+from shapely.geometry import Polygon, Point
 import geopandas as gpd
 
 # pylint: enable=import-error
@@ -127,7 +120,42 @@ def fixture_zone_2_shape(main_dir) -> Path:
         crs="EPSG:27700",
     )
     file = main_dir / "zone_2.shp"
-    zone_2.to_file(main_dir / "zone_2.shp")
+    zone_2.to_file(file)
+    return file
+
+
+@pytest.fixture(name="point_shapefile", scope="session")
+def fixture_point_shapefile(main_dir) -> Path:
+    """
+    Fixture for a path to a point shapefile for point handling.
+    """
+    true_point = Point(5, 7)
+    point_df = pd.DataFrame(data=["true_point"], columns=["zone_2_id"])
+    gdf = gpd.GeoDataFrame(data=point_df, geometry=[true_point])
+    file = main_dir / "point_shape.shp"
+    gdf.to_file(file)
+    return file
+
+
+@pytest.fixture(name="point_zones", scope="session")
+def fixture_point_zones(main_dir) -> Path:
+    """
+    Fixture for zone_2 with some point zones included.
+    """
+    pseudo_point = Polygon([(0, 0), (0, 1), (1, 1), (1, 0)])
+    points_df = pd.DataFrame(data=["pseudo_point", "W", "X", "Y", "Z"], columns=["zone_2_id"])
+    points = gpd.GeoDataFrame(
+        data=points_df,
+        geometry=[
+            pseudo_point,
+            Polygon([(0, 8), (0, 4), (3, 4), (3, 8)]),
+            Polygon([(3, 4), (3, 8), (8, 8), (8, 4)]),
+            Polygon([(0, 1), (0, 4), (3, 4), (3, 0), (1, 0), (1, 1)]),
+            Polygon([(3, 0), (3, 4), (8, 4), (8, 0)]),
+        ],
+    )
+    file = main_dir / "pseudo_point.shp"
+    points.to_file(file)
     return file
 
 
@@ -210,8 +238,12 @@ def fixture_spatial_config(
     -------
     A spatial translation config.
     """
-    zone_1 = inputs.ZoneSystemInfo(name="zone_1", shapefile=zone_1_shape, id_col="zone_1_id")
-    zone_2 = inputs.ZoneSystemInfo(name="zone_2", shapefile=zone_2_shape, id_col="zone_2_id")
+    zone_1 = inputs.TransZoneSystemInfo(
+        name="zone_1", shapefile=zone_1_shape, id_col="zone_1_id"
+    )
+    zone_2 = inputs.TransZoneSystemInfo(
+        name="zone_2", shapefile=zone_2_shape, id_col="zone_2_id"
+    )
     params = inputs.ZoningTranslationInputs(
         zone_1=zone_1,
         zone_2=zone_2,
@@ -264,8 +296,12 @@ def fixture_weighted_config(
     -------
     An input config for running a basic weighted zone translation.
     """
-    zone_1 = inputs.ZoneSystemInfo(name="zone_1", shapefile=zone_1_shape, id_col="zone_1_id")
-    zone_2 = inputs.ZoneSystemInfo(name="zone_2", shapefile=zone_2_shape, id_col="zone_2_id")
+    zone_1 = inputs.TransZoneSystemInfo(
+        name="zone_1", shapefile=zone_1_shape, id_col="zone_1_id"
+    )
+    zone_2 = inputs.TransZoneSystemInfo(
+        name="zone_2", shapefile=zone_2_shape, id_col="zone_2_id"
+    )
     lower = inputs.LowerZoneSystemInfo(
         name="lower_zone",
         shapefile=lower_zone,
@@ -273,6 +309,7 @@ def fixture_weighted_config(
         weight_data=lower_weighting,
         data_col="weight",
         weight_id_col="lower_id",
+        weight_data_year=2018,
     )
     params = inputs.ZoningTranslationInputs(
         zone_1=zone_1,
@@ -300,6 +337,22 @@ def fixture_weighted_trans(weighted_config) -> pd.DataFrame:
     A complete weighted zone translation stored in a dataframe
     """
     trans = zone_translation.ZoneTranslation(weighted_config).weighted_translation()
+    return trans
+
+
+@pytest.fixture(name="points_config", scope="session")
+def fixture_points_config(main_dir, weighted_config, point_zones, point_shapefile) -> Path:
+    config = deepcopy(weighted_config)
+    config.zone_2.shapefile = point_zones
+    config.zone_2.point_shapefile = point_shapefile
+    config.point_handling = True
+    config.point_tolerance = 2
+    return config
+
+
+@pytest.fixture(name="point_trans", scope="session")
+def fixture_point_trans(points_config) -> pd.DataFrame:
+    trans = zone_translation.ZoneTranslation(points_config).weighted_translation()
     return trans
 
 

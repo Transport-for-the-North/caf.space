@@ -18,7 +18,9 @@ logging.captureWarnings(True)
 ##### FUNCTIONS #####
 
 
-def read_zone_shapefiles(zone_1: inputs.ZoneSystemInfo, zone_2: inputs.ZoneSystemInfo) -> dict:
+def read_zone_shapefiles(
+    zone_1: inputs.TransZoneSystemInfo, zone_2: inputs.TransZoneSystemInfo
+) -> dict:
     """
     Read in zone system shapefiles.
 
@@ -28,9 +30,9 @@ def read_zone_shapefiles(zone_1: inputs.ZoneSystemInfo, zone_2: inputs.ZoneSyste
 
     Parameters
     ----------
-    zone_1: inputs.ZoneSystemInfo
+    zone_1: inputs.TransZoneSystemInfo
         Info on first zone system
-    zone_2: inputs.ZoneSystemInfo
+    zone_2: inputs.TransZoneSystemInfo
         Info on second zone system
 
     Returns
@@ -89,8 +91,8 @@ def read_zone_shapefiles(zone_1: inputs.ZoneSystemInfo, zone_2: inputs.ZoneSyste
 
 def spatial_zone_correspondence(
     zones: dict,
-    zone_1: inputs.ZoneSystemInfo,
-    zone_2: inputs.ZoneSystemInfo,
+    zone_1: inputs.TransZoneSystemInfo,
+    zone_2: inputs.TransZoneSystemInfo,
 ):
     """
     Find the spatial zone correspondence.
@@ -101,9 +103,9 @@ def spatial_zone_correspondence(
     Parameters
     ----------
     zones: Return value from 'read_zone_shapefiles'.
-    zone_1: inputs.ZoneSystemInfo
+    zone_1: inputs.TransZoneSystemInfo
         Info on first zone system
-    zone_2: inputs.ZoneSystemInfo
+    zone_2: inputs.TransZoneSystemInfo
         Info on second zone system
 
     Returns
@@ -356,8 +358,8 @@ def round_zone_correspondence(
 def missing_zones_check(
     zones: dict,
     zone_correspondence: pd.DataFrame,
-    zone_1: inputs.ZoneSystemInfo,
-    zone_2: inputs.ZoneSystemInfo,
+    zone_1: inputs.TransZoneSystemInfo,
+    zone_2: inputs.TransZoneSystemInfo,
 ):
     """
     Find missing zones.
@@ -370,9 +372,9 @@ def missing_zones_check(
         Zone 1 and zone 2 GeoDataFrames.
     zone_correspondence : pd.DataFrame
         Zone correspondence between zone systems 1 and 2.
-    zone_1: inputs.ZoneSystemInfo
+    zone_1: inputs.TransZoneSystemInfo
         Info on first zone system
-    zone_2: inputs.ZoneSystemInfo
+    zone_2: inputs.TransZoneSystemInfo
         Info on second zone system
     Returns
     -------

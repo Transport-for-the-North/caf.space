@@ -9,11 +9,11 @@
 <a href="https://github.com/psf/black"><img alt="code style: black" src="https://img.shields.io/badge/code%20format-black-000000.svg"></a>
 </p>
 
-Common Analytical Framework (CAF) Space contain geo-processing functionality useful
+Common Analytical Framework (CAF) Space contains geo-processing functionality useful
 for transport planners. Primarily it is a tool for generating standard weighting
 translations in `.csv` format describing how to convert between different zoning systems.
 The aim is to free tools up from directly having to do their own geo-processing, and    
-instead have a single source of truth to get them from!
+instead have a single source of truth to get them from! For more info see https://cafspcae.readthedocs.io/en/latest/.
 
 <u><h3> Tool info </h3></u>
 The tool has two main options for running a translation, either a purely spatial translation (where overlapping zones are split by area), or a weighted translation where overlapping zones are split by some other type of weighting data like population or employment data. For most purposes a weighted translation will be more accurate, and it is up to the user to decide the most appropriate weighting data to use. For both types of translation the tool runs from a config file (in yaml format). These files can be created using the inputs module, or there is an example config file in the examples folder called test.yml. Parameters for this config are described below.

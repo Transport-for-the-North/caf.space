@@ -1,0 +1,25 @@
+zone_1:
+  name: zone_1
+  shapefile: examples\zone_1\zone_1.shp
+  id_col: zone_1_id
+zone_2:
+  name: zone_2
+  shapefile: examples/zone_2/pseudo_points.shp
+  id_col: zone_2_id
+  point_shapefile: examples/zone_2/point.shp
+lower_zoning:
+  name: lower
+  shapefile: examples\lower_zone\lower_zone.shp
+  id_col: lower_id
+  weight_data: examples\lower_zone\weight.csv
+  data_col: weight
+  weight_id_col: lower_id
+  weight_data_year: 100
+cache_path: examples\test_cache
+method: test
+slither_tolerance: 0.98
+rounding: yes
+filter_slithers: yes
+point_handling: yes
+point_tolerance: 2
+run_date: 16_03_23
