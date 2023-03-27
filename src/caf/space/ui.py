@@ -3,9 +3,12 @@
 User interface for caf.space
 """
 # Built-Ins
+from tkinterweb import HtmlFrame
+import markdown
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from pathlib import Path
+import sys
 
 # Third Party
 from caf.space import inputs, zone_translation
@@ -408,9 +411,9 @@ class ParametersFrame(ttk.LabelFrame):
         return params
 
 
-class Main(tk.Tk):
-    def __init__(self):
-        super().__init__()
+class UiTab(ttk.Frame):
+    def __init__(self, master=None):
+        super().__init__(master)
         self.main_params = ParametersFrame(self)
         # self.zone_1 = ZoneFrame(self, "zone 1")
         # self.zone_2 = ZoneFrame(self, "zone 2")
@@ -473,9 +476,104 @@ class Main(tk.Tk):
         return
 
 
-if __name__ == "__main__":
-    app = Main()
-    app.mainloop()
+class ReadmeTab(ttk.Frame):
+    def __init__(self, master=None, readme_path='readme.md', **kwargs):
+        super().__init__(master, **kwargs)
 
+        # create a text widget to display the readme contents
+        self.readme_text = tk.Text(self, wrap='word', state='disabled')
+        self.readme_text.pack(fill='both', expand=True)
+
+        # read the contents of the readme file
+        with open(readme_path, 'r') as f:
+            readme_contents = f.read()
+
+        # convert the Markdown text to HTML
+        html_text = markdown.markdown(readme_contents)
+
+        # insert the HTML into the text widget as formatted text
+        self.readme_text.config(state='normal')
+        self.readme_text.insert('end', html_text)
+        self.readme_text.config(state='disabled')
+
+
+class ConsoleFrame(ttk.Frame):
+    """Frame containing the console."""
+
+    class StdoutRedirector(object):
+        def __init__(self, text_widget):
+            self.text_space = text_widget
+            self.text_space.tag_configure("n", font=("Calibri", 12))
+
+        def write(self, string):
+            self.text_space.config(state="normal")
+            self.text_space.insert("end", string, "n")
+            self.text_space.see("end")
+            self.text_space.config(state="disabled")
+
+        def flush(self):
+            return
+
+    def __init__(self, parent):
+        super().__init__(parent)
+
+        # Configure text widget
+        self.text = tk.Text(self)
+        yscroll = ttk.Scrollbar(self, command=self.text.yview)
+        xscroll = ttk.Scrollbar(self, command=self.text.xview, orient="horizontal")
+        self.text.config(
+            state="disabled",
+            yscrollcommand=yscroll.set,
+            xscrollcommand=xscroll.set,
+            wrap="none",
+        )
+
+        # Change stdout
+        sys.stdout = self.StdoutRedirector(self.text)
+        sys.stderr = self.StdoutRedirector(self.text)
+
+        # Pack widgets
+        yscroll.pack(side="right", fill="y")
+        xscroll.pack(side="bottom", fill="x")
+        self.text.pack(side="left", fill="both", expand=True)
+        return
+
+
+class NotebookApp:
+    def __init__(self):
+        self.root = tk.Tk()
+        self.notebook = ttk.Notebook(self.root)
+        self.notebook.pack(fill='both', expand=True)
+
+        # Add MyUI instance as a tab
+        my_ui_tab = ttk.Frame(self.notebook)
+        my_ui = UiTab(master=my_ui_tab)
+        my_ui.pack(fill='both', expand=True)
+        self.notebook.add(my_ui_tab, text='My UI')
+
+        # Add readme as a tab
+        readme_tab = ttk.Frame(self.notebook)
+        readme = ReadmeTab(master=readme_tab, readme_path=r'C:\Users\IsaacScott\Projects\caf\caf.space\README.md')
+        readme.pack(fill='both', expand=True)
+        self.notebook.add(readme_tab, text='Readme')
+
+        console_tab = ttk.Frame(self.notebook)
+        console_text = ConsoleFrame(console_tab)
+        console_text.pack(fill="both", expand=True)
+        self.notebook.add(console_tab, text="Console Output")
+
+
+        self.root.mainloop()
+
+# def test_func():
+#     root = tk.Tk()  # create the tkinter window
+#     frame = HtmlFrame(root)  # create HTML browser
+#     frame.load_website("https://cafspcae.readthedocs.io/en/latest/")
+#     frame.pack(fill="both", expand=True)
+#     root.mainloop()
+
+if __name__ == "__main__":
+    NotebookApp()
+    # test_func()
 
 # # # FUNCTIONS # # #
