@@ -3,7 +3,7 @@
 User interface for caf.space
 """
 # Built-Ins
-from tkinterweb import HtmlFrame
+from tkinterweb import HtmlFrame, Notebook
 from tkhtmlview import HTMLScrolledText, RenderHTML
 import markdown
 import tkinter as tk
@@ -17,6 +17,7 @@ from caf.space import inputs, zone_translation
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
 # Local imports here
+
 # pylint: enable=import-error,wrong-import-position
 
 # # # CONSTANTS # # #
@@ -61,7 +62,9 @@ class FileWidget(ttk.Frame):
         self.file_filter = file_filter
         # Create entry box and browse button
         self.path = ttk.Entry(self, width=path_width)
-        self.button = ttk.Button(self, text="...", width=3, command=self.browse)
+        self.button = ttk.Button(
+            self, text="...", width=3, command=self.browse
+        )
 
         # Attempt to place label if it exists
         try:
@@ -77,7 +80,9 @@ class FileWidget(ttk.Frame):
     def browse(self):
         """Method to open filedialog for selecting a file."""
         if self.browseType == "open":
-            path = filedialog.askopenfilename(filetypes=self.file_filter)
+            path = filedialog.askopenfilename(
+                filetypes=self.file_filter
+            )
         elif self.browseType == "save":
             path = filedialog.asksaveasfilename()
         elif self.browseType == "directory":
@@ -134,7 +139,9 @@ class LabelledTextEntry(ttk.Frame):
         super().__init__(parent)
         self.label = ttk.Label(self, text=label, width=label_width)
         if variable:
-            self.text = ttk.Entry(self, width=text_width, textvariable=variable)
+            self.text = ttk.Entry(
+                self, width=text_width, textvariable=variable
+            )
         else:
             self.text = ttk.Entry(self, width=text_width)
         self.label.pack(side="left", fill="x", padx=5)
@@ -158,7 +165,9 @@ class LabelledTextEntry(ttk.Frame):
 
 
 class NumberScroller(ttk.Frame):
-    def __init__(self, parent, scroll_range, label, default_value, label_width=20):
+    def __init__(
+        self, parent, scroll_range, label, default_value, label_width=20
+    ):
         super().__init__(parent)
         self.link_var = tk.IntVar(value=default_value)
         self.label = ttk.Label(self, text=label, width=label_width)
@@ -197,8 +206,12 @@ class ZoneFrame(ttk.LabelFrame):
             path_width=30,
             file_filter=SHAPE_FILEFILTER,
         )
-        self.name = LabelledTextEntry(self, label="Zone system name", text_width=10)
-        self.id_col = LabelledTextEntry(self, label="ID column name", text_width=10)
+        self.name = LabelledTextEntry(
+            self, label="Zone system name", text_width=10
+        )
+        self.id_col = LabelledTextEntry(
+            self, label="ID column name", text_width=10
+        )
         self.point_shapefile = FileWidget(
             self,
             label="Point shapefile",
@@ -208,10 +221,18 @@ class ZoneFrame(ttk.LabelFrame):
             file_filter=SHAPE_FILEFILTER,
         )
 
-        self.shapefile.grid(column=0, row=0, columnspan=3, sticky="ew", pady=5)
-        self.name.grid(column=0, row=1, columnspan=3, sticky="ew", pady=5)
-        self.id_col.grid(column=0, row=2, columnspan=3, sticky="ew", pady=5)
-        self.point_shapefile.grid(column=0, row=3, columnspan=3, sticky="ew", pady=5)
+        self.shapefile.grid(
+            column=0, row=0, columnspan=3, sticky="ew", pady=5
+        )
+        self.name.grid(
+            column=0, row=1, columnspan=3, sticky="ew", pady=5
+        )
+        self.id_col.grid(
+            column=0, row=2, columnspan=3, sticky="ew", pady=5
+        )
+        self.point_shapefile.grid(
+            column=0, row=3, columnspan=3, sticky="ew", pady=5
+        )
 
     def disable(self):
         self.shapefile.disable()
@@ -257,22 +278,42 @@ class LowerZoneFrame(ttk.LabelFrame):
             file_filter=CSV_FILEFILTER,
         )
         self.data_col = LabelledTextEntry(
-            self, label="Weight data column", label_width=30, text_width=10
+            self,
+            label="Weight data column",
+            label_width=30,
+            text_width=10,
         )
         self.weight_id_col = LabelledTextEntry(
             self, label="Weight id col", label_width=30, text_width=10
         )
         self.weight_data_year = LabelledTextEntry(
-            self, label="Year of weight data", label_width=30, text_width=10
+            self,
+            label="Year of weight data",
+            label_width=30,
+            text_width=10,
         )
 
-        self.shapefile.grid(column=0, row=0, columnspan=3, sticky="ew", pady=5)
-        self.name.grid(column=0, row=1, columnspan=3, sticky="ew", pady=5)
-        self.id_col.grid(column=0, row=2, columnspan=3, sticky="ew", pady=5)
-        self.weight_data.grid(column=3, row=0, columnspan=3, sticky="ew", pady=5)
-        self.data_col.grid(column=3, row=1, columnspan=3, sticky="ew", pady=5)
-        self.weight_id_col.grid(column=3, row=2, columnspan=3, sticky="ew", pady=5)
-        self.weight_data_year.grid(column=3, row=3, columnspan=3, sticky="ew", pady=5)
+        self.shapefile.grid(
+            column=0, row=0, columnspan=3, sticky="ew", pady=5
+        )
+        self.name.grid(
+            column=0, row=1, columnspan=3, sticky="ew", pady=5
+        )
+        self.id_col.grid(
+            column=0, row=2, columnspan=3, sticky="ew", pady=5
+        )
+        self.weight_data.grid(
+            column=3, row=0, columnspan=3, sticky="ew", pady=5
+        )
+        self.data_col.grid(
+            column=3, row=1, columnspan=3, sticky="ew", pady=5
+        )
+        self.weight_id_col.grid(
+            column=3, row=2, columnspan=3, sticky="ew", pady=5
+        )
+        self.weight_data_year.grid(
+            column=3, row=3, columnspan=3, sticky="ew", pady=5
+        )
 
     def disable(self):
         self.shapefile.disable()
@@ -317,10 +358,17 @@ class ParametersFrame(ttk.LabelFrame):
         )
         self.cache_folder.set(inputs.CACHE_PATH)
         self.output_folder = FileWidget(
-            self, label="Output Folder", browse="directory", label_width=15
+            self,
+            label="Output Folder",
+            browse="directory",
+            label_width=15,
         )
         self.method = LabelledTextEntry(
-            self, label="Method name", variable=self.method_var, label_width=15, text_width=10
+            self,
+            label="Method name",
+            variable=self.method_var,
+            label_width=15,
+            text_width=10,
         )
         self.method_var.trace_add("write", self.activateLower)
         self.lower = LowerZoneFrame(self)
@@ -363,17 +411,39 @@ class ParametersFrame(ttk.LabelFrame):
             command=self.activateSlivers,
         )
 
-        self.cache_folder.grid(column=0, row=0, columnspan=3, sticky="ew", pady=5)
-        self.output_folder.grid(column=3, row=0, columnspan=3, sticky="ew", pady=5)
-        self.filter_slithers.grid(column=0, columnspan=2, row=1, sticky="s", pady=10)
-        self.rounding.grid(column=2, columnspan=2, row=1, sticky="es", pady=10)
-        self.point_handling.grid(column=4, columnspan=2, row=1, sticky="s", pady=10)
-        self.slither_tolerance.grid(column=0, row=2, columnspan=2, sticky="s", pady=5)
-        self.point_tolerance.grid(column=2, row=2, columnspan=2, sticky="s", pady=5)
-        self.method.grid(column=4, row=2, columnspan=2, sticky="ew", pady=5)
-        self.zone_1.grid(column=0, row=4, columnspan=3, sticky="nsew", pady=5)
-        self.zone_2.grid(column=3, row=4, columnspan=3, sticky="nsew", pady=5)
-        self.lower.grid(column=0, row=5, columnspan=6, sticky="s", pady=5)
+        self.cache_folder.grid(
+            column=0, row=0, columnspan=3, sticky="ew", pady=5
+        )
+        self.output_folder.grid(
+            column=3, row=0, columnspan=3, sticky="ew", pady=5
+        )
+        self.filter_slithers.grid(
+            column=0, columnspan=2, row=1, sticky="s", pady=10
+        )
+        self.rounding.grid(
+            column=2, columnspan=2, row=1, sticky="es", pady=10
+        )
+        self.point_handling.grid(
+            column=4, columnspan=2, row=1, sticky="s", pady=10
+        )
+        self.slither_tolerance.grid(
+            column=0, row=2, columnspan=2, sticky="s", pady=5
+        )
+        self.point_tolerance.grid(
+            column=2, row=2, columnspan=2, sticky="s", pady=5
+        )
+        self.method.grid(
+            column=4, row=2, columnspan=2, sticky="ew", pady=5
+        )
+        self.zone_1.grid(
+            column=0, row=4, columnspan=3, sticky="nsew", pady=5
+        )
+        self.zone_2.grid(
+            column=3, row=4, columnspan=3, sticky="nsew", pady=5
+        )
+        self.lower.grid(
+            column=0, row=5, columnspan=6, sticky="s", pady=5
+        )
 
     def activateHandling(self):
         if self.handling_var.get():
@@ -425,11 +495,22 @@ class UiTab(ttk.Frame):
             self, text="Spatial translation", command=self.run_spatial
         )
 
-        self.main_params.grid(column=0, row=0, rowspan=3, columnspan=2, sticky="ew", pady=5)
+        self.main_params.grid(
+            column=0,
+            row=0,
+            rowspan=3,
+            columnspan=2,
+            sticky="ew",
+            pady=5,
+        )
         # self.zone_1.grid(column=1, row=0, sticky="ew", pady=5)
         # self.zone_2.grid(column=1, row=1, sticky="ew", pady=5)
-        self.weighted_button.grid(column=0, columnspan=1, row=3, sticky="ew", pady=5)
-        self.spatial_button.grid(column=1, columnspan=1, row=3, sticky="ew", pady=5)
+        self.weighted_button.grid(
+            column=0, columnspan=1, row=3, sticky="ew", pady=5
+        )
+        self.spatial_button.grid(
+            column=1, columnspan=1, row=3, sticky="ew", pady=5
+        )
 
     def run_weighted(self):
         main_params = self.main_params.get()
@@ -477,23 +558,23 @@ class UiTab(ttk.Frame):
         return
 
 
-class ReadmeTab(ttk.Frame):
-    def __init__(self, master=None, readme_path="readme.md", **kwargs):
-        super().__init__(master, **kwargs)
+# class ReadmeTab(ttk.Frame):
+#     def __init__(self, master=None, readme_path="readme.md", **kwargs):
+#         super().__init__(master, **kwargs)
 
-        # create a text widget to display the readme contents
+#         # create a text widget to display the readme contents
 
-        # read the contents of the readme file
-        with open(readme_path, "r") as f:
-            readme_contents = f.read()
+#         # read the contents of the readme file
+#         with open(readme_path, "r") as f:
+#             readme_contents = f.read()
 
-        # convert the Markdown text to HTML
-        html_text = markdown.markdown(readme_contents)
-        self.readme_text = HTMLScrolledText(
-            self, wrap="word", state="disabled", html=html_text
-        )
-        self.readme_text.pack(fill="both", expand=True)
-        print("debugging")
+#         # convert the Markdown text to HTML
+#         html_text = markdown.markdown(readme_contents)
+#         self.readme_text = HTMLScrolledText(
+#             self, wrap="word", state="disabled", html=html_text
+#         )
+#         self.readme_text.pack(fill="both", expand=True)
+#         print("debugging")
 
 
 class ConsoleFrame(ttk.Frame):
@@ -519,7 +600,9 @@ class ConsoleFrame(ttk.Frame):
         # Configure text widget
         self.text = tk.Text(self)
         yscroll = ttk.Scrollbar(self, command=self.text.yview)
-        xscroll = ttk.Scrollbar(self, command=self.text.xview, orient="horizontal")
+        xscroll = ttk.Scrollbar(
+            self, command=self.text.xview, orient="horizontal"
+        )
         self.text.config(
             state="disabled",
             yscrollcommand=yscroll.set,
@@ -541,7 +624,7 @@ class ConsoleFrame(ttk.Frame):
 class NotebookApp:
     def __init__(self):
         self.root = tk.Tk()
-        self.notebook = ttk.Notebook(self.root)
+        self.notebook = Notebook(self.root)
         self.notebook.pack(fill="both", expand=True)
 
         # Add MyUI instance as a tab
@@ -549,14 +632,12 @@ class NotebookApp:
         my_ui = UiTab(master=my_ui_tab)
         my_ui.pack(fill="both", expand=True)
         self.notebook.add(my_ui_tab, text="My UI")
-
-        # Add readme as a tab
-        readme_tab = ttk.Frame(self.notebook)
-        readme = ReadmeTab(
-            master=readme_tab,
-            readme_path=r"C:\Users\IsaacScott\Projects\caf\caf.space\README.md",
+        readme_tab = HtmlFrame(
+            self.notebook, messages_enabled=False
         )
-        readme.pack(fill="both", expand=True)
+        readme_tab.load_website(
+            "https://cafspcae.readthedocs.io/en/latest/"
+        )
         self.notebook.add(readme_tab, text="Readme")
 
         console_tab = ttk.Frame(self.notebook)
@@ -574,8 +655,9 @@ def test_func():
     frame.pack(fill="both", expand=True)
     root.mainloop()
 
+
 if __name__ == "__main__":
-    # NotebookApp()
-    test_func()
+    NotebookApp()
+    # test_func()
 
 # # # FUNCTIONS # # #
