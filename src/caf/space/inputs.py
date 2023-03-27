@@ -178,7 +178,7 @@ class ZoningTranslationInputs(BaseConfig):
         This can be anything, but must be included as the tool checks if
         this parameter exists to decide whether to perform a spatial or
         weighted translation.
-    slither_tolerance: float, default 0.98
+    sliver_tolerance: float, default 0.98
         This is a float less than 1, and defaults to 0.98. If
         filter_slivers (explained below) is chosen, tolerance controls
         how big or small the slithers need to be to be rounded away. For
@@ -186,7 +186,7 @@ class ZoningTranslationInputs(BaseConfig):
     rounding: bool, default True
         Select whether or not zone totals will be rounded to 1 after the
         translation is performed. Recommended to keep as True.
-    filter_slithers: bool, True
+    filter_slivers: bool, True
         Select whether very small overlaps between zones will be
         filtered out. This accounts for zone boundaries not aligning
         perfectly when they should between shapefiles, and the tolerance
@@ -210,9 +210,9 @@ class ZoningTranslationInputs(BaseConfig):
     lower_zoning: Optional[LowerZoneSystemInfo] = None
     cache_path: Path = Path(CACHE_PATH)
     method: Optional[str] = None
-    slither_tolerance: float = 0.98
+    sliver_tolerance: float = 0.98
     rounding: bool = True
-    filter_slithers: bool = True
+    filter_slivers: bool = True
     point_handling: bool = False
     point_tolerance: float = 1
     run_date: str = datetime.datetime.now().strftime("%d_%m_%y")

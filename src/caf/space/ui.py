@@ -4,6 +4,7 @@ User interface for caf.space
 """
 # Built-Ins
 from tkinterweb import HtmlFrame
+from tkhtmlview import HTMLScrolledText, RenderHTML
 import markdown
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
@@ -477,24 +478,22 @@ class UiTab(ttk.Frame):
 
 
 class ReadmeTab(ttk.Frame):
-    def __init__(self, master=None, readme_path='readme.md', **kwargs):
+    def __init__(self, master=None, readme_path="readme.md", **kwargs):
         super().__init__(master, **kwargs)
 
         # create a text widget to display the readme contents
-        self.readme_text = tk.Text(self, wrap='word', state='disabled')
-        self.readme_text.pack(fill='both', expand=True)
 
         # read the contents of the readme file
-        with open(readme_path, 'r') as f:
+        with open(readme_path, "r") as f:
             readme_contents = f.read()
 
         # convert the Markdown text to HTML
         html_text = markdown.markdown(readme_contents)
-
-        # insert the HTML into the text widget as formatted text
-        self.readme_text.config(state='normal')
-        self.readme_text.insert('end', html_text)
-        self.readme_text.config(state='disabled')
+        self.readme_text = HTMLScrolledText(
+            self, wrap="word", state="disabled", html=html_text
+        )
+        self.readme_text.pack(fill="both", expand=True)
+        print("debugging")
 
 
 class ConsoleFrame(ttk.Frame):
@@ -543,37 +542,40 @@ class NotebookApp:
     def __init__(self):
         self.root = tk.Tk()
         self.notebook = ttk.Notebook(self.root)
-        self.notebook.pack(fill='both', expand=True)
+        self.notebook.pack(fill="both", expand=True)
 
         # Add MyUI instance as a tab
         my_ui_tab = ttk.Frame(self.notebook)
         my_ui = UiTab(master=my_ui_tab)
-        my_ui.pack(fill='both', expand=True)
-        self.notebook.add(my_ui_tab, text='My UI')
+        my_ui.pack(fill="both", expand=True)
+        self.notebook.add(my_ui_tab, text="My UI")
 
         # Add readme as a tab
         readme_tab = ttk.Frame(self.notebook)
-        readme = ReadmeTab(master=readme_tab, readme_path=r'C:\Users\IsaacScott\Projects\caf\caf.space\README.md')
-        readme.pack(fill='both', expand=True)
-        self.notebook.add(readme_tab, text='Readme')
+        readme = ReadmeTab(
+            master=readme_tab,
+            readme_path=r"C:\Users\IsaacScott\Projects\caf\caf.space\README.md",
+        )
+        readme.pack(fill="both", expand=True)
+        self.notebook.add(readme_tab, text="Readme")
 
         console_tab = ttk.Frame(self.notebook)
         console_text = ConsoleFrame(console_tab)
         console_text.pack(fill="both", expand=True)
         self.notebook.add(console_tab, text="Console Output")
 
-
         self.root.mainloop()
 
-# def test_func():
-#     root = tk.Tk()  # create the tkinter window
-#     frame = HtmlFrame(root)  # create HTML browser
-#     frame.load_website("https://cafspcae.readthedocs.io/en/latest/")
-#     frame.pack(fill="both", expand=True)
-#     root.mainloop()
+
+def test_func():
+    root = tk.Tk()  # create the tkinter window
+    frame = HtmlFrame(root)  # create HTML browser
+    frame.load_website("https://cafspcae.readthedocs.io/en/latest/")
+    frame.pack(fill="both", expand=True)
+    root.mainloop()
 
 if __name__ == "__main__":
-    NotebookApp()
-    # test_func()
+    # NotebookApp()
+    test_func()
 
 # # # FUNCTIONS # # #
