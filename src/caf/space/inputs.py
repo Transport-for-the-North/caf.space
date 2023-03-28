@@ -53,18 +53,6 @@ class ZoneSystemInfo(BaseConfig):
     shapefile: Path
     id_col: str
 
-    @validator("id_col")
-    def _id_col_in_file(cls, v, values):
-        with fiona.collection(values["shapefile"]) as source:
-            schema = source.schema
-            if v not in schema["properties"].keys():
-                raise ValueError(
-                    f"The id_col provided, {v}, does not appear"
-                    f" in the given shapefile. Please choose from:"
-                    f"{schema['properties'].keys()}."
-                )
-        return v
-
     @validator("shapefile")
     def _path_exists(cls, v):
         """
@@ -83,6 +71,18 @@ class ZoneSystemInfo(BaseConfig):
                 f"The path provided for {v} does not exist."
                 "If this path is on a network drive make sure you are connected"
             )
+        return v
+
+    @validator("id_col")
+    def _id_col_in_file(cls, v, values):
+        with fiona.collection(values["shapefile"]) as source:
+            schema = source.schema
+            if v not in schema["properties"].keys():
+                raise ValueError(
+                    f"The id_col provided, {v}, does not appear"
+                    f" in the given shapefile. Please choose from:"
+                    f"{schema['properties'].keys()}."
+                )
         return v
 
 

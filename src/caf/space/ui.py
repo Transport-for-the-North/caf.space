@@ -3,11 +3,10 @@
 User interface for caf.space
 """
 # Built-Ins
+from functools import partial
 from tkinterweb import HtmlFrame, Notebook
-from tkhtmlview import HTMLScrolledText, RenderHTML
-import markdown
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+from tkinter import ttk, filedialog
 from pathlib import Path
 import sys
 
@@ -37,6 +36,7 @@ class FileWidget(ttk.Frame):
         path_width=20,
         label_width=20,
         file_filter=(("All files", "*.*")),
+        variable=None,
     ):
         """
         Parameters
@@ -61,10 +61,11 @@ class FileWidget(ttk.Frame):
         self.label = ttk.Label(self, text=label, width=label_width)
         self.file_filter = file_filter
         # Create entry box and browse button
-        self.path = ttk.Entry(self, width=path_width)
-        self.button = ttk.Button(
-            self, text="...", width=3, command=self.browse
-        )
+        if variable:
+            self.path = ttk.Entry(self, width=path_width, textvariable=variable)
+        else:
+            self.path = ttk.Entry(self, width=path_width)
+        self.button = ttk.Button(self, text="...", width=3, command=self.browse)
 
         # Attempt to place label if it exists
         try:
@@ -80,9 +81,7 @@ class FileWidget(ttk.Frame):
     def browse(self):
         """Method to open filedialog for selecting a file."""
         if self.browseType == "open":
-            path = filedialog.askopenfilename(
-                filetypes=self.file_filter
-            )
+            path = filedialog.askopenfilename(filetypes=self.file_filter)
         elif self.browseType == "save":
             path = filedialog.asksaveasfilename()
         elif self.browseType == "directory":
@@ -135,13 +134,14 @@ class LabelledTextEntry(ttk.Frame):
         parent: tkinter container widget
             Parent container for storing the widget.
         label (str): Text used for labelling widget.
+        label_width (int): Width of label.
+        text_width (int): Width of text.
+        variable (tk.StringVar): The variable linked to this input, if any.
         """
         super().__init__(parent)
         self.label = ttk.Label(self, text=label, width=label_width)
         if variable:
-            self.text = ttk.Entry(
-                self, width=text_width, textvariable=variable
-            )
+            self.text = ttk.Entry(self, width=text_width, textvariable=variable)
         else:
             self.text = ttk.Entry(self, width=text_width)
         self.label.pack(side="left", fill="x", padx=5)
@@ -165,9 +165,20 @@ class LabelledTextEntry(ttk.Frame):
 
 
 class NumberScroller(ttk.Frame):
-    def __init__(
-        self, parent, scroll_range, label, default_value, label_width=20
-    ):
+    """
+    Number scroller class to add a number scroller.
+
+    Parameters
+    ----------
+    parent: tkinter container widget
+            Parent container for storing the widget.
+    scroll_range: The range of numbers the scroller will scroll between.
+    label (str): Label text.
+    default_value (int): The value the scroller will start on.
+    label_width (int): The width of the label.
+    """
+
+    def __init__(self, parent, scroll_range, label, default_value, label_width=20):
         super().__init__(parent)
         self.link_var = tk.IntVar(value=default_value)
         self.label = ttk.Label(self, text=label, width=label_width)
@@ -196,8 +207,23 @@ class NumberScroller(ttk.Frame):
 
 
 class ZoneFrame(ttk.LabelFrame):
+    """
+    Class for creating frames for TransZoneSystemInfo from the config class.
+
+    This is currently not very customisable when called, but parameters passed
+    to sub frames and widgets could be exposed.
+
+    Parameters
+    ----------
+    parent: The parent frame this frame sits within.
+    label: Passed to the 'text' parameter of LabelFrame.
+    """
+
     def __init__(self, parent, label):
         super().__init__(parent, text=label)
+        self.shape_var = tk.StringVar(value="")
+        self.name_var = tk.StringVar(value="zone_name")
+        self.id_col_var = tk.StringVar(value="shape_id_col")
         self.shapefile = FileWidget(
             self,
             label="Shapefile",
@@ -205,12 +231,13 @@ class ZoneFrame(ttk.LabelFrame):
             label_width=15,
             path_width=30,
             file_filter=SHAPE_FILEFILTER,
+            variable=self.shape_var,
         )
         self.name = LabelledTextEntry(
-            self, label="Zone system name", text_width=10
+            self, label="Zone system name", text_width=10, variable=self.name_var
         )
         self.id_col = LabelledTextEntry(
-            self, label="ID column name", text_width=10
+            self, label="ID column name", text_width=10, variable=self.id_col_var
         )
         self.point_shapefile = FileWidget(
             self,
@@ -221,44 +248,74 @@ class ZoneFrame(ttk.LabelFrame):
             file_filter=SHAPE_FILEFILTER,
         )
 
-        self.shapefile.grid(
-            column=0, row=0, columnspan=3, sticky="ew", pady=5
-        )
-        self.name.grid(
-            column=0, row=1, columnspan=3, sticky="ew", pady=5
-        )
-        self.id_col.grid(
-            column=0, row=2, columnspan=3, sticky="ew", pady=5
-        )
-        self.point_shapefile.grid(
-            column=0, row=3, columnspan=3, sticky="ew", pady=5
-        )
+        self.shapefile.grid(column=0, row=0, columnspan=3, sticky="ew", pady=5)
+        self.name.grid(column=0, row=1, columnspan=3, sticky="ew", pady=5)
+        self.id_col.grid(column=0, row=2, columnspan=3, sticky="ew", pady=5)
+        self.point_shapefile.grid(column=0, row=3, columnspan=3, sticky="ew", pady=5)
 
     def disable(self):
+        """
+        Disable method for class.
+        """
         self.shapefile.disable()
         self.name.disable()
         self.id_col.disable()
         self.point_shapefile.disable()
 
     def enable(self):
+        """
+        Enable method for class.
+        """
         self.shapefile.enable()
         self.name.enable()
         self.id_col.enable()
         self.point_shapefile.enable()
 
     def get(self):
+        """
+        Get method for class.
+
+        Returns
+        -------
+        Instance of TransZoneSystemInfo class with parameters read from UI.
+        """
         zone = inputs.TransZoneSystemInfo(
-            shapefile=self.shapefile.get(),
-            name=self.name.get(),
-            id_col=self.id_col.get(),
+            shapefile=self.shape_var.get(),
+            name=self.name_var.get(),
+            id_col=self.id_col_var.get(),
             point_shapefile=self.point_shapefile.get(),
         )
         return zone
 
+    def validate(self):
+        """
+        Confirm that this frame is sufficiently provided.
+        Returns
+        -------
+        """
+        if self.shape_var.get().endswith(".shp"):
+            return True
+        else:
+            return False
+
 
 class LowerZoneFrame(ttk.LabelFrame):
+    """
+    Class for creating frames corresponding to the LowerZoneSystem class in inputs.
+
+    This is currently not very customisable when called, but parameters passed
+    to sub frames and widgets could be exposed.
+
+    Parameters
+    ----------
+    parent: The parent frame this frame sits within.
+    label: Passed to the 'text' parameter of LabelFrame.
+    """
+
     def __init__(self, parent):
         super().__init__(parent, text="Lower Zone")
+        self.shape_var = tk.StringVar(value="PATH/TO/LOWER/SHAPEFILE")
+        self.weight_var = tk.StringVar(value="PATH/TO/WEIGHT/DATA")
         self.shapefile = FileWidget(
             self,
             label="Shapefile",
@@ -266,6 +323,7 @@ class LowerZoneFrame(ttk.LabelFrame):
             label_width=15,
             path_width=30,
             file_filter=SHAPE_FILEFILTER,
+            variable=self.shape_var
         )
         self.name = LabelledTextEntry(self, label="Zone system name")
         self.id_col = LabelledTextEntry(self, label="ID column name")
@@ -276,6 +334,7 @@ class LowerZoneFrame(ttk.LabelFrame):
             label_width=15,
             path_width=30,
             file_filter=CSV_FILEFILTER,
+            variable=self.weight_var
         )
         self.data_col = LabelledTextEntry(
             self,
@@ -293,29 +352,18 @@ class LowerZoneFrame(ttk.LabelFrame):
             text_width=10,
         )
 
-        self.shapefile.grid(
-            column=0, row=0, columnspan=3, sticky="ew", pady=5
-        )
-        self.name.grid(
-            column=0, row=1, columnspan=3, sticky="ew", pady=5
-        )
-        self.id_col.grid(
-            column=0, row=2, columnspan=3, sticky="ew", pady=5
-        )
-        self.weight_data.grid(
-            column=3, row=0, columnspan=3, sticky="ew", pady=5
-        )
-        self.data_col.grid(
-            column=3, row=1, columnspan=3, sticky="ew", pady=5
-        )
-        self.weight_id_col.grid(
-            column=3, row=2, columnspan=3, sticky="ew", pady=5
-        )
-        self.weight_data_year.grid(
-            column=3, row=3, columnspan=3, sticky="ew", pady=5
-        )
+        self.shapefile.grid(column=0, row=0, columnspan=3, sticky="ew", pady=5)
+        self.name.grid(column=0, row=1, columnspan=3, sticky="ew", pady=5)
+        self.id_col.grid(column=0, row=2, columnspan=3, sticky="ew", pady=5)
+        self.weight_data.grid(column=3, row=0, columnspan=3, sticky="ew", pady=5)
+        self.data_col.grid(column=3, row=1, columnspan=3, sticky="ew", pady=5)
+        self.weight_id_col.grid(column=3, row=2, columnspan=3, sticky="ew", pady=5)
+        self.weight_data_year.grid(column=3, row=3, columnspan=3, sticky="ew", pady=5)
 
     def disable(self):
+        """
+        Disable method for class.
+        """
         self.shapefile.disable()
         self.name.disable()
         self.id_col.disable()
@@ -325,6 +373,9 @@ class LowerZoneFrame(ttk.LabelFrame):
         self.weight_data_year.disable()
 
     def enable(self):
+        """
+        Enable method for class.
+        """
         self.shapefile.enable()
         self.name.enable()
         self.id_col.enable()
@@ -334,6 +385,13 @@ class LowerZoneFrame(ttk.LabelFrame):
         self.weight_data_year.enable()
 
     def get(self):
+        """
+        Get method for class.
+
+        Returns
+        -------
+        Instance of LowerZoneSystemInfo class with parameters read from UI.
+        """
         lower_zone = inputs.LowerZoneSystemInfo(
             shapefile=self.shapefile.get(),
             name=self.name.get(),
@@ -345,23 +403,46 @@ class LowerZoneFrame(ttk.LabelFrame):
         )
         return lower_zone
 
+    def validate(self):
+        if self.shape_var.get().endswith(".shp") and self.weight_var.get().endswith(".csv"):
+            return True
+        else:
+            return False
+
 
 class ParametersFrame(ttk.LabelFrame):
+    """
+    Frame for main parameters for ZoneTranslationInputs class.
+
+    This frame contains all parameters which aren't stores within either
+    zone system info class
+
+    Parameters
+    ----------
+    parent: Parent frame
+    """
+
     def __init__(self, parent):
         super().__init__(parent, text="Parameters")
         self.method_var = tk.StringVar()
         self.handling_var = tk.BooleanVar()
         self.rounding_var = tk.BooleanVar(value=True)
         self.slivers_var = tk.BooleanVar(value=True)
+        self.cache_var = tk.StringVar(value=inputs.CACHE_PATH)
+        self.output_var = tk.StringVar(value="path/to/output/folder")
         self.cache_folder = FileWidget(
-            self, label="Cache Path", browse="directory", label_width=15
+            self,
+            label="Cache Path",
+            browse="directory",
+            label_width=15,
+            variable=self.cache_var,
         )
-        self.cache_folder.set(inputs.CACHE_PATH)
         self.output_folder = FileWidget(
             self,
             label="Output Folder",
             browse="directory",
             label_width=15,
+            variable=self.output_var,
         )
         self.method = LabelledTextEntry(
             self,
@@ -370,13 +451,13 @@ class ParametersFrame(ttk.LabelFrame):
             label_width=15,
             text_width=10,
         )
-        self.method_var.trace_add("write", self.activateLower)
+        self.method_var.trace_add("write", self.activate_lower)
         self.lower = LowerZoneFrame(self)
         self.lower.disable()
         self.zone_1 = ZoneFrame(self, "zone 1")
         self.zone_2 = ZoneFrame(self, "zone 2")
 
-        self.slither_tolerance = NumberScroller(
+        self.sliver_tolerance = NumberScroller(
             self,
             scroll_range=(1, 100),
             label="Percentage sliver tolerance",
@@ -401,99 +482,123 @@ class ParametersFrame(ttk.LabelFrame):
             self,
             text="Do you want point zones handled?",
             variable=self.handling_var,
-            command=self.activateHandling,
+            command=partial(
+                self.activator, var=self.handling_var, widget=self.point_tolerance
+            ),
         )
 
         self.filter_slithers = ttk.Checkbutton(
             self,
             text="Filter out slivers?",
             variable=self.slivers_var,
-            command=self.activateSlivers,
+            command=partial(
+                self.activator, var=self.slivers_var, widget=self.sliver_tolerance
+            ),
         )
 
-        self.cache_folder.grid(
-            column=0, row=0, columnspan=3, sticky="ew", pady=5
-        )
-        self.output_folder.grid(
-            column=3, row=0, columnspan=3, sticky="ew", pady=5
-        )
-        self.filter_slithers.grid(
-            column=0, columnspan=2, row=1, sticky="s", pady=10
-        )
-        self.rounding.grid(
-            column=2, columnspan=2, row=1, sticky="es", pady=10
-        )
-        self.point_handling.grid(
-            column=4, columnspan=2, row=1, sticky="s", pady=10
-        )
-        self.slither_tolerance.grid(
-            column=0, row=2, columnspan=2, sticky="s", pady=5
-        )
-        self.point_tolerance.grid(
-            column=2, row=2, columnspan=2, sticky="s", pady=5
-        )
-        self.method.grid(
-            column=4, row=2, columnspan=2, sticky="ew", pady=5
-        )
-        self.zone_1.grid(
-            column=0, row=4, columnspan=3, sticky="nsew", pady=5
-        )
-        self.zone_2.grid(
-            column=3, row=4, columnspan=3, sticky="nsew", pady=5
-        )
-        self.lower.grid(
-            column=0, row=5, columnspan=6, sticky="s", pady=5
-        )
+        self.cache_folder.grid(column=0, row=0, columnspan=3, sticky="ew", pady=5)
+        self.output_folder.grid(column=3, row=0, columnspan=3, sticky="ew", pady=5)
+        self.filter_slithers.grid(column=0, columnspan=2, row=1, sticky="sw", pady=10)
+        self.rounding.grid(column=2, columnspan=2, row=1, sticky="sw", pady=10)
+        self.point_handling.grid(column=4, columnspan=2, row=1, sticky="sw", pady=10)
+        self.sliver_tolerance.grid(column=0, row=2, columnspan=2, sticky="s", pady=5)
+        self.point_tolerance.grid(column=2, row=2, columnspan=2, sticky="s", pady=5)
+        self.method.grid(column=4, row=2, columnspan=2, sticky="ew", pady=5)
+        self.zone_1.grid(column=0, row=4, columnspan=3, sticky="nsew", pady=5)
+        self.zone_2.grid(column=3, row=4, columnspan=3, sticky="nsew", pady=5)
+        self.lower.grid(column=0, row=5, columnspan=6, sticky="s", pady=5)
 
-    def activateHandling(self):
-        if self.handling_var.get():
-            self.point_tolerance.enable()
+    def activator(self, var, widget):
+        """
+        Method used as a command argument within ttk.Checkbox objects,
+        Parameters
+        ----------
+        var: The variable connected to the checkbox.
+        widget: The widget being toggled by the checkbox.
+
+        Returns
+        -------
+
+        """
+        if var.get():
+            widget.enable()
         else:
-            self.point_tolerance.disable()
+            widget.disable()
 
-    def activateSlivers(self):
-        if self.slivers_var.get():
-            self.slither_tolerance.enable()
-        else:
-            self.slither_tolerance.disable()
-
-    def activateLower(self, *args):
+    def activate_lower(self, *args):
+        """
+        Toggles the lower frame based on whether there is any text in method.
+        """
         if len(self.method_var.get()) > 0:
             self.lower.enable()
         else:
             self.lower.disable()
 
     def get(self):
+        """
+        Get method for parameters.
+
+        Returns
+        -------
+        A dictionary of parameters from the ui in the correct format to be
+        passed to ZoningTranslationInputs.
+        """
         if len(self.method_var.get()) > 0:
             lower = self.lower.get()
         else:
             lower = None
-        params = {
-            "output_path": Path(self.output_folder.get()),
-            "cache_path": Path(self.cache_folder.get()),
-            "filter_slivers": self.slivers_var.get(),
-            "rounding": self.rounding_var.get(),
-            "point_handling": self.handling_var.get(),
-            "sliver_tolerance": self.slither_tolerance.get() / 100,
-            "point_tolerance": self.point_tolerance.get(),
-            "method": self.method_var.get(),
-            "lower": lower,
-        }
-        return params
+        zone_1 = self.zone_1.get()
+        zone_2 = self.zone_2.get()
+        conf = inputs.ZoningTranslationInputs(
+            zone_1=zone_1,
+            zone_2=zone_2,
+            lower=lower,
+            cache_path=Path(self.cache_var.get()),
+            filter_slivers=self.slivers_var.get(),
+            point_handling=self.handling_var.get(),
+            method=self.method_var.get(),
+            sliver_tolerance=self.sliver_tolerance.get() / 100,
+            point_tolerance=self.point_tolerance.get(),
+            rounding=self.rounding_var.get(),
+        )
+
+        return conf, Path(self.output_var.get())
+
+        # )
+        # params = {
+        #     "output_path": Path(self.output_var.get()),
+        #     "cache_path": Path(self.cache_var.get()),
+        #     "filter_slivers": self.slivers_var.get(),
+        #     "rounding": self.rounding_var.get(),
+        #     "point_handling": self.handling_var.get(),
+        #     "sliver_tolerance": self.sliver_tolerance.get() / 100,
+        #     "point_tolerance": self.point_tolerance.get(),
+        #     "method": self.method_var.get(),
+        #     "lower": lower,
+        # }
+        # return params
 
 
 class UiTab(ttk.Frame):
     def __init__(self, master=None):
         super().__init__(master)
         self.main_params = ParametersFrame(self)
+        self.main_params.zone_1.shape_var.trace_add("write", self.activate_spatial)
+        self.main_params.zone_1.shape_var.trace_add("write", self.activate_weighted)
+        self.main_params.zone_2.shape_var.trace_add("write", self.activate_spatial)
+        self.main_params.zone_2.shape_var.trace_add("write", self.activate_weighted)
+        self.main_params.lower.shape_var.trace_add("write", self.activate_weighted)
+        self.main_params.lower.weight_var.trace_add("write", self.activate_weighted)
         # self.zone_1 = ZoneFrame(self, "zone 1")
         # self.zone_2 = ZoneFrame(self, "zone 2")
         self.weighted_button = ttk.Button(
             self, text="Weighted translation", command=self.run_weighted
         )
+        self.weighted_button.config(state="disabled")
         self.spatial_button = ttk.Button(
             self, text="Spatial translation", command=self.run_spatial
         )
+        self.spatial_button.config(state="disabled")
 
         self.main_params.grid(
             column=0,
@@ -505,55 +610,60 @@ class UiTab(ttk.Frame):
         )
         # self.zone_1.grid(column=1, row=0, sticky="ew", pady=5)
         # self.zone_2.grid(column=1, row=1, sticky="ew", pady=5)
-        self.weighted_button.grid(
-            column=0, columnspan=1, row=3, sticky="ew", pady=5
-        )
-        self.spatial_button.grid(
-            column=1, columnspan=1, row=3, sticky="ew", pady=5
-        )
+        self.weighted_button.grid(column=0, columnspan=1, row=3, sticky="ew", pady=1, padx=1)
+        self.spatial_button.grid(column=1, columnspan=1, row=3, sticky="ew", pady=1, padx=1)
 
+    def activate_spatial(self, *args):
+        if self.main_params.zone_2.validate() and self.main_params.zone_1.validate():
+            self.spatial_button.config(state="normal")
+        else:
+            self.spatial_button.config(state="disabled")
+
+    def activate_weighted(self, *args):
+        if self.main_params.zone_1.validate() and self.main_params.zone_2.validate() and self.main_params.lower.validate():
+            self.weighted_button.config(state="normal")
+        else:
+            self.weighted_button.config(state="disabled")
     def run_weighted(self):
-        main_params = self.main_params.get()
-        zone_1 = self.zone_1.get()
-        zone_2 = self.zone_2.get()
-        lower = main_params["lower"]
-        config = inputs.ZoningTranslationInputs(
-            zone_1=zone_1,
-            zone_2=zone_2,
-            cache_path=main_params["cache_path"],
-            filter_slivers=main_params["filter_slivers"],
-            rounding=main_params["rounding"],
-            point_handling=main_params["point_handling"],
-            sliver_tolerance=main_params["sliver_tolerance"],
-            point_tolerance=main_params["point_tolerance"],
-            method=main_params["method"],
-            lower_zoning=lower,
-        )
-        zt = zone_translation.ZoneTranslation(config)
+        params, output_path = self.main_params.get()
+        # zone_1 = self.zone_1.get()
+        # zone_2 = self.zone_2.get()
+        # lower = main_params["lower"]
+        # config = inputs.ZoningTranslationInputs(
+        #     zone_1=zone_1,
+        #     zone_2=zone_2,
+        #     cache_path=main_params["cache_path"],
+        #     filter_slivers=main_params["filter_slivers"],
+        #     rounding=main_params["rounding"],
+        #     point_handling=main_params["point_handling"],
+        #     sliver_tolerance=main_params["sliver_tolerance"],
+        #     point_tolerance=main_params["point_tolerance"],
+        #     method=main_params["method"],
+        #     lower_zoning=lower,
+        # )
+        zt = zone_translation.ZoneTranslation(params)
         zt.weighted_translation().to_csv(
-            main_params["output_path"]
-            / f"{config.zone_1.name}_{config.zone_2.name}_{config.method}.csv"
+            output_path / f"{params.zone_1.name}_{params.zone_2.name}_{params.method}.csv"
         )
         return
 
     def run_spatial(self):
-        main_params = self.main_params.get()
-        zone_1 = self.zone_1.get()
-        zone_2 = self.zone_2.get()
-        config = inputs.ZoningTranslationInputs(
-            zone_1=zone_1,
-            zone_2=zone_2,
-            cache_path=main_params["cache_path"],
-            filter_slivers=main_params["filter_slivers"],
-            rounding=main_params["rounding"],
-            point_handling=main_params["point_handling"],
-            sliver_tolerance=main_params["sliver_tolerance"],
-            point_tolerance=main_params["point_tolerance"],
-        )
-        zt = zone_translation.ZoneTranslation(config)
+        params, output_path = self.main_params.get()
+        # zone_1 = self.zone_1.get()
+        # zone_2 = self.zone_2.get()
+        # config = inputs.ZoningTranslationInputs(
+        #     zone_1=zone_1,
+        #     zone_2=zone_2,
+        #     cache_path=main_params["cache_path"],
+        #     filter_slivers=main_params["filter_slivers"],
+        #     rounding=main_params["rounding"],
+        #     point_handling=main_params["point_handling"],
+        #     sliver_tolerance=main_params["sliver_tolerance"],
+        #     point_tolerance=main_params["point_tolerance"],
+        # )
+        zt = zone_translation.ZoneTranslation(params)
         zt.spatial_translation().to_csv(
-            main_params["output_path"]
-            / f"{config.zone_1.name}_{config.zone_2.name}_spatial.csv"
+            output_path / f"{params.zone_1.name}_{params.zone_2.name}_spatial.csv"
         )
         return
 
@@ -600,9 +710,7 @@ class ConsoleFrame(ttk.Frame):
         # Configure text widget
         self.text = tk.Text(self)
         yscroll = ttk.Scrollbar(self, command=self.text.yview)
-        xscroll = ttk.Scrollbar(
-            self, command=self.text.xview, orient="horizontal"
-        )
+        xscroll = ttk.Scrollbar(self, command=self.text.xview, orient="horizontal")
         self.text.config(
             state="disabled",
             yscrollcommand=yscroll.set,
@@ -631,14 +739,10 @@ class NotebookApp:
         my_ui_tab = ttk.Frame(self.notebook)
         my_ui = UiTab(master=my_ui_tab)
         my_ui.pack(fill="both", expand=True)
-        self.notebook.add(my_ui_tab, text="My UI")
-        readme_tab = HtmlFrame(
-            self.notebook, messages_enabled=False
-        )
-        readme_tab.load_website(
-            "https://cafspcae.readthedocs.io/en/latest/"
-        )
-        self.notebook.add(readme_tab, text="Readme")
+        self.notebook.add(my_ui_tab, text="Zone translation parameters")
+        readme_tab = HtmlFrame(self.notebook, messages_enabled=False)
+        readme_tab.load_website("https://cafspcae.readthedocs.io/en/latest/")
+        self.notebook.add(readme_tab, text="Documentation")
 
         console_tab = ttk.Frame(self.notebook)
         console_text = ConsoleFrame(console_tab)
@@ -648,16 +752,6 @@ class NotebookApp:
         self.root.mainloop()
 
 
-def test_func():
-    root = tk.Tk()  # create the tkinter window
-    frame = HtmlFrame(root)  # create HTML browser
-    frame.load_website("https://cafspcae.readthedocs.io/en/latest/")
-    frame.pack(fill="both", expand=True)
-    root.mainloop()
-
-
 if __name__ == "__main__":
     NotebookApp()
-    # test_func()
-
 # # # FUNCTIONS # # #
