@@ -26,9 +26,7 @@ source = dir_path / "src" / "caf" / "space"
 sys.path.insert(0, os.path.abspath(str(source)))
 sys.path.insert(
     0,
-    os.path.abspath(
-        r"C:\Users\IsaacScott\anaconda3\envs\space\Lib\site-packages"
-    ),
+    os.path.abspath(r"C:\Users\IsaacScott\anaconda3\envs\space\Lib\site-packages"),
 )
 
 project = "caf.space"
