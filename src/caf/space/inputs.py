@@ -146,18 +146,14 @@ class LowerZoneSystemInfo(ZoneSystemInfo):
     @validator("weight_data")
     def _weight_data_exists(cls, v):
         if os.path.isfile(v) is False:
-            raise FileNotFoundError(
-                f"The weight data path provided for {v} does not exist."
-            )
+            raise FileNotFoundError(f"The weight data path provided for {v} does not exist.")
         return v
 
     @validator("data_col", "weight_id_col")
     def _valid_data_col(cls, v, values):
         cols = pd.read_csv(values["weight_data"], nrows=1).columns
         if v not in cols:
-            raise ValueError(
-                f"The given col, {v}, does not appear in the weight data."
-            )
+            raise ValueError(f"The given col, {v}, does not appear in the weight data.")
         return v
 
 

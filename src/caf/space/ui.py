@@ -24,7 +24,7 @@ CSV_FILEFILTER = (("CSV", "*.csv"), ("All files", "*.*"))
 
 
 # # # CLASSES # # #
-#pylint: disable=too-many-ancestors, too-many-instance-attributes, unused-argument
+# pylint: disable=too-many-ancestors, too-many-instance-attributes, unused-argument
 class FileWidget(ttk.Frame):
     """Tkinter widget for an entry box to select a file."""
 
@@ -35,7 +35,7 @@ class FileWidget(ttk.Frame):
         label="",
         browse="open",
         widths=(20, 20),
-        file_filter=(("All files", "*.*"))
+        file_filter=(("All files", "*.*")),
     ):
         """
         Initialise class.
@@ -126,13 +126,14 @@ class LabelledTextEntry(ttk.Frame):
     """
     Simple text input box with a label.
     """
+
     def __init__(
         self,
         parent,
         label: str,
         variable: Optional[tk.StringVar] = None,
         label_width: int = 20,
-        text_width=20
+        text_width=20,
     ):
         """
         Parameters
@@ -322,7 +323,6 @@ class ZoneFrame(ttk.LabelFrame):
         Confirm that this frame is sufficiently provided.
         """
         return self.shape_var.get().endswith(".shp")
-
 
 
 class LowerZoneFrame(ttk.LabelFrame):
@@ -682,10 +682,12 @@ class UiTab(ttk.Frame):
 
 class ConsoleFrame(ttk.Frame):
     """Frame containing the console."""
+
     class StdoutRedirector:
         """
         Class for redirecting.
         """
+
         def __init__(self, text_widget):
             self.text_space = text_widget
             self.text_space.tag_configure("n", font=("Calibri", 12))
@@ -729,6 +731,7 @@ class NotebookApp:
 
     One for the UI, one for the documentation, one for the console.
     """
+
     def __init__(self):
         self.root = tk.Tk()
         self.notebook = Notebook(self.root)
@@ -751,4 +754,4 @@ class NotebookApp:
 
 if __name__ == "__main__":
     NotebookApp()
-#pylint: enable=too-many-ancestors, too-many-instance-attributes, unused-argument
+# pylint: enable=too-many-ancestors, too-many-instance-attributes, unused-argument
