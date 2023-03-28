@@ -29,7 +29,7 @@ from caf.toolkit import BaseConfig
 
 ##### CONSTANTS #####
 LOG = logging.getLogger(__name__)
-CACHE_PATH = r"I:\Data\Zone Translations\cache"
+CACHE_PATH = "I:/Data/Zone Translations/cache"
 
 
 class ZoneSystemInfo(BaseConfig):
