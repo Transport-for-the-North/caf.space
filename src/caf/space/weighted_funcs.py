@@ -8,6 +8,7 @@ import logging
 import warnings
 from functools import reduce
 import pandas as pd
+from typing import Optional
 
 # pylint: disable=import-error
 import geopandas as gpd
@@ -102,6 +103,8 @@ def _create_tiles(
     lower_zoning: inputs.LowerZoneSystemInfo,
     point_handling: bool,
     point_tolerance: float,
+    zone_1_points: Optional[gpd.GeoDataFrame],
+    zone_2_points: Optional[gpd.GeoDataFrame]
 ) -> pd.DataFrame:
     """
     Create a spanning set of tiles for the weighted translation.
@@ -122,14 +125,14 @@ def _create_tiles(
     weighting = _weighted_lower(lower_zoning)
     if point_handling:
         if zone_1.point_shapefile:
-            zone_1_points = gpd.read_file(zone_1.point_shapefile)[[zone_1.id_col, "geometry"]]
+            zone_1_points = zone_1_points[[zone_1.id_col, "geometry"]]
             zone_1_points.rename(columns={zone_1.id_col: f"{zone_1.name}_id"}, inplace=True)
             zone_1_gdf = pd.concat([zone_1_gdf, zone_1_points])
         zone_1_gdf = _point_handling(
             zone_1_gdf, f"{zone_1.name}_id", weighting, lower_zoning.id_col, point_tolerance
         )
         if zone_2.point_shapefile:
-            zone_2_points = gpd.read_file(zone_2.point_shapefile)[[zone_2.id_col, "geometry"]]
+            zone_2_points = zone_2_points[[zone_2.id_col, "geometry"]]
             zone_2_points.rename(columns={zone_2.id_col: f"{zone_2.name}_id"}, inplace=True)
             zone_2_gdf = pd.concat([zone_2_gdf, zone_2_points])
         zone_2_gdf = _point_handling(
@@ -175,6 +178,8 @@ def get_weighted_translation(
     lower_zoning: inputs.LowerZoneSystemInfo,
     point_handling: bool,
     point_tolerance: float,
+    zone_1_points: Optional[gpd.GeoDataFrame],
+    zone_2_points: Optional[gpd.GeoDataFrame]
 ) -> pd.DataFrame:
     """
     Create overlap totals for zone systems.
@@ -196,7 +201,7 @@ def get_weighted_translation(
     """
     # create a set of spanning weighted, tiles. These tiles will be
     # grouped in different ways to produce the translation.
-    tiles = _create_tiles(zone_1, zone_2, lower_zoning, point_handling, point_tolerance)
+    tiles = _create_tiles(zone_1, zone_2, lower_zoning, point_handling, point_tolerance, zone_1_points, zone_2_points)
     # produce total weights by each respective zone system.
     totals_1 = return_totals(tiles, f"{zone_1.name}_id", lower_zoning.data_col).to_frame()
     totals_2 = return_totals(tiles, f"{zone_2.name}_id", lower_zoning.data_col).to_frame()
@@ -219,6 +224,8 @@ def final_weighted(
     lower_zoning: inputs.LowerZoneSystemInfo,
     point_handling: bool,
     point_tolerance: float,
+    zone_1_points: Optional[gpd.GeoDataFrame],
+    zone_2_points: Optional[gpd.GeoDataFrame]
 ) -> pd.DataFrame:
     """
     Run functions from module to produce a weighted translation.
@@ -236,7 +243,7 @@ def final_weighted(
     rounding before being output, according to the input parameters.
     """
     full_df = get_weighted_translation(
-        zone_1, zone_2, lower_zoning, point_handling, point_tolerance
+        zone_1, zone_2, lower_zoning, point_handling, point_tolerance, zone_1_points, zone_2_points
     )
     full_df[f"{zone_1.name}_to_{zone_2.name}"] = (
         full_df[f"{lower_zoning.data_col}_overlap"] / full_df[f"{lower_zoning.data_col}_1"]

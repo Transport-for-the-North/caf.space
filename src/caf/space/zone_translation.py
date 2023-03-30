@@ -8,7 +8,8 @@ ZoneTranslationInputs class in 'inputs'.
 import logging
 import warnings
 import pandas as pd
-from caf.space import weighted_funcs, zone_correspondence, inputs
+import geopandas as gpd
+from caf.space import weighted_funcs, zone_correspondence, inputs, utils
 
 ##### CONSTANTS #####
 LOG = logging.getLogger(__name__)
@@ -136,12 +137,29 @@ class ZoneTranslation:
             raise ValueError("A method must be provided to perform a weighted translation.")
         if self.params.lower_zoning is False:
             raise ValueError("Lower zoning data is required for a weighted translations.")
+        points_1 = None
+        points_2 = None
+        if self.zone_1.point_shapefile & self.zone_2.point_shapefile:
+            points_1 = gpd.read_file(self.zone_1.point_shapefile)
+            points_2 = gpd.read_file(self.zone_2.point_shapefile)
+            if len(points_1) > len(points_2):
+                matches = utils.find_point_matches(points_1, points_2, 1000)
+            else:
+                matches = utils.find_point_matches(points_2, points_1, 1000)
+            points_1 = points_1.loc[~points_1[self.zone_1.id_col] in matches[self.zone_1.id_col]]
+            points_2 = points_2.loc[~points_2[self.zone_2.id_col] in matches[self.zone_2.id_col]]
+        elif self.zone_1.point_shapefile:
+            points_1 = gpd.read_file(self.zone_1.point_shapefile)
+        elif self.zone_2.point_shapefile:
+            points_2 = gpd.read_file(self.zone_2.point_shapefile)
         weighted_translation = weighted_funcs.final_weighted(
             self.zone_1,
             self.zone_2,
             self.lower_zoning,
             self.point_handling,
             self.point_tolerance,
+            points_1,
+            points_2
         )
         weighted_translation = weighted_translation[
             [
