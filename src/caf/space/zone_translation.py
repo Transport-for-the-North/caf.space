@@ -144,11 +144,23 @@ class ZoneTranslation:
                 points_1 = gpd.read_file(self.zone_1.point_shapefile)
                 points_2 = gpd.read_file(self.zone_2.point_shapefile)
                 if len(points_1) > len(points_2):
-                    matches = utils.find_point_matches(points_1, points_2, 1000)
+                    matches = utils.find_point_matches(
+                        points_1,
+                        points_2,
+                        1000,
+                        self.zone_1.id_col,
+                        self.zone_2.id_col,
+                        self.zone_1.name,
+                        self.zone_2.name,
+                    )
                 else:
                     matches = utils.find_point_matches(points_2, points_1, 1000)
-                points_1 = points_1.loc[~points_1[self.zone_1.id_col] in matches[self.zone_1.id_col]]
-                points_2 = points_2.loc[~points_2[self.zone_2.id_col] in matches[self.zone_2.id_col]]
+                points_1 = utils.points_update(
+                    points_1, matches, self.zone_1.id_col, f"{self.zone_1.name}_id"
+                )
+                points_2 = utils.points_update(
+                    points_2, matches, self.zone_2.id_col, f"{self.zone_2.name}_id"
+                )
             else:
                 points_1 = gpd.read_file(self.zone_1.point_shapefile)
         elif self.zone_2.point_shapefile:
@@ -160,7 +172,7 @@ class ZoneTranslation:
             self.point_handling,
             self.point_tolerance,
             points_1,
-            points_2
+            points_2,
         )
         weighted_translation = weighted_translation[
             [
@@ -168,10 +180,11 @@ class ZoneTranslation:
                 f"{self.names[1]}_to_{self.names[0]}",
             ]
         ]
+
         weighted_translation.reset_index(inplace=True)
 
         weighted_translation = self._slithers_and_rounding(weighted_translation)
-
+        weighted_translation = pd.concat([weighted_translation, matches])
         column_list = list(weighted_translation.columns)
 
         summary_table_1 = weighted_translation.groupby(column_list[0])[column_list[2]].sum()

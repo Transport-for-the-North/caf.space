@@ -85,6 +85,8 @@ def read_zone_shapefiles(
         if not zone["Zone"].crs:
             warnings.warn(f"Zone {name} has no CRS, setting crs to EPSG:27700.")
             zone["Zone"].crs = "EPSG:27700"
+        else:
+            zone["Zone"].set_crs("EPSG:27700")
 
     return zones
 

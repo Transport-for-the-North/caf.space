@@ -59,7 +59,15 @@ def generate_points(point_folder: Path, points_name: str, zones_path: Path, join
     dissolved.to_file(point_folder / "zones_no_points.shp")
 
 
-def find_point_matches(gdA: gpd.GeoDataFrame, gdB: gpd.GeoDataFrame, max_dist: int):
+def find_point_matches(
+    gdA: gpd.GeoDataFrame,
+    gdB: gpd.GeoDataFrame,
+    max_dist: int,
+    id_col_1,
+    id_col_2,
+    name_1,
+    name_2,
+):
     """
     Find corresponding point features between two geodataframe.
 
@@ -75,6 +83,8 @@ def find_point_matches(gdA: gpd.GeoDataFrame, gdB: gpd.GeoDataFrame, max_dist: i
     -------
     gdB with a column for corresponding points in gdA, and the distance between them.
     """
+    gdA = gdA.rename(columns={id_col_1: f"{name_1}_id"})
+    gdB = gdB.rename(columns={id_col_2: f"{name_2}_id"})
     nA = np.array(list(gdA.geometry.apply(lambda x: (x.x, x.y))))
     nB = np.array(list(gdB.geometry.apply(lambda x: (x.x, x.y))))
     btree = cKDTree(nB)
@@ -83,5 +93,23 @@ def find_point_matches(gdA: gpd.GeoDataFrame, gdB: gpd.GeoDataFrame, max_dist: i
     gdf = pd.concat(
         [gdA.reset_index(drop=True), gdB_nearest, pd.Series(dist, name="dist")], axis=1
     )
+    return gdf.loc[gdf["dist"] < max_dist, [f"{name_1}_id", f"{name_2}_id", "dist"]]
 
-    return gdf.loc[gdf["dist"] < max_dist]
+
+def points_update(
+    points: gpd.GeoDataFrame, matches: pd.DataFrame, id_col: str, matches_id: str
+):
+    points.set_index(id_col, inplace=True)
+    points.drop([i for i in matches[matches_id]], axis=0, inplace=True)
+    return points.reset_index()
+
+
+if __name__ == "__main__":
+    points_1 = gpd.read_file(
+        r"Y:\Freight\1.Local_Freight_Tool\Version2_WSP\zone_correspondence\1.GBFM_to_NoHAM\Inputs\point_zones.shp"
+    )
+    points_2 = gpd.read_file(
+        r"Y:\Freight\1.Local_Freight_Tool\Version2_WSP\Zoning\GBFM_Zones_Combined_2021\GBFM_points.shp"
+    )
+    gdf = find_point_matches(points_1, points_2, 1000, "UniqueID", "UniqueID", "noham", "gbfm")
+    print("debugging")
