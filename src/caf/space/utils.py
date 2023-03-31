@@ -99,6 +99,22 @@ def find_point_matches(
 def points_update(
     points: gpd.GeoDataFrame, matches: pd.DataFrame, id_col: str, matches_id: str
 ):
+    """
+    Removes matching points from point shapefile.
+
+    Reads in a master points shapefile, and a matching points shapefile and removes
+    features from the master file which appear in the matching one.
+    Parameters
+    ----------
+    points: master shapefile
+    matches: matches shapefile
+    id_col: ID column of master points
+    matches_id: id column od matching points
+
+    Returns
+    -------
+    master gdf with matching points removed.
+    """
     points.set_index(id_col, inplace=True)
     points.drop([i for i in matches[matches_id]], axis=0, inplace=True)
     return points.reset_index()
