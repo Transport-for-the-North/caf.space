@@ -103,8 +103,8 @@ def _create_tiles(
     lower_zoning: inputs.LowerZoneSystemInfo,
     point_handling: bool,
     point_tolerance: float,
-    zone_1_points: Optional[gpd.GeoDataFrame],
-    zone_2_points: Optional[gpd.GeoDataFrame]
+    zone_1_points: Optional[gpd.GeoDataFrame] = None,
+    zone_2_points: Optional[gpd.GeoDataFrame] = None
 ) -> pd.DataFrame:
     """
     Create a spanning set of tiles for the weighted translation.
@@ -178,8 +178,8 @@ def get_weighted_translation(
     lower_zoning: inputs.LowerZoneSystemInfo,
     point_handling: bool,
     point_tolerance: float,
-    zone_1_points: Optional[gpd.GeoDataFrame],
-    zone_2_points: Optional[gpd.GeoDataFrame]
+    zone_1_points: Optional[gpd.GeoDataFrame] = None,
+    zone_2_points: Optional[gpd.GeoDataFrame] = None
 ) -> pd.DataFrame:
     """
     Create overlap totals for zone systems.
@@ -224,8 +224,8 @@ def final_weighted(
     lower_zoning: inputs.LowerZoneSystemInfo,
     point_handling: bool,
     point_tolerance: float,
-    zone_1_points: Optional[gpd.GeoDataFrame],
-    zone_2_points: Optional[gpd.GeoDataFrame]
+    zone_1_points: Optional[gpd.GeoDataFrame] = None,
+    zone_2_points: Optional[gpd.GeoDataFrame] = None
 ) -> pd.DataFrame:
     """
     Run functions from module to produce a weighted translation.

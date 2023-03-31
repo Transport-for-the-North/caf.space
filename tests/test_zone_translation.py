@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 import pandas as pd
 import geopandas as gpd
+from copy import deepcopy
 
 # pylint: disable=import-error, wrong-import-position
 from caf.space import zone_translation
@@ -49,9 +50,9 @@ def fixture_dupe_shapes_config(
     -------
         A new config with lower zoning and zone 2 the same.
     """
-    config = weighted_config.copy()
-    config.zone_2 = weighted_config.lower_zoning
-    config.zone_2.name = weighted_config.zone_2.name
+    config = deepcopy(weighted_config)
+    config.zone_2.shapefile = weighted_config.lower_zoning.shapefile
+    config.zone_2.id_col = weighted_config.lower_zoning.id_col
     config.lower_zoning.name = weighted_config.zone_2.name
     return config
 
