@@ -751,7 +751,4 @@ class SpaceUI:
         self.notebook.add(console_tab, text="Console Output")
         self.root.mainloop()
 
-
-if __name__ == "__main__":
-    NotebookApp()
 # pylint: enable=too-many-ancestors, too-many-instance-attributes, unused-argument
