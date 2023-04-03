@@ -725,7 +725,7 @@ class ConsoleFrame(ttk.Frame):
         self.text.pack(side="left", fill="both", expand=True)
 
 
-class NotebookApp:
+class SpaceUI:
     """
     Main notebook, containing three pages.
 
