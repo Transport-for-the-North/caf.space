@@ -751,4 +751,5 @@ class SpaceUI:
         self.notebook.add(console_tab, text="Console Output")
         self.root.mainloop()
 
+
 # pylint: enable=too-many-ancestors, too-many-instance-attributes, unused-argument
