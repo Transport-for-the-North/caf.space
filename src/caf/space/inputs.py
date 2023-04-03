@@ -223,6 +223,7 @@ class ZoningTranslationInputs(BaseConfig):
     def __post_init__(self) -> None:
         """Make directories if they don't exist."""
         self.cache_path.mkdir(exist_ok=True, parents=True)
+
     @classmethod
     def write_example(cls, out_path: Path):
         """
