@@ -29,6 +29,7 @@ from caf.toolkit import BaseConfig
 
 ##### CONSTANTS #####
 LOG = logging.getLogger(__name__)
+CACHE_PATH = "I:/Data/Zone Translations/cache"
 
 
 class ZoneSystemInfo(BaseConfig):
@@ -52,18 +53,6 @@ class ZoneSystemInfo(BaseConfig):
     shapefile: Path
     id_col: str
 
-    @validator("id_col")
-    def _id_col_in_file(cls, v, values):
-        with fiona.collection(values["shapefile"]) as source:
-            schema = source.schema
-            if v not in schema["properties"].keys():
-                raise ValueError(
-                    f"The id_col provided, {v}, does not appear"
-                    f" in the given shapefile. Please choose from:"
-                    f"{schema['properties'].keys()}."
-                )
-        return v
-
     @validator("shapefile")
     def _path_exists(cls, v):
         """
@@ -82,6 +71,18 @@ class ZoneSystemInfo(BaseConfig):
                 f"The path provided for {v} does not exist."
                 "If this path is on a network drive make sure you are connected"
             )
+        return v
+
+    @validator("id_col")
+    def _id_col_in_file(cls, v, values):
+        with fiona.collection(values["shapefile"]) as source:
+            schema = source.schema
+            if v not in schema["properties"].keys():
+                raise ValueError(
+                    f"The id_col provided, {v}, does not appear"
+                    f" in the given shapefile. Please choose from:"
+                    f"{schema['properties'].keys()}."
+                )
         return v
 
 
@@ -136,7 +137,10 @@ class LowerZoneSystemInfo(ZoneSystemInfo):
 
     def _lower_to_higher(self) -> TransZoneSystemInfo:
         return TransZoneSystemInfo(
-            name=self.name, shapefile=self.shapefile, id_col=self.id_col, point_shapefile=None
+            name=self.name,
+            shapefile=self.shapefile,
+            id_col=self.id_col,
+            point_shapefile=None,
         )
 
     @validator("weight_data")
@@ -177,7 +181,7 @@ class ZoningTranslationInputs(BaseConfig):
         This can be anything, but must be included as the tool checks if
         this parameter exists to decide whether to perform a spatial or
         weighted translation.
-    slither_tolerance: float, default 0.98
+    sliver_tolerance: float, default 0.98
         This is a float less than 1, and defaults to 0.98. If
         filter_slivers (explained below) is chosen, tolerance controls
         how big or small the slithers need to be to be rounded away. For
@@ -185,7 +189,7 @@ class ZoningTranslationInputs(BaseConfig):
     rounding: bool, default True
         Select whether or not zone totals will be rounded to 1 after the
         translation is performed. Recommended to keep as True.
-    filter_slithers: bool, True
+    filter_slivers: bool, True
         Select whether very small overlaps between zones will be
         filtered out. This accounts for zone boundaries not aligning
         perfectly when they should between shapefiles, and the tolerance
@@ -207,11 +211,11 @@ class ZoningTranslationInputs(BaseConfig):
     zone_1: TransZoneSystemInfo
     zone_2: TransZoneSystemInfo
     lower_zoning: Optional[LowerZoneSystemInfo] = None
-    cache_path: Path = Path(r"I:\Data\Zone Translations\cache")
+    cache_path: Path = Path(CACHE_PATH)
     method: Optional[str] = None
-    slither_tolerance: float = 0.98
+    sliver_tolerance: float = 0.98
     rounding: bool = True
-    filter_slithers: bool = True
+    filter_slivers: bool = True
     point_handling: bool = False
     point_tolerance: float = 1
     run_date: str = datetime.datetime.now().strftime("%d_%m_%y")

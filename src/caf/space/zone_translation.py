@@ -48,9 +48,9 @@ class ZoneTranslation:
             self.lower_zoning = params.lower_zoning
         if params.method:
             self.method = params.method
-        self.slither_tolerance = params.slither_tolerance
+        self.slither_tolerance = params.sliver_tolerance
         self.rounding = params.rounding
-        self.filter_slithers = params.filter_slithers
+        self.filter_slithers = params.filter_slivers
         self.point_handling = params.point_handling
         self.point_tolerance = params.point_tolerance
         self.run_date = params.run_date
@@ -203,13 +203,13 @@ class ZoneTranslation:
         The input dataframe with slithers removed and/or values rounded
         according to input params.
         """
-        if self.params.filter_slithers:
+        if self.params.filter_slivers:
             LOG.info("Filtering out small overlaps.")
             (
                 _,
                 spatial_correspondence_no_slithers,
             ) = zone_correspondence.find_slithers(
-                translation, self.names, self.params.slither_tolerance
+                translation, self.names, self.params.sliver_tolerance
             )
 
             if self.params.rounding:

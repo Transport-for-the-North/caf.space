@@ -83,3 +83,21 @@ cross higher zone boundaries as rarely as possible for best results.
    table are the actual zone translation outputs.
 
 The inputs used in this example are included in the examples folder in the repo.
+
+Point Handling
+--------------
+
+If selected by the user, caf.space will treat features satisfying point criteria differently to other zones.
+These point zones may either be 'true points'; features with point geometries which must be provided as a
+separate shapefile parameter in 'zone_1', and/or 'zone_2', or 'pseudo points'; polygons in the primary shapefile
+for zone_1 or zone_2 whose area is below a user set threshold - point_tolerance.
+
+Once these point features are separated from the rest of the zone system geodataframe, they are all assigned the
+geometry of the lower zone they lie within (n.b. this process assumed that point zones lie entirely within one lower
+zone. This is not currently checked for so if you get any unexpected results this should be checked). Once the point
+zones have their updated geometry a normal weighted translation is performed.
+
+The logic behind this approach is that a point zone should only be used for features whose demand is completely out
+of relation with its size, like an airport. In this case it may be assumed that only a negligible amount of demand to
+that zone will not be accounted for by the point feature, so assigning all of the weighting to that feature makes
+a certain amount of sense.
