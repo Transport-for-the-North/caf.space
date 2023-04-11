@@ -4,18 +4,19 @@ Contains functionality for creating weighted translations.
 These are called in the 'weighted_trans' method in ZoneTranslation.
 """
 ##### IMPORTS #####
+from typing import Optional
 import logging
 import warnings
 from functools import reduce
 import pandas as pd
-from typing import Optional
+
 
 # pylint: disable=import-error
 import geopandas as gpd
 
 # pylint: enable=import-error
 
-from caf.space import inputs, zone_correspondence
+from caf.space import inputs
 
 ##### CONSTANTS #####
 logging.captureWarnings(True)
@@ -98,6 +99,7 @@ def _point_handling(
 
 
 def _create_tiles(
+    zones: dict,
     zone_1: inputs.TransZoneSystemInfo,
     zone_2: inputs.TransZoneSystemInfo,
     lower_zoning: inputs.LowerZoneSystemInfo,
@@ -119,19 +121,18 @@ def _create_tiles(
     -------
     A set of weighted tiles used for weighted translation.
     """
-    zones = zone_correspondence.read_zone_shapefiles(zone_1, zone_2)
     zone_1_gdf = zones[zone_1.name]["Zone"][[f"{zone_1.name}_id", "geometry"]]
     zone_2_gdf = zones[zone_2.name]["Zone"][[f"{zone_2.name}_id", "geometry"]]
     weighting = _weighted_lower(lower_zoning)
     if point_handling:
-        if zone_1.point_shapefile:
+        if zone_1_points is not None:
             zone_1_points = zone_1_points[[zone_1.id_col, "geometry"]]
             zone_1_points.rename(columns={zone_1.id_col: f"{zone_1.name}_id"}, inplace=True)
             zone_1_gdf = pd.concat([zone_1_gdf, zone_1_points])
         zone_1_gdf = _point_handling(
             zone_1_gdf, f"{zone_1.name}_id", weighting, lower_zoning.id_col, point_tolerance
         )
-        if zone_2.point_shapefile:
+        if zone_2_points is not None:
             zone_2_points = zone_2_points[[zone_2.id_col, "geometry"]]
             zone_2_points.rename(columns={zone_2.id_col: f"{zone_2.name}_id"}, inplace=True)
             zone_2_gdf = pd.concat([zone_2_gdf, zone_2_points])
@@ -173,6 +174,7 @@ def return_totals(frame: pd.DataFrame, id_col: str, data_col: str) -> pd.DataFra
 
 
 def get_weighted_translation(
+    zones: dict,
     zone_1: inputs.TransZoneSystemInfo,
     zone_2: inputs.TransZoneSystemInfo,
     lower_zoning: inputs.LowerZoneSystemInfo,
@@ -202,6 +204,7 @@ def get_weighted_translation(
     # create a set of spanning weighted, tiles. These tiles will be
     # grouped in different ways to produce the translation.
     tiles = _create_tiles(
+        zones,
         zone_1,
         zone_2,
         lower_zoning,
@@ -227,6 +230,7 @@ def get_weighted_translation(
 
 
 def final_weighted(
+    zones: dict,
     zone_1: inputs.TransZoneSystemInfo,
     zone_2: inputs.TransZoneSystemInfo,
     lower_zoning: inputs.LowerZoneSystemInfo,
@@ -251,6 +255,7 @@ def final_weighted(
     rounding before being output, according to the input parameters.
     """
     full_df = get_weighted_translation(
+        zones,
         zone_1,
         zone_2,
         lower_zoning,

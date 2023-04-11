@@ -5,7 +5,15 @@ from copy import deepcopy
 import pytest
 import pandas as pd
 import geopandas as gpd
-from caf.space import weighted_funcs
+from caf.space import weighted_funcs, zone_correspondence
+
+
+@pytest.fixture(name="zones", scope="session")
+def fixture_zones(weighted_config):
+    zones = zone_correspondence.read_zone_shapefiles(
+        weighted_config.zone_1, weighted_config.zone_2
+    )
+    return zones
 
 
 @pytest.fixture(name="weighted", scope="class")
@@ -19,11 +27,12 @@ def fixture_weighted(weighted_config):
 
 
 @pytest.fixture(name="tiles", scope="class")
-def fixture_tiles(weighted_config):
+def fixture_tiles(weighted_config, zones):
     """
     Fixture returning tiles from the _create_tiles function
     """
     tiles = weighted_funcs._create_tiles(
+        zones,
         weighted_config.zone_1,
         weighted_config.zone_2,
         weighted_config.lower_zoning,
@@ -34,12 +43,17 @@ def fixture_tiles(weighted_config):
 
 
 @pytest.fixture(name="overlaps", scope="class")
-def fixture_overlaps(weighted_config):
+def fixture_overlaps(weighted_config, zones):
     """
     Fixture returning overlaps ond totals.
     """
     overlaps = weighted_funcs.get_weighted_translation(
-        weighted_config.zone_1, weighted_config.zone_2, weighted_config.lower_zoning, False, 1
+        zones,
+        weighted_config.zone_1,
+        weighted_config.zone_2,
+        weighted_config.lower_zoning,
+        False,
+        1,
     )
     return overlaps
 
@@ -60,9 +74,9 @@ def fixture_no_points(weighted_config):
 
 
 @pytest.fixture(name="points_handled", scope="class")
-def fixture_points(point_zones, point_shapefile, weighted_config):
+def fixture_points(point_zones, point_shapefile_2, weighted_config):
     polygons = gpd.read_file(point_zones)
-    points = gpd.read_file(point_shapefile)
+    points = gpd.read_file(point_shapefile_2)
     zone = pd.concat([polygons, points])
     lower = gpd.read_file(weighted_config.lower_zoning.shapefile)
     adjusted = weighted_funcs._point_handling(
@@ -145,7 +159,7 @@ class TestPointHandling:
         handled, zone = point_handling_no_points
         pd.testing.assert_frame_equal(handled, zone)
 
-    @pytest.mark.parametrize("column", ["true_point", "pseudo_point"])
+    @pytest.mark.parametrize("column", ["true_point_2", "pseudo_point"])
     def test_point(self, points_handled, column):
         handled = points_handled
         assert (handled.loc[handled["zone_2_id"] == column, "geometry"].area == 4).all()

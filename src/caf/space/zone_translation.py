@@ -7,8 +7,10 @@ ZoneTranslationInputs class in 'inputs'.
 """
 import logging
 import warnings
+from pathlib import Path
 import pandas as pd
 import geopandas as gpd
+
 from caf.space import weighted_funcs, zone_correspondence, inputs, utils
 
 ##### CONSTANTS #####
@@ -79,35 +81,9 @@ class ZoneTranslation:
         )
         final_zone_corr = self._slithers_and_rounding(spatial_correspondence)
         # Save correspondence output
-        (
-            missing_zones_1,
-            missing_zones_2,
-        ) = zone_correspondence.missing_zones_check(
-            zones, final_zone_corr, self.zone_1, self.zone_2
-        )
-
-        warnings.warn(f"Missing Zones from 1 : {len(missing_zones_1)}")
-        warnings.warn(f"Missing Zones from 2 : {len(missing_zones_2)}")
         out_path = self.cache_path / f"{self.names[0]}_{self.names[1]}"
         out_path.mkdir(exist_ok=True, parents=True)
-        log_file = out_path / "missing_zones_log.xlsx"
-        with pd.ExcelWriter(
-            log_file, engine="openpyxl"
-        ) as writer:  # pylint: disable=abstract-class-instantiated
-            missing_zones_1.to_excel(
-                writer,
-                sheet_name=f"{self.names[0]}_missing",
-                index=False,
-            )
-            missing_zones_2.to_excel(
-                writer,
-                sheet_name=f"{self.names[1]}_missing",
-                index=False,
-            )
-        LOG.info(
-            "List of missing zones can be found in log file found here: %s",
-            log_file,
-        )
+        self.post_processing(zones, final_zone_corr, out_path)
         out_name = f"{self.names[0]}_to_{self.names[1]}_spatial"
         final_zone_corr.to_csv(out_path / f"{out_name}.csv", index=False)
         self.params.save_yaml(out_path / f"{out_name}.yml")
@@ -137,6 +113,7 @@ class ZoneTranslation:
             raise ValueError("A method must be provided to perform a weighted translation.")
         if self.params.lower_zoning is False:
             raise ValueError("Lower zoning data is required for a weighted translations.")
+        zones = zone_correspondence.read_zone_shapefiles(self.zone_1, self.zone_2)
         points_1 = None
         points_2 = None
         if self.zone_1.point_shapefile:
@@ -154,7 +131,15 @@ class ZoneTranslation:
                         self.zone_2.name,
                     )
                 else:
-                    matches = utils.find_point_matches(points_2, points_1, 1000)
+                    matches = utils.find_point_matches(
+                        points_2,
+                        points_1,
+                        1000,
+                        self.zone_2.id_col,
+                        self.zone_1.id_col,
+                        self.zone_2.name,
+                        self.zone_1.name,
+                    )
                 points_1 = utils.points_update(
                     points_1, matches, self.zone_1.id_col, f"{self.zone_1.name}_id"
                 )
@@ -166,6 +151,7 @@ class ZoneTranslation:
         elif self.zone_2.point_shapefile:
             points_2 = gpd.read_file(self.zone_2.point_shapefile)
         weighted_translation = weighted_funcs.final_weighted(
+            zones,
             self.zone_1,
             self.zone_2,
             self.lower_zoning,
@@ -180,40 +166,16 @@ class ZoneTranslation:
                 f"{self.names[1]}_to_{self.names[0]}",
             ]
         ]
-
+        fill_columns = list(weighted_translation.columns)
         weighted_translation.reset_index(inplace=True)
 
         weighted_translation = self._slithers_and_rounding(weighted_translation)
-        weighted_translation = pd.concat([weighted_translation, matches])
-        column_list = list(weighted_translation.columns)
-
-        summary_table_1 = weighted_translation.groupby(column_list[0])[column_list[2]].sum()
-        summary_table_2 = weighted_translation.groupby(column_list[1])[column_list[3]].sum()
-
-        under_1_zones_1 = summary_table_1[summary_table_1 < 0.999999]
-        under_1_zones_2 = summary_table_2[summary_table_2 < 0.999999]
-
-        if len(pd.unique(weighted_translation[column_list[0]])) == sum(summary_table_1):
-            LOG.info("Split factors add up to 1 for %s", column_list[0])
-        else:
-            LOG.warning(
-                "Split factors DO NOT add up to 1 for %s. CHECK "
-                "TRANSLATION IS ACCURATE\n%s",
-                column_list[0],
-                under_1_zones_1,
-            )
-
-        if len(pd.unique(weighted_translation[column_list[1]])) == sum(summary_table_2):
-            LOG.info("Split factors add up to 1 for %s", column_list[1])
-        else:
-            LOG.warning(
-                "Split factors DO NOT add up to 1 for %s. CHECK "
-                "TRANSLATION IS ACCURATE\n%s",
-                column_list[1],
-                under_1_zones_2,
-            )
         out_path = self.cache_path / f"{self.names[0]}_{self.names[1]}"
         out_path.mkdir(exist_ok=True, parents=True)
+        self.post_processing(zones, weighted_translation, out_path)
+        if "matches" in locals():
+            matches[fill_columns] = 1
+            weighted_translation = pd.concat([weighted_translation, matches])
         out_name = f"{self.names[0]}_to_{self.names[1]}_{self.method}_{self.lower_zoning.weight_data_year}"
         weighted_translation.to_csv(out_path / f"{out_name}.csv", index=False)
         self.params.save_yaml(out_path / f"{out_name}.yml")
@@ -261,3 +223,71 @@ class ZoneTranslation:
                 final_zone_corr = translation
 
         return final_zone_corr
+
+    def post_processing(self, zones: dict, zone_translation: gpd.GeoDataFrame, out_path: Path):
+        """
+        Log info after producing a zone translation.
+
+        Parameters
+        ----------
+        zones: dict produced by zone_correspondence.read_zone_shapefile
+        zone_translation: A dataframe containing a weighted or spatial translation.
+        out_path: Path logging files will be written to.
+
+        Returns
+        -------
+        Nothing.
+        """
+        (
+            missing_zones_1,
+            missing_zones_2,
+        ) = zone_correspondence.missing_zones_check(
+            zones, zone_translation, self.zone_1, self.zone_2
+        )
+        warnings.warn(f"Missing Zones from 1 : {len(missing_zones_1)}")
+        warnings.warn(f"Missing Zones from 2 : {len(missing_zones_2)}")
+        log_file = out_path / "missing_zones_log.xlsx"
+        with pd.ExcelWriter(
+            log_file, engine="openpyxl"
+        ) as writer:  # pylint: disable=abstract-class-instantiated
+            missing_zones_1.to_excel(
+                writer,
+                sheet_name=f"{self.names[0]}_missing",
+                index=False,
+            )
+            missing_zones_2.to_excel(
+                writer,
+                sheet_name=f"{self.names[1]}_missing",
+                index=False,
+            )
+        LOG.info(
+            "List of missing zones can be found in log file found here: %s",
+            log_file,
+        )
+        column_list = list(zone_translation.columns)
+
+        summary_table_1 = zone_translation.groupby(column_list[0])[column_list[2]].sum()
+        summary_table_2 = zone_translation.groupby(column_list[1])[column_list[3]].sum()
+
+        under_1_zones_1 = summary_table_1[summary_table_1 < 0.999999]
+        under_1_zones_2 = summary_table_2[summary_table_2 < 0.999999]
+
+        if len(pd.unique(zone_translation[column_list[0]])) == sum(summary_table_1):
+            LOG.info("Split factors add up to 1 for %s", column_list[0])
+        else:
+            LOG.warning(
+                "Split factors DO NOT add up to 1 for %s. CHECK "
+                "TRANSLATION IS ACCURATE\n%s",
+                column_list[0],
+                under_1_zones_1,
+            )
+
+        if len(pd.unique(zone_translation[column_list[1]])) == sum(summary_table_2):
+            LOG.info("Split factors add up to 1 for %s", column_list[1])
+        else:
+            LOG.warning(
+                "Split factors DO NOT add up to 1 for %s. CHECK "
+                "TRANSLATION IS ACCURATE\n%s",
+                column_list[1],
+                under_1_zones_2,
+            )
