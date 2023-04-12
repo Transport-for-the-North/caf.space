@@ -127,7 +127,7 @@ def _create_tiles(
     weighting = _weighted_lower(lower_zoning)
     if point_handling:
         if zone_1_points is not None:
-            zone_1_points = zone_1_points[[zone_1.id_col, "geometry"]]
+            zone_1_points = zone_1_points.loc[:, [zone_1.id_col, "geometry"]]
             zone_1_points.rename(columns={zone_1.id_col: f"{zone_1.name}_id"}, inplace=True)
             zone_1_gdf = pd.concat([zone_1_gdf, zone_1_points])
         zone_1_gdf = _point_handling(
@@ -144,8 +144,8 @@ def _create_tiles(
         lambda x, y: gpd.overlay(x, y, keep_geom_type=False),
         [zone_1_gdf, zone_2_gdf, weighting],
     )
-    tiles.overlay_area = tiles.area
-    tiles.prop = tiles.overlay_area / tiles.lower_area
+    tiles['overlay_area'] = tiles.area
+    tiles['prop'] = tiles.overlay_area / tiles.lower_area
     tiles[lower_zoning.data_col] *= tiles.prop
     return tiles[
         [
