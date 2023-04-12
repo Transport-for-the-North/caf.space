@@ -172,10 +172,10 @@ class ZoneTranslation:
         weighted_translation = self._slithers_and_rounding(weighted_translation)
         out_path = self.cache_path / f"{self.names[0]}_{self.names[1]}"
         out_path.mkdir(exist_ok=True, parents=True)
-        self.post_processing(zones, weighted_translation, out_path)
         if "matches" in locals():
             matches[fill_columns] = 1
             weighted_translation = pd.concat([weighted_translation, matches])
+        self.post_processing(zones, weighted_translation, out_path)
         out_name = f"{self.names[0]}_to_{self.names[1]}_{self.method}_{self.lower_zoning.weight_data_year}"
         weighted_translation.to_csv(out_path / f"{out_name}.csv", index=False)
         self.params.save_yaml(out_path / f"{out_name}.yml")

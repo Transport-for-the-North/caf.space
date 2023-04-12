@@ -46,9 +46,10 @@ def _weighted_lower(
     )
     weighted = lower_zone.join(weighting)
     missing = weighted[lower_zoning.data_col].isna().sum()
-    warnings.warn(
-        f"{missing} zones do not match up between the lower zoning and weighting data."
-    )
+    if missing > 0:
+        warnings.warn(
+            f"{missing} zones do not match up between the lower zoning and weighting data."
+        )
     weighted["lower_area"] = weighted.area
     return weighted
 
@@ -91,7 +92,7 @@ def _point_handling(
         joined = gpd.sjoin(points, lower, how="left", predicate="within")
         new = pd.merge(lower.reset_index(), joined, how="inner", on=lower_id)
         new = gpd.GeoDataFrame(data=new[zone_id], geometry=new["geometry_x"])
-        overlay = zone.overlay(new, how="symmetric_difference")
+        overlay = zone.overlay(new, how="symmetric_difference", keep_geom_type=False)
         overlay.rename(columns={f"{zone_id}_1": zone_id}, inplace=True)
         out = overlay[~overlay[zone_id].isna()]
         zone = pd.concat([out.loc[:, [zone_id, "geometry"]], new])
@@ -133,14 +134,14 @@ def _create_tiles(
             zone_1_gdf, f"{zone_1.name}_id", weighting, lower_zoning.id_col, point_tolerance
         )
         if zone_2_points is not None:
-            zone_2_points = zone_2_points[[zone_2.id_col, "geometry"]]
+            zone_2_points = zone_2_points.loc[:, [zone_2.id_col, "geometry"]]
             zone_2_points.rename(columns={zone_2.id_col: f"{zone_2.name}_id"}, inplace=True)
             zone_2_gdf = pd.concat([zone_2_gdf, zone_2_points])
         zone_2_gdf = _point_handling(
             zone_2_gdf, f"{zone_2.name}_id", weighting, lower_zoning.id_col, point_tolerance
         )
     tiles = reduce(
-        lambda x, y: gpd.overlay(x, y, keep_geom_type=True),
+        lambda x, y: gpd.overlay(x, y, keep_geom_type=False),
         [zone_1_gdf, zone_2_gdf, weighting],
     )
     tiles.overlay_area = tiles.area
