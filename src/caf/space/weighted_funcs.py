@@ -49,7 +49,7 @@ def _weighted_lower(
     if missing > 0:
         warnings.warn(
             f"{missing} zones do not match up between the lower zoning and weighting data.",
-            stacklevel=2
+            stacklevel=2,
         )
     weighted["lower_area"] = weighted.area
     return weighted
@@ -88,6 +88,7 @@ def _point_handling(
         zone.geometry.geometry.type == "Point", "geometry"
     ].buffer(0.1)
     points = zone[zone.area < tolerance]
+    points = points.set_crs("EPSG:27700")
     if len(points) > 0:
         lower.reset_index(inplace=True)
         joined = gpd.sjoin(points, lower, how="left", predicate="within")
@@ -142,11 +143,11 @@ def _create_tiles(
             zone_2_gdf, f"{zone_2.name}_id", weighting, lower_zoning.id_col, point_tolerance
         )
     tiles = reduce(
-        lambda x, y: gpd.overlay(x, y, keep_geom_type=False),
+        lambda x, y: gpd.overlay(x, y, keep_geom_type=True),
         [zone_1_gdf, zone_2_gdf, weighting],
     )
-    tiles['overlay_area'] = tiles.area
-    tiles['prop'] = tiles.overlay_area / tiles.lower_area
+    tiles["overlay_area"] = tiles.area
+    tiles["prop"] = tiles.overlay_area / tiles.lower_area
     tiles[lower_zoning.data_col] *= tiles.prop
     return tiles[
         [

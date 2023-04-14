@@ -348,7 +348,7 @@ class ZoneFrame(ttk.LabelFrame):
                 shapefile=self.shape_var.get(),
                 name=self.name_var.get(),
                 id_col=self.id_col_var.get(),
-                point_shapefile=self.point_shapefile.get()
+                point_shapefile=self.point_shapefile.get(),
             )
         return zone
 
@@ -793,9 +793,7 @@ class NotebookApp(tk.Tk):
     def _redirect_logging(self):
         """Add new handler to root logger which outputs to `self.terminal`."""
         self._logger = logging.getLogger("SPACE")
-        self.console_handler = logging.StreamHandler(
-            stream=RedirectStdOut(self.console_text)
-        )
+        self.console_handler = logging.StreamHandler(stream=RedirectStdOut(self.console_text))
         fmt = logging.Formatter("[{levelname}] {message}", style="{")
         self.console_handler.setFormatter(fmt)
         self.console_handler.setLevel(logging.INFO)
@@ -804,28 +802,38 @@ class NotebookApp(tk.Tk):
 
 
 class UI:
+    """
+    Main class to launch UI.
+    """
+
     _LOG_NAME = "SPACE.log"
+
     def __init__(self):
-        self.logFile = Path(os.getcwd()) / self._LOG_NAME
+        self.log_file = Path(os.getcwd()) / self._LOG_NAME
         # Remove log file if present
-        if os.path.exists(self.logFile):
-            os.remove(self.logFile)
+        if os.path.exists(self.log_file):
+            os.remove(self.log_file)
 
         # Initiate logger object
         self.logger = logging.getLogger("SPACE")
         self.logger.setLevel(logging.DEBUG)
 
         # Create file handler which logs everything
-        fh = logging.FileHandler(self.logFile)
-        fh.setLevel(logging.DEBUG)
+        f_h = logging.FileHandler(self.log_file)
+        f_h.setLevel(logging.DEBUG)
 
         # Create formatter and add to handlers
-        format = logging.Formatter(
+        fmt = logging.Formatter(
             "%(asctime)s [%(name)-20.20s] [%(levelname)-8.8s]  %(message)s"
         )
-        fh.setFormatter(format)
-        self.logger.addHandler(fh)
+        f_h.setFormatter(fmt)
+        self.logger.addHandler(f_h)
         # Start it with initial line
         self.logger.info("Initialised log file.")
         self._gui = NotebookApp()
+
+
 # pylint: enable=too-many-ancestors, too-many-instance-attributes, unused-argument
+
+if __name__ == "__main__":
+    UI()

@@ -15,6 +15,7 @@ from caf.space import weighted_funcs, zone_correspondence, inputs, utils
 
 ##### CONSTANTS #####
 LOG = logging.getLogger("SPACE")
+# logging.basicConfig(format="%(asctime)s [%(name)-20.20s] [%(levelname)-8.8s]  %(message)s")
 logging.captureWarnings(True)
 
 
@@ -43,7 +44,7 @@ class ZoneTranslation:
     """
 
     def __init__(self, params: inputs.ZoningTranslationInputs):
-        self.logger = logging.getLogger(f"SPACE.{__name__}.{self.__class__.__name__}")
+
         self.params = params
         self.zone_1 = params.zone_1
         self.zone_2 = params.zone_2
@@ -60,6 +61,12 @@ class ZoneTranslation:
         self.run_date = params.run_date
         sorted_names = sorted([params.zone_1.name, params.zone_2.name])
         self.names = (sorted_names[0], sorted_names[1])
+        self.logger = logging.getLogger(f"SPACE")
+        self.handler = logging.FileHandler(self.cache_path / f"{self.names[0]}_{self.names[1]}.log")
+        self.handler.setFormatter(logging.Formatter("%(asctime)s [%(name)-20.20s] [%(levelname)-8.8s]  %(message)s"))
+        self.logger.addHandler(self.handler)
+        self.logger.setLevel(logging.INFO)
+
 
     def spatial_translation(self) -> pd.DataFrame:
         """
@@ -246,11 +253,9 @@ class ZoneTranslation:
             zones, zone_translation, self.zone_1, self.zone_2
         )
         if len(missing_zones_1) > 0:
-            warnings.warn(f"Missing Zones from 1 : {len(missing_zones_1)}",
-                          stacklevel=2)
+            warnings.warn(f"Missing Zones from 1 : {len(missing_zones_1)}", stacklevel=2)
         if len(missing_zones_2) > 0:
-            warnings.warn(f"Missing Zones from 2 : {len(missing_zones_2)}",
-                          stacklevel=2)
+            warnings.warn(f"Missing Zones from 2 : {len(missing_zones_2)}", stacklevel=2)
         log_file = out_path / "missing_zones_log.xlsx"
         with pd.ExcelWriter(
             log_file, engine="openpyxl"
