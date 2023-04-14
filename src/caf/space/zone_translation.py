@@ -14,7 +14,7 @@ import geopandas as gpd
 from caf.space import weighted_funcs, zone_correspondence, inputs, utils
 
 ##### CONSTANTS #####
-LOG = logging.getLogger(__name__)
+LOG = logging.getLogger("SPACE")
 logging.captureWarnings(True)
 
 
@@ -43,6 +43,7 @@ class ZoneTranslation:
     """
 
     def __init__(self, params: inputs.ZoningTranslationInputs):
+        self.logger = logging.getLogger(f"SPACE.{__name__}.{self.__class__.__name__}")
         self.params = params
         self.zone_1 = params.zone_1
         self.zone_2 = params.zone_2
@@ -107,7 +108,7 @@ class ZoneTranslation:
         weighted_translation: pd.DataFrame
             Dataframe containing weighted zone translation between zone 1 and zone 2.
         """
-        LOG.info("Starting weighted translation")
+        self.logger.info("Starting weighted translation")
         # Init
         if self.params.method is False:
             raise ValueError("A method must be provided to perform a weighted translation.")
@@ -198,7 +199,7 @@ class ZoneTranslation:
         according to input params.
         """
         if self.params.filter_slivers:
-            LOG.info("Filtering out small overlaps.")
+            self.logger.info("Filtering out small overlaps.")
             (
                 _,
                 spatial_correspondence_no_slithers,
@@ -207,7 +208,7 @@ class ZoneTranslation:
             )
 
             if self.params.rounding:
-                LOG.info("Checking all adjustment factors add to 1")
+                self.logger.info("Checking all adjustment factors add to 1")
                 final_zone_corr = zone_correspondence.round_zone_correspondence(
                     spatial_correspondence_no_slithers, self.names
                 )
@@ -215,7 +216,7 @@ class ZoneTranslation:
                 final_zone_corr = spatial_correspondence_no_slithers
         else:
             if self.params.rounding:
-                LOG.info("Checking all adjustment factors add to 1")
+                self.logger.info("Checking all adjustment factors add to 1")
                 final_zone_corr = zone_correspondence.round_zone_correspondence(
                     translation, self.names
                 )
@@ -244,8 +245,12 @@ class ZoneTranslation:
         ) = zone_correspondence.missing_zones_check(
             zones, zone_translation, self.zone_1, self.zone_2
         )
-        warnings.warn(f"Missing Zones from 1 : {len(missing_zones_1)}")
-        warnings.warn(f"Missing Zones from 2 : {len(missing_zones_2)}")
+        if len(missing_zones_1) > 0:
+            warnings.warn(f"Missing Zones from 1 : {len(missing_zones_1)}",
+                          stacklevel=2)
+        if len(missing_zones_2) > 0:
+            warnings.warn(f"Missing Zones from 2 : {len(missing_zones_2)}",
+                          stacklevel=2)
         log_file = out_path / "missing_zones_log.xlsx"
         with pd.ExcelWriter(
             log_file, engine="openpyxl"
@@ -260,7 +265,7 @@ class ZoneTranslation:
                 sheet_name=f"{self.names[1]}_missing",
                 index=False,
             )
-        LOG.info(
+        self.logger.info(
             "List of missing zones can be found in log file found here: %s",
             log_file,
         )
@@ -273,9 +278,9 @@ class ZoneTranslation:
         under_1_zones_2 = summary_table_2[summary_table_2 < 0.999999]
 
         if len(pd.unique(zone_translation[column_list[0]])) == sum(summary_table_1):
-            LOG.info("Split factors add up to 1 for %s", column_list[0])
+            self.logger.info("Split factors add up to 1 for %s", column_list[0])
         else:
-            LOG.warning(
+            self.logger.warning(
                 "Split factors DO NOT add up to 1 for %s. CHECK "
                 "TRANSLATION IS ACCURATE\n%s",
                 column_list[0],
@@ -283,9 +288,9 @@ class ZoneTranslation:
             )
 
         if len(pd.unique(zone_translation[column_list[1]])) == sum(summary_table_2):
-            LOG.info("Split factors add up to 1 for %s", column_list[1])
+            self.logger.info("Split factors add up to 1 for %s", column_list[1])
         else:
-            LOG.warning(
+            self.logger.warning(
                 "Split factors DO NOT add up to 1 for %s. CHECK "
                 "TRANSLATION IS ACCURATE\n%s",
                 column_list[1],

@@ -20,7 +20,7 @@ from caf.space import inputs
 
 ##### CONSTANTS #####
 logging.captureWarnings(True)
-LOG = logging.getLogger(__name__)
+LOG = logging.getLogger("SPACE")
 
 
 ##### FUNCTIONS #####
@@ -48,7 +48,8 @@ def _weighted_lower(
     missing = weighted[lower_zoning.data_col].isna().sum()
     if missing > 0:
         warnings.warn(
-            f"{missing} zones do not match up between the lower zoning and weighting data."
+            f"{missing} zones do not match up between the lower zoning and weighting data.",
+            stacklevel=2
         )
     weighted["lower_area"] = weighted.area
     return weighted

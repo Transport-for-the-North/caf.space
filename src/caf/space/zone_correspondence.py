@@ -12,7 +12,7 @@ import pandas as pd
 from caf.space import inputs
 
 ##### CONSTANTS #####
-LOG = logging.getLogger(__name__)
+LOG = logging.getLogger("SPACE")
 logging.captureWarnings(True)
 
 ##### FUNCTIONS #####

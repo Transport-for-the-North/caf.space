@@ -6,7 +6,9 @@ import tkinter as tk
 from tkinter import ttk, filedialog
 from pathlib import Path
 from typing import Optional
+import os
 import sys
+import logging
 
 # Third Party
 from tkinterweb import HtmlFrame, Notebook
@@ -22,9 +24,34 @@ from caf.space import inputs, zone_translation
 SHAPE_FILEFILTER = (("Shapefiles", "*.shp"), ("All files", "*.*"))
 CSV_FILEFILTER = (("CSV", "*.csv"), ("All files", "*.*"))
 
-
 # # # CLASSES # # #
 # pylint: disable=too-many-ancestors, too-many-instance-attributes, unused-argument
+
+
+class RedirectStdOut:  # pylint: disable=too-few-public-methods
+    """Class to redirect stdout to `ScolledText` widget."""
+
+    def __init__(self, text_widget):
+        self.output = text_widget.text
+
+    def write(self, text: str):
+        """Write given `text` to widget.
+
+        Parameters
+        ----------
+        text : str
+            Message to write to widget.
+        """
+        # Check what tag to add
+        tag = None
+        for i in ("warning", "error", "debug"):
+            if f"[{i}]" in text.lower():
+                tag = i
+        self.output.configure(state="normal")
+        self.output.insert("end", text, tag)
+        self.output.configure(state="disabled")
+
+
 class FileWidget(ttk.Frame):
     """Tkinter widget for an entry box to select a file."""
 
@@ -310,12 +337,19 @@ class ZoneFrame(ttk.LabelFrame):
         -------
         Instance of TransZoneSystemInfo class with parameters read from UI.
         """
-        zone = inputs.TransZoneSystemInfo(
-            shapefile=self.shape_var.get(),
-            name=self.name_var.get(),
-            id_col=self.id_col_var.get(),
-            point_shapefile=self.point_shapefile.get(),
-        )
+        if self.point_shapefile.get() == "":
+            zone = inputs.TransZoneSystemInfo(
+                shapefile=self.shape_var.get(),
+                name=self.name_var.get(),
+                id_col=self.id_col_var.get(),
+            )
+        else:
+            zone = inputs.TransZoneSystemInfo(
+                shapefile=self.shape_var.get(),
+                name=self.name_var.get(),
+                id_col=self.id_col_var.get(),
+                point_shapefile=self.point_shapefile.get()
+            )
         return zone
 
     def validate(self):
@@ -722,10 +756,13 @@ class ConsoleFrame(ttk.Frame):
         # Pack widgets
         yscroll.pack(side="right", fill="y")
         xscroll.pack(side="bottom", fill="x")
+        self.text.tag_configure("warning", foreground="orange")
+        self.text.tag_configure("error", foreground="red")
+        self.text.tag_configure("debug", foreground="gray")
         self.text.pack(side="left", fill="both", expand=True)
 
 
-class NotebookApp:
+class NotebookApp(tk.Tk):
     """
     Main notebook, containing three pages.
 
@@ -733,8 +770,9 @@ class NotebookApp:
     """
 
     def __init__(self):
-        self.root = tk.Tk()
-        self.notebook = Notebook(self.root)
+        super().__init__()
+        # self.logger = logging.getLogger("SPACE")
+        self.notebook = Notebook(self)
         self.notebook.pack(fill="both", expand=True)
 
         # Add MyUI instance as a tab
@@ -746,12 +784,48 @@ class NotebookApp:
         readme_tab.load_website("https://cafspcae.readthedocs.io/en/latest/")
         self.notebook.add(readme_tab, text="Documentation")
         console_tab = ttk.Frame(self.notebook)
-        console_text = ConsoleFrame(console_tab)
-        console_text.pack(fill="both", expand=True)
+        self.console_text = ConsoleFrame(console_tab)
+        self._redirect_logging()
+        self.console_text.pack(fill="both", expand=True)
         self.notebook.add(console_tab, text="Console Output")
-        self.root.mainloop()
+        self.mainloop()
+
+    def _redirect_logging(self):
+        """Add new handler to root logger which outputs to `self.terminal`."""
+        self._logger = logging.getLogger("SPACE")
+        self.console_handler = logging.StreamHandler(
+            stream=RedirectStdOut(self.console_text)
+        )
+        fmt = logging.Formatter("[{levelname}] {message}", style="{")
+        self.console_handler.setFormatter(fmt)
+        self.console_handler.setLevel(logging.INFO)
+        self._logger.addHandler(self.console_handler)
+        self._logger.info("Log file saved here: %s", (Path(os.getcwd()) / UI._LOG_NAME))
 
 
-if __name__ == "__main__":
-    NotebookApp()
+class UI:
+    _LOG_NAME = "SPACE.log"
+    def __init__(self):
+        self.logFile = Path(os.getcwd()) / self._LOG_NAME
+        # Remove log file if present
+        if os.path.exists(self.logFile):
+            os.remove(self.logFile)
+
+        # Initiate logger object
+        self.logger = logging.getLogger("SPACE")
+        self.logger.setLevel(logging.DEBUG)
+
+        # Create file handler which logs everything
+        fh = logging.FileHandler(self.logFile)
+        fh.setLevel(logging.DEBUG)
+
+        # Create formatter and add to handlers
+        format = logging.Formatter(
+            "%(asctime)s [%(name)-20.20s] [%(levelname)-8.8s]  %(message)s"
+        )
+        fh.setFormatter(format)
+        self.logger.addHandler(fh)
+        # Start it with initial line
+        self.logger.info("Initialised log file.")
+        self._gui = NotebookApp()
 # pylint: enable=too-many-ancestors, too-many-instance-attributes, unused-argument
