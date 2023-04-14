@@ -44,7 +44,6 @@ class ZoneTranslation:
     """
 
     def __init__(self, params: inputs.ZoningTranslationInputs):
-
         self.params = params
         self.zone_1 = params.zone_1
         self.zone_2 = params.zone_2
@@ -61,12 +60,16 @@ class ZoneTranslation:
         self.run_date = params.run_date
         sorted_names = sorted([params.zone_1.name, params.zone_2.name])
         self.names = (sorted_names[0], sorted_names[1])
-        self.logger = logging.getLogger(f"SPACE")
-        self.handler = logging.FileHandler(self.cache_path / f"{self.names[0]}_{self.names[1]}.log")
-        self.handler.setFormatter(logging.Formatter("%(asctime)s [%(name)-20.20s] [%(levelname)-8.8s]  %(message)s"))
+        self.logger = logging.getLogger("SPACE")
+        self.handler = logging.FileHandler(
+            self.cache_path / f"{self.names[0]}_{self.names[1]}.log",
+            mode='w'
+        )
+        self.handler.setFormatter(
+            logging.Formatter("%(asctime)s [%(name)-20.20s] [%(levelname)-8.8s]  %(message)s")
+        )
         self.logger.addHandler(self.handler)
         self.logger.setLevel(logging.INFO)
-
 
     def spatial_translation(self) -> pd.DataFrame:
         """
