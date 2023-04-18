@@ -17,6 +17,20 @@ decide the most appropriate weighting data to use. For both types of translation
 runs from a config file (a file called config.yml in the base folder). Parameters for this
 config are described below.
 
+Installation
+------------
+caf.space can be installed from pip with the command:
+
+pip install caf.space
+
+After that the easiest way to use caf.space is to launch the GUI. This can by done by importing caf.space then calling SpaceUI
+
+import caf.space as space
+
+space.SpaceUI()
+
+This will launch the GUI in a new window.
+
 .. toctree::
    :maxdepth: 4
    :caption: Contents:

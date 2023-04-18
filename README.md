@@ -41,3 +41,13 @@ For a weighted translation more parameters must be provided. The tool creates a 
     <b>data_col:</b> The name of the column in the weighting data csv containing the weight data.<br>
     <b>weight_id_col:</b> The name of the columns in the weighting data containing the zone ids. This will be used to join the weighting data to the lower zoning, so the IDs must match, but the names of the ID columns may be different.<br>
 <b>method:</b> The name of the method used for weighting (e.g. pop or emp). This can be anything, but must be included as the tool checks if this parameter exists to decide whether a weighted translation can be performed.
+
+<u><h4> Launching the GUI </h4></u>
+
+To launch the gui simply import the package and call SpaceUI:
+
+import caf.space as space
+
+space.SpaceUI()
+
+This will open the GUI in a new window on your screen.
