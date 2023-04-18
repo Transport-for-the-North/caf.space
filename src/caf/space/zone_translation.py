@@ -44,9 +44,11 @@ class ZoneTranslation:
     """
 
     def __init__(self, params: inputs.ZoningTranslationInputs):
+
         self.params = params
         self.zone_1 = params.zone_1
         self.zone_2 = params.zone_2
+
         self.cache_path = params.cache_path
         if params.lower_zoning:
             self.lower_zoning = params.lower_zoning
@@ -71,6 +73,7 @@ class ZoneTranslation:
         self.logger.addHandler(self.handler)
         self.logger.setLevel(logging.INFO)
 
+
     def spatial_translation(self) -> pd.DataFrame:
         """
         Create spatial zone translation.
@@ -93,7 +96,7 @@ class ZoneTranslation:
         final_zone_corr = self._slithers_and_rounding(spatial_correspondence)
         # Save correspondence output
         out_path = self.cache_path / f"{self.names[0]}_{self.names[1]}"
-        out_path.mkdir(exist_ok=True, parents=True)
+        out_path.mkdir(exist_ok=True, parents=False)
         self.post_processing(zones, final_zone_corr, out_path)
         out_name = f"{self.names[0]}_to_{self.names[1]}_spatial"
         final_zone_corr.to_csv(out_path / f"{out_name}.csv", index=False)
@@ -182,7 +185,7 @@ class ZoneTranslation:
 
         weighted_translation = self._slithers_and_rounding(weighted_translation)
         out_path = self.cache_path / f"{self.names[0]}_{self.names[1]}"
-        out_path.mkdir(exist_ok=True, parents=True)
+        out_path.mkdir(exist_ok=True, parents=False)
         if "matches" in locals():
             matches[fill_columns] = 1
             weighted_translation = pd.concat([weighted_translation, matches])

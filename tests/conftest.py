@@ -216,7 +216,7 @@ def fixture_lower_weighting(main_dir) -> Path:
 
 
 @pytest.fixture(name="paths", scope="session")
-def fixture_paths(main_dir) -> dict[str, Path]:
+def fixture_paths(main_dir, tmp_path_factory) -> dict[str, Path]:
     """
     fixture storing paths for configs
 
@@ -228,8 +228,8 @@ def fixture_paths(main_dir) -> dict[str, Path]:
     -------
 
     """
-    output_path = main_dir / "output"
-    cache_path = main_dir / "cache"
+    output_path = tmp_path_factory.mktemp("output")
+    cache_path = tmp_path_factory.mktemp("cache")
     paths = {"output": output_path, "cache": cache_path}
     return paths
 
