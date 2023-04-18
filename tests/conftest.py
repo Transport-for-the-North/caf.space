@@ -124,15 +124,28 @@ def fixture_zone_2_shape(main_dir) -> Path:
     return file
 
 
-@pytest.fixture(name="point_shapefile", scope="session")
+@pytest.fixture(name="point_shapefile_1", scope="session")
 def fixture_point_shapefile(main_dir) -> Path:
     """
     Fixture for a path to a point shapefile for point handling.
     """
-    true_point = Point(5, 7)
-    point_df = pd.DataFrame(data=["true_point"], columns=["zone_2_id"])
+    true_point = Point(6, 8)
+    point_df = pd.DataFrame(data=["true_point_1"], columns=["zone_1_id"])
     gdf = gpd.GeoDataFrame(data=point_df, geometry=[true_point])
-    file = main_dir / "point_shape.shp"
+    file = main_dir / "point_shape_1.shp"
+    gdf.to_file(file)
+    return file
+
+
+@pytest.fixture(name="point_shapefile_2", scope="session")
+def fixture_point_shapefile_2(main_dir) -> Path:
+    """
+    Fixture for a path to a point shapefile for point handling.
+    """
+    true_point = Point(5, 7)
+    point_df = pd.DataFrame(data=["true_point_2"], columns=["zone_2_id"])
+    gdf = gpd.GeoDataFrame(data=point_df, geometry=[true_point])
+    file = main_dir / "point_shape_2.shp"
     gdf.to_file(file)
     return file
 
@@ -203,7 +216,7 @@ def fixture_lower_weighting(main_dir) -> Path:
 
 
 @pytest.fixture(name="paths", scope="session")
-def fixture_paths(main_dir) -> dict[str, Path]:
+def fixture_paths(main_dir, tmp_path_factory) -> dict[str, Path]:
     """
     fixture storing paths for configs
 
@@ -215,8 +228,8 @@ def fixture_paths(main_dir) -> dict[str, Path]:
     -------
 
     """
-    output_path = main_dir / "output"
-    cache_path = main_dir / "cache"
+    output_path = tmp_path_factory.mktemp("output")
+    cache_path = tmp_path_factory.mktemp("cache")
     paths = {"output": output_path, "cache": cache_path}
     return paths
 
@@ -341,10 +354,10 @@ def fixture_weighted_trans(weighted_config) -> pd.DataFrame:
 
 
 @pytest.fixture(name="points_config", scope="session")
-def fixture_points_config(main_dir, weighted_config, point_zones, point_shapefile) -> Path:
+def fixture_points_config(main_dir, weighted_config, point_zones, point_shapefile_2) -> Path:
     config = deepcopy(weighted_config)
     config.zone_2.shapefile = point_zones
-    config.zone_2.point_shapefile = point_shapefile
+    config.zone_2.point_shapefile = point_shapefile_2
     config.point_handling = True
     config.point_tolerance = 2
     return config
@@ -353,6 +366,21 @@ def fixture_points_config(main_dir, weighted_config, point_zones, point_shapefil
 @pytest.fixture(name="point_trans", scope="session")
 def fixture_point_trans(points_config) -> pd.DataFrame:
     trans = zone_translation.ZoneTranslation(points_config).weighted_translation()
+    return trans
+
+
+@pytest.fixture(name="point_to_point_config", scope="session")
+def fixture_point_to_point(main_dir, weighted_config, point_shapefile_1, point_shapefile_2):
+    config = deepcopy(weighted_config)
+    config.zone_1.point_shapefile = point_shapefile_1
+    config.zone_2.point_shapefile = point_shapefile_2
+    config.point_handling = True
+    return config
+
+
+@pytest.fixture(name="point_to_point_trans", scope="session")
+def fixture_point_to_point_trans(point_to_point_config):
+    trans = zone_translation.ZoneTranslation(point_to_point_config).weighted_translation()
     return trans
 
 
