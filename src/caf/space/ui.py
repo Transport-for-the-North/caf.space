@@ -798,10 +798,10 @@ class NotebookApp(tk.Tk):
         self.console_handler.setFormatter(fmt)
         self.console_handler.setLevel(logging.INFO)
         self._logger.addHandler(self.console_handler)
-        self._logger.info("Log file saved here: %s", (Path(os.getcwd()) / UI._LOG_NAME))
+        self._logger.info("Log file saved here: %s", (Path(os.getcwd()) / SpaceUI._LOG_NAME))
 
 
-class UI:
+class SpaceUI:
     """
     Main class to launch UI.
     """
@@ -831,5 +831,6 @@ class UI:
         # Start it with initial line
         self.logger.info("Initialised log file.")
         self._gui = NotebookApp()
+
 
 # pylint: enable=too-many-ancestors, too-many-instance-attributes, unused-argument
