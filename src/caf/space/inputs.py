@@ -224,7 +224,8 @@ class ZoningTranslationInputs(BaseConfig):
         """Make directories if they don't exist."""
         self.cache_path.mkdir(exist_ok=True, parents=True)
 
-    def write_example(self, out_path: Path):
+    @classmethod
+    def write_example(cls, out_path: Path):
         """
         Write out an example config file.
 
@@ -239,13 +240,13 @@ class ZoningTranslationInputs(BaseConfig):
         """
         zones = {}
         for i in range(1, 3):
-            zones[i] = TransZoneSystemInfo(
+            zones[i] = TransZoneSystemInfo.construct(
                 name=f"zone_{i}_name",
                 shapefile=Path(f"path/to/shapefile_{i}"),
                 id_col=f"id_col_for_zone_{i}",
                 point_shapefile=Path(f"path/to/point/shapefile"),
             )
-        lower = LowerZoneSystemInfo(
+        lower = LowerZoneSystemInfo.construct(
             name="lower_zone_name",
             shapefile=Path("path/to/lower/shapefile"),
             id_col="id_col_for_lower_zone",
@@ -254,11 +255,13 @@ class ZoningTranslationInputs(BaseConfig):
             weight_id_col="id_col_in_weighting_data",
             weight_data_year=2018,
         )
-        ex = ZoningTranslationInputs(
+        ex = ZoningTranslationInputs.construct(
             zone_1=zones[1],
             zone_2=zones[2],
             lower_zoning=lower,
             cache_path=Path(r"path\to\cache\folder\defaults\to\ydrive"),
             method="OPTIONAL name of method",
         )
+        if not isinstance(out_path, Path):
+            out_path = Path(out_path)
         ex.save_yaml(out_path / "example.yml")

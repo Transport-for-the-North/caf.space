@@ -832,8 +832,4 @@ class UI:
         self.logger.info("Initialised log file.")
         self._gui = NotebookApp()
 
-
 # pylint: enable=too-many-ancestors, too-many-instance-attributes, unused-argument
-
-if __name__ == "__main__":
-    UI()
