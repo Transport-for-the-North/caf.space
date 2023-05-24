@@ -28,6 +28,10 @@ This can be run with no arguments, which will launch the GUI, but there are also
 * <b> config_path: --config</b> must be provided if mode is either "spatial" or "weighted". This is a path to the config file containing parameters for that translation.
 * <b> out_path: --out_path</b> must be provided if either "spatial" or "weighted". This is the directory you want your translation saved to. This directory must exist and will not be generated internally.
 
+Running with all three arguments would look like:
+
+<b> python -m caf.space --mode "spatial" --config "path/to/config.yml" --out_path "path/to/output/folder" </b>
+
 <u><h4> Spatial Correspondence </h4></u>
 For a spatial correspondence, the only user inputs needed are shapefiles for the two zone systems you want a translation between. The parameters required for a spatial translation are as follows:
 
