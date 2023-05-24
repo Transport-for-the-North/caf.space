@@ -35,10 +35,6 @@ LOG = logging.getLogger(__name__)
 CACHE_PATH = "I:/Data/Zone Translations/cache"
 MODES = ("spatial", "weighted", "GUI")
 
-class modes(Enum):
-    SPATIAL = "spatial"
-    WEIGHTED = "weighted"
-    GUI = "GUI"
 
 class ZoneSystemInfo(BaseConfig):
     """Base class for storing information about a shapefile input.
@@ -167,9 +163,7 @@ class LowerZoneSystemInfo(ZoneSystemInfo):
 
 @dataclasses.dataclass
 class SpaceArguments:
-    """
-    Command Line arguments for running space.
-    """
+    """Command Line arguments for running space."""
 
     config_path: Path
     mode: str
@@ -186,38 +180,40 @@ class SpaceArguments:
             type=str,
             help="Mode to run translation in; spatial, weighted or GUI.",
             default="GUI",
-            required=False
+            required=False,
         )
         parser.add_argument(
             "--config",
             type=Path,
             help="path to config file containing parameters",
             default=None,
-            required=False
+            required=False,
         )
         parser.add_argument(
             "--out_path",
             type=Path,
             help="Path the translation will be saved in.",
             default=None,
-            required=False
+            required=False,
         )
 
         parsed_args = parser.parse_args()
         return SpaceArguments(parsed_args.config, parsed_args.mode, parsed_args.out_path)
-    
+
     def validate(self):
-        """Raise error for invalid input"""
+        """Raise error for invalid input."""
         if self.config_path:
             if not self.config_path.is_file():
                 raise FileNotFoundError(f"config file doesn't exist: {self.config_path}")
-        
+
         if self.out_path:
             if not self.out_path.is_dir():
                 raise FileNotFoundError(f"{self.out_path} does not exist.")
-        
+
         if self.mode not in MODES:
             raise ValueError(f"{self.mode} is not a valid mode for caf.space to run in.")
+
+
 class ZoningTranslationInputs(BaseConfig):
     """
     Class for storing and reading input parameters for `ZoneTranslation`.
