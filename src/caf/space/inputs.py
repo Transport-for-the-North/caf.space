@@ -209,11 +209,11 @@ class SpaceArguments:
     def validate(self):
         """Raise error for invalid input"""
         if self.config_path:
-            if ~self.config_path.is_file():
+            if not self.config_path.is_file():
                 raise FileNotFoundError(f"config file doesn't exist: {self.config_path}")
         
         if self.out_path:
-            if ~self.out_path.is_dir():
+            if not self.out_path.is_dir():
                 raise FileNotFoundError(f"{self.out_path} does not exist.")
         
         if self.mode not in MODES:
