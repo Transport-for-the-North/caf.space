@@ -25,7 +25,7 @@ The tool can be run from command line, with the command:
 
 This can be run with no arguments, which will launch the GUI, but there are also 3 arguments for running in different modes.:
 * <b> mode: --mode</b> must be either "GUI" (default value), "spatial", or "weighted". "Gui" launches the GUI and the other two produce spatial or weighted zone translations respectively.
-* <b> config_path: --config_path</b> must be provided if mode is either "spatial" or "weighted". This is a path to the config file containing parameters for that translation.
+* <b> config_path: --config</b> must be provided if mode is either "spatial" or "weighted". This is a path to the config file containing parameters for that translation.
 * <b> out_path: --out_path</b> must be provided if either "spatial" or "weighted". This is the directory you want your translation saved to. This directory must exist and will not be generated internally.
 
 <u><h4> Spatial Correspondence </h4></u>
