@@ -12,7 +12,7 @@ import pandas as pd
 from caf.space import inputs
 
 ##### CONSTANTS #####
-LOG = logging.getLogger(__name__)
+LOG = logging.getLogger("SPACE")
 logging.captureWarnings(True)
 
 ##### FUNCTIONS #####
@@ -84,7 +84,9 @@ def read_zone_shapefiles(
 
         if not zone["Zone"].crs:
             warnings.warn(f"Zone {name} has no CRS, setting crs to EPSG:27700.")
-            zone["Zone"].crs = "EPSG:27700"
+            zone["Zone"].set_crs = "EPSG:27700"
+        else:
+            zone["Zone"].to_crs("EPSG:27700")
 
     return zones
 

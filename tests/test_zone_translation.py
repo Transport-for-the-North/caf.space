@@ -1,10 +1,12 @@
 """
     Module for testing the zone_translation module
 """
+from math import sqrt
 from pathlib import Path
 import pytest
 import pandas as pd
 import geopandas as gpd
+from copy import deepcopy
 
 # pylint: disable=import-error, wrong-import-position
 from caf.space import zone_translation
@@ -49,9 +51,9 @@ def fixture_dupe_shapes_config(
     -------
         A new config with lower zoning and zone 2 the same.
     """
-    config = weighted_config.copy()
-    config.zone_2 = weighted_config.lower_zoning
-    config.zone_2.name = weighted_config.zone_2.name
+    config = deepcopy(weighted_config)
+    config.zone_2.shapefile = weighted_config.lower_zoning.shapefile
+    config.zone_2.id_col = weighted_config.lower_zoning.id_col
     config.lower_zoning.name = weighted_config.zone_2.name
     return config
 
@@ -88,7 +90,7 @@ def fixture_expected_points() -> pd.DataFrame:
     output = pd.DataFrame(
         {
             "zone_1_id": ["A", "A", "A", "A", "B", "B", "B", "C", "C", "C"],
-            "zone_2_id": ["W", "X", "Y", "Z", "X", "Z", "true_point", "Y", "Z", "pseudo_point"],
+            "zone_2_id": ["W", "X", "Y", "Z", "X", "Z", "true_point_2", "Y", "Z", "pseudo_point"],
             "zone_1_to_zone_2": [
                 0.529, 0.176, 0.235, 0.059, 0.526, 0.263, 0.211, 0.269, 0.5, 0.231
             ],
@@ -99,6 +101,16 @@ def fixture_expected_points() -> pd.DataFrame:
     )
     # fmt: on
     return output
+
+
+@pytest.fixture(name="expected_point_to_point", scope="class")
+def fixture_expetced_point_to_point(expected_weighted) -> pd.DataFrame:
+    df = deepcopy(expected_weighted)
+    df["dist"] = 0
+    df.loc[8] = ["true_point_1", "true_point_2", 1, 1, round(sqrt(2), 3)]
+    df.set_index(["zone_1_id", "zone_2_id"], inplace=True)
+
+    return df
 
 
 @pytest.fixture(name="expected_spatial", scope="class")
@@ -148,7 +160,14 @@ class TestZoneTranslation:
     """
 
     @pytest.mark.parametrize(
-        "translation_str", ["spatial_trans", "weighted_trans", "dupe_trans", "point_trans"]
+        "translation_str",
+        [
+            "spatial_trans",
+            "weighted_trans",
+            "dupe_trans",
+            "point_trans",
+            "point_to_point_trans",
+        ],
     )
     @pytest.mark.parametrize("origin_zone", [1, 2])
     def test_sum_to_1(self, translation_str: str, origin_zone: int, request):
@@ -173,7 +192,14 @@ class TestZoneTranslation:
         assert (rounded == 1).all()
 
     @pytest.mark.parametrize(
-        "translation_str", ["spatial_trans", "weighted_trans", "dupe_trans", "point_trans"]
+        "translation_str",
+        [
+            "spatial_trans",
+            "weighted_trans",
+            "dupe_trans",
+            "point_trans",
+            "point_to_point_trans",
+        ],
     )
     @pytest.mark.parametrize("col", ["zone_1_to_zone_2", "zone_2_to_zone_1"])
     def test_positive(self, translation_str: str, col: str, request):
@@ -211,6 +237,7 @@ class TestZoneTranslation:
             ("expected_spatial", "spatial_trans"),
             ("expected_weighted", "weighted_trans"),
             ("expected_points", "point_trans"),
+            ("expected_point_to_point", "point_to_point_trans"),
         ],
     )
     def test_output(self, trans_str: str, expected_str: str, request):
