@@ -18,6 +18,20 @@ instead have a single source of truth to get them from! For more info see https:
 <u><h3> Tool info </h3></u>
 The tool has two main options for running a translation, either a purely spatial translation (where overlapping zones are split by area), or a weighted translation where overlapping zones are split by some other type of weighting data like population or employment data. For most purposes a weighted translation will be more accurate, and it is up to the user to decide the most appropriate weighting data to use. For both types of translation the tool runs from a set of parameters within a config class. If you are using the GUI then provide parameters in the first tab. If you are not using the GUI a instance of inputs.ZoningTranslationInputs is required. This can either be loaded from a yaml file, or initialised in the code.
 
+<u><h3> Command Line Tool </h3></u>
+The tool can be run from command line, with the command:
+
+<b> python -m caf.space </b>
+
+This can be run with no arguments, which will launch the GUI, but there are also 3 arguments for running in different modes.:
+* <b> mode: --mode</b> must be either "GUI" (default value), "spatial", or "weighted". "Gui" launches the GUI and the other two produce spatial or weighted zone translations respectively.
+* <b> config_path: --config</b> must be provided if mode is either "spatial" or "weighted". This is a path to the config file containing parameters for that translation.
+* <b> out_path: --out_path</b> must be provided if either "spatial" or "weighted". This is the directory you want your translation saved to. This directory must exist and will not be generated internally.
+
+Running with all three arguments would look like:
+
+<b> python -m caf.space --mode "spatial" --config "path/to/config.yml" --out_path "path/to/output/folder" </b>
+
 <u><h4> Spatial Correspondence </h4></u>
 For a spatial correspondence, the only user inputs needed are shapefiles for the two zone systems you want a translation between. The parameters required for a spatial translation are as follows:
 
