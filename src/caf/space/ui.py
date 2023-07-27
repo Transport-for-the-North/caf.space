@@ -771,7 +771,7 @@ class NotebookApp(tk.Tk):
 
     def __init__(self):
         super().__init__()
-        # self.logger = logging.getLogger("SPACE")
+        self.logger = logging.getLogger("SPACE")
         self.notebook = Notebook(self)
         self.notebook.pack(fill="both", expand=True)
 
@@ -798,7 +798,7 @@ class NotebookApp(tk.Tk):
         self.console_handler.setFormatter(fmt)
         self.console_handler.setLevel(logging.INFO)
         self._logger.addHandler(self.console_handler)
-        self._logger.info("Log file saved here: %s", (Path(os.getcwd()) / SpaceUI._LOG_NAME))
+        # self._logger.info("Log file saved here: %s", (Path(os.getcwd()) / SpaceUI._LOG_NAME))
 
 
 class SpaceUI:
@@ -806,30 +806,30 @@ class SpaceUI:
     Main class to launch UI.
     """
 
-    _LOG_NAME = "SPACE.log"
+    # _LOG_NAME = "SPACE.log"
 
     def __init__(self):
-        self.log_file = Path(os.getcwd()) / self._LOG_NAME
+        # self.log_file = Path(os.getcwd()) / self._LOG_NAME
         # Remove log file if present
-        if os.path.exists(self.log_file):
-            os.remove(self.log_file)
+        # if os.path.exists(self.log_file):
+        #     os.remove(self.log_file)
 
         # Initiate logger object
         self.logger = logging.getLogger("SPACE")
         self.logger.setLevel(logging.DEBUG)
 
         # Create file handler which logs everything
-        f_h = logging.FileHandler(self.log_file)
-        f_h.setLevel(logging.DEBUG)
+        # f_h = logging.FileHandler("dummy.log")
+        # f_h.setLevel(logging.DEBUG)
 
         # Create formatter and add to handlers
-        fmt = logging.Formatter(
-            "%(asctime)s [%(name)-20.20s] [%(levelname)-8.8s]  %(message)s"
-        )
-        f_h.setFormatter(fmt)
-        self.logger.addHandler(f_h)
+        # fmt = logging.Formatter(
+        #     "%(asctime)s [%(name)-20.20s] [%(levelname)-8.8s]  %(message)s"
+        # )
+        # f_h.setFormatter(fmt)
+        # self.logger.addHandler(f_h)
         # Start it with initial line
-        self.logger.info("Initialised log file.")
+        # self.logger.info("Initialised log file.")
         self._gui = NotebookApp()
 
 
