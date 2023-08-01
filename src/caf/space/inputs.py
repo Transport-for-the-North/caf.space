@@ -282,7 +282,7 @@ class ZoningTranslationInputs(BaseConfig):
         self.cache_path.mkdir(exist_ok=True, parents=True)
 
     @classmethod
-    def write_example(cls, out_path: Path):
+    def write_example_space(cls, out_path: Path):
         """
         Write out an example config file.
 
