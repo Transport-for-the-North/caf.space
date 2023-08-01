@@ -6,7 +6,6 @@ import tkinter as tk
 from tkinter import ttk, filedialog
 from pathlib import Path
 from typing import Optional
-import os
 import sys
 import logging
 

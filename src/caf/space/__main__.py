@@ -1,8 +1,9 @@
 """Main module."""
-import caf.space
-from caf.toolkit import LogHelper, ToolDetails
 import os
 from pathlib import Path
+import caf.space
+from caf.toolkit import LogHelper, ToolDetails
+
 
 if __name__ == "__main__":
     args = caf.space.inputs.SpaceArguments.parse()
