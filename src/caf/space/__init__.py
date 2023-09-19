@@ -1,5 +1,3 @@
-from . import _version
-
 from ._version import __version__
 
 from caf.space.inputs import ZoningTranslationInputs, TransZoneSystemInfo, LowerZoneSystemInfo
