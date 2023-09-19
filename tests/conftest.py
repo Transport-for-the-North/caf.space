@@ -19,7 +19,10 @@ import pandas as pd
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
 # Local imports here
-from caf.space import inputs, zone_translation
+from caf.space import ZoneTranslation
+from caf.space import TransZoneSystemInfo
+from caf.space import ZoningTranslationInputs
+from caf.space import LowerZoneSystemInfo
 
 # pylint: enable=import-error,wrong-import-position
 
@@ -237,7 +240,7 @@ def fixture_paths(main_dir, tmp_path_factory) -> dict[str, Path]:
 @pytest.fixture(name="spatial_config", scope="class")
 def fixture_spatial_config(
     zone_1_shape: Path, zone_2_shape: Path, paths: dict
-) -> inputs.ZoningTranslationInputs:
+) -> ZoningTranslationInputs:
     """
     Config for a test case spatial translation.This config can be altered
     for other test cases.
@@ -251,13 +254,13 @@ def fixture_spatial_config(
     -------
     A spatial translation config.
     """
-    zone_1 = inputs.TransZoneSystemInfo(
+    zone_1 = TransZoneSystemInfo(
         name="zone_1", shapefile=zone_1_shape, id_col="zone_1_id"
     )
-    zone_2 = inputs.TransZoneSystemInfo(
+    zone_2 = TransZoneSystemInfo(
         name="zone_2", shapefile=zone_2_shape, id_col="zone_2_id"
     )
-    params = inputs.ZoningTranslationInputs(
+    params = ZoningTranslationInputs(
         zone_1=zone_1,
         zone_2=zone_2,
         output_path=paths["output"],
@@ -281,7 +284,7 @@ def fixture_spatial_trans(spatial_config) -> pd.DataFrame:
     A complete spatial zone translation stored in a dataframe
 
     """
-    trans = zone_translation.ZoneTranslation(spatial_config).spatial_translation()
+    trans = ZoneTranslation(spatial_config).spatial_translation()
     return trans
 
 
@@ -292,7 +295,7 @@ def fixture_weighted_config(
     lower_zone: Path,
     lower_weighting: Path,
     paths: dict,
-) -> inputs.ZoningTranslationInputs:
+) -> ZoningTranslationInputs:
     """
     The config for a test weighted translation. This config is used as
     a base for other weighted test cases.
@@ -309,13 +312,13 @@ def fixture_weighted_config(
     -------
     An input config for running a basic weighted zone translation.
     """
-    zone_1 = inputs.TransZoneSystemInfo(
+    zone_1 = TransZoneSystemInfo(
         name="zone_1", shapefile=zone_1_shape, id_col="zone_1_id"
     )
-    zone_2 = inputs.TransZoneSystemInfo(
+    zone_2 = TransZoneSystemInfo(
         name="zone_2", shapefile=zone_2_shape, id_col="zone_2_id"
     )
-    lower = inputs.LowerZoneSystemInfo(
+    lower = LowerZoneSystemInfo(
         name="lower_zone",
         shapefile=lower_zone,
         id_col="lower_id",
@@ -324,7 +327,7 @@ def fixture_weighted_config(
         weight_id_col="lower_id",
         weight_data_year=2018,
     )
-    params = inputs.ZoningTranslationInputs(
+    params = ZoningTranslationInputs(
         zone_1=zone_1,
         zone_2=zone_2,
         lower_zoning=lower,
@@ -349,7 +352,7 @@ def fixture_weighted_trans(weighted_config) -> pd.DataFrame:
     -------
     A complete weighted zone translation stored in a dataframe
     """
-    trans = zone_translation.ZoneTranslation(weighted_config).weighted_translation()
+    trans = ZoneTranslation(weighted_config).weighted_translation()
     return trans
 
 
@@ -365,7 +368,7 @@ def fixture_points_config(main_dir, weighted_config, point_zones, point_shapefil
 
 @pytest.fixture(name="point_trans", scope="session")
 def fixture_point_trans(points_config) -> pd.DataFrame:
-    trans = zone_translation.ZoneTranslation(points_config).weighted_translation()
+    trans = ZoneTranslation(points_config).weighted_translation()
     return trans
 
 
@@ -380,7 +383,7 @@ def fixture_point_to_point(main_dir, weighted_config, point_shapefile_1, point_s
 
 @pytest.fixture(name="point_to_point_trans", scope="session")
 def fixture_point_to_point_trans(point_to_point_config):
-    trans = zone_translation.ZoneTranslation(point_to_point_config).weighted_translation()
+    trans = ZoneTranslation(point_to_point_config).weighted_translation()
     return trans
 
 
