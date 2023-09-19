@@ -106,7 +106,7 @@ ignore_errors = true
 
 [tool.pydocstyle]
 convention = "numpy"
-match = '(?!_test)(?!test_)(?!__init__).*\.py'
+match = '(?!_test)(?!test_)(?!__init__)(?!ui).*\.py'
 add-ignore = [
     "D202",    # Temporary compatibility with black
 ]
