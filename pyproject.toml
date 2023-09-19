@@ -127,8 +127,8 @@ match = ["v*"]
 default-tag = "0.0.1"
 
 [tool.versioningit.onbuild]
-source-file = "src/caf/toolkit/_version.py"
-build-file = "caf/toolkit/_version.py"
+source-file = "src/caf/space/_version.py"
+build-file = "caf/space/_version.py"
 
 [tool.versioningit.format]
 distance = "{base_version}+{distance}.{vcs}{rev}"
