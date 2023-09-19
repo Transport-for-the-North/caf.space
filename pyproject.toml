@@ -130,31 +130,4 @@ build-file = "caf/toolkit/_version.py"
 [tool.versioningit.format]
 distance = "{base_version}+{distance}.{vcs}{rev}"
 dirty = "{base_version}+{distance}.{vcs}{rev}.dirty"
-distance-dirty = "{base_version}+{distance}.{vcs}{rev}.dirty"
-
-
-
-
-
-# Pylint settings
-
-[tool.mypy]
-mypy_path = "src"
-ignore_missing_imports = true
-allow_redefinition = true
-
-[[tool.mypy.overrides]]
-module = [
-  "caf.space._version",
-]
-ignore_errors = true
-
-[tool.pydocstyle]
-convention = "numpy"
-match = '(?!_test)(?!test_)(?!__init__)(?!ui).*\.py'
-
-[tool.pytest.ini_options]
-addopts = "--cov=caf.space --cov-report=xml"
-
-[tool.coverage.run]
-omit = ["*/_version.py"]
+distance-dirty = "{base_version}+{distance}.{vcs}{rev}.dirty"#
