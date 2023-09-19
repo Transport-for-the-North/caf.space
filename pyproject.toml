@@ -112,10 +112,13 @@ add-ignore = [
 ]
 
 [tool.pytest.ini_options]
-addopts = "--cov=caf.{package_name} --cov-report=xml -n auto"
+addopts = "--cov=caf --cov-report=xml -n auto"
 
 [tool.coverage.run]
 omit = ["*/_version.py"]
+
+[tool.coverage.report]
+include_namespace_packages = true
 
 # Versioning
 [tool.versioningit.vcs]
