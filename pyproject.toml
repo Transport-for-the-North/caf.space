@@ -13,7 +13,6 @@ authors = [
     { name = "Transport for the North" },
 ]
 classifiers = [
-    "Programming Language :: Python3",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -33,11 +32,11 @@ dependencies = [
 
 [project.optional-dependencies]
 lint = [
-    "mypy>=0.910",
-    "mypy_extensions>=0.4.3",
-    "pylint>=2.14.5",
+    "black>=22.6.0",
+    "mypy>=1.0.0, <2.0.0",
+    "mypy_extensions>=1.0.0, <2.0.0",
     "pydocstyle[toml]>=6.1.1",
-    "black>=22.6.0"
+    "pylint>=2.14.5",
 ]
 
 test = [
@@ -105,6 +104,7 @@ add-ignore = [
     "D202",    # Temporary compatibility with black
 ]
 
+# Tests
 [tool.pytest.ini_options]
 addopts = "--cov=caf --cov-report=xml -n auto"
 

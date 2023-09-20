@@ -1,7 +1,7 @@
 # package linters
 black>=22.6.0
-mypy>=0.910
-mypy_extensions>=0.4.3
+mypy>=1.0.0, <2.0.0
+mypy_extensions>=1.0.0, <2.0.0
 pydocstyle[toml]>=6.1.1
 pylint>=2.14.5
 
