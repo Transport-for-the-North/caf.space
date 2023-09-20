@@ -20,7 +20,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
 ]
 dependencies = [
-    "caf.toolkit>=0.1.4",
+    "caf.toolkit>=0.2.1",
     "geopandas>=0.9",
     "fiona>=1.8",
     "shapely>=1.8",
