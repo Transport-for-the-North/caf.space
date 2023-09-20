@@ -106,6 +106,7 @@ add-ignore = [
 
 # Tests
 [tool.pytest.ini_options]
+pythonpath = ["src"]
 addopts = "--cov=caf --cov-report=xml -n auto"
 
 [tool.coverage.report]
