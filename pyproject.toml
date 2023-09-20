@@ -98,12 +98,6 @@ packages = ["caf.space"]
 ignore_missing_imports = true
 allow_redefinition = true
 
-[[tool.mypy.overrides]]
-module = [
-  "caf.space._version",
-]
-ignore_errors = true
-
 [tool.pydocstyle]
 convention = "numpy"
 match = '(?!_test)(?!test_)(?!__init__)(?!ui).*\.py'
@@ -113,9 +107,6 @@ add-ignore = [
 
 [tool.pytest.ini_options]
 addopts = "--cov=caf --cov-report=xml -n auto"
-
-[tool.coverage.run]
-omit = ["*/_version.py"]
 
 [tool.coverage.report]
 include_namespace_packages = true
