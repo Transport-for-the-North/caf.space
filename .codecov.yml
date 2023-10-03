@@ -1,0 +1,6 @@
+coverage:
+  status:
+    # Ensure each PR hits at least 80% coverage
+    patch:
+      default:
+        target: 80%

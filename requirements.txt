@@ -1,7 +1,7 @@
 # Required libraries
 
 # Example
-caf.toolkit>=0.0.7
+caf.toolkit>=0.2.1
 geopandas>=0.9
 fiona>=1.8
 shapely>=1.8

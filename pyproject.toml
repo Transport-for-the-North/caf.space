@@ -1,16 +1,72 @@
 [build-system]
-requires = ["setuptools", "versioneer-518"]
+requires = ["setuptools>=64.0.0", "versioningit"]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "caf.space"
+dynamic = ["version"]
+description = "Easily generate translations between zoning systems"
+readme = "README.md"
+license = {"file"= "LICENSE"}
+requires-python = ">=3.9"
+authors = [
+    { name = "Transport for the North" },
+]
+classifiers = [
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+dependencies = [
+    "caf.toolkit>=0.2.1",
+    "geopandas>=0.9",
+    "fiona>=1.8",
+    "shapely>=1.8",
+    "numpy>=1.21",
+    "pandas>=1.3",
+    "pydantic>=1.10.2, <2.0.0",
+    "openpyxl>=3.0",
+    "tkinterweb>=3.17",
+]
+
+[project.optional-dependencies]
+lint = [
+    "black>=22.6.0",
+    "mypy>=1.0.0, <2.0.0",
+    "mypy_extensions>=1.0.0, <2.0.0",
+    "pydocstyle[toml]>=6.1.1",
+    "pylint>=2.14.5",
+]
+
+test = [
+    "pytest>=7.4.0, <8.0.0",
+    "pytest-cov>=4.1.0, < 5.0.0",
+    "pytest-xdist>=3.3.1, <4.0.0",
+    "tox>=3.24.3, <4.0.0",
+]
+
+edit_install = [
+    "versioningit>=2.2.0, < 3.0.0"
+]
+
+[project.urls]
+"Bug Tracker" = "https://github.com/Transport-for-the-North/caf.space/issues"
+Homepage = "https://github.com/Transport-for-the-North/caf.space"
+Source = "https://github.com/Transport-for-the-North/caf.space"
+Documentation = "https://cafspcae.readthedocs.io/en/latest/"
+
+# Packaging options
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"caf.space" = ["py.typed"]
+
+# Linters
 [tool.black]
 line-length = 95
 target-version = ['py39']
-extend-exclude = '''
-(
-  _version\.py
-  | versioneer\.py
-)
-'''
 
 [tool.pylint.messages_control]
 disable = [
@@ -29,7 +85,7 @@ disable = [
 good-names = ["df", "fn", "ca", "tp", "to", "x", "i", "f", "q"]
 
 [tool.pylint.main]
-ignore = ["__init__.py", "_version.py", "versioneer.py", "inputs.py", "conf.py", "_run.py"]
+ignore = ["__init__.py", "_version.py", "inputs.py", "conf.py", "_run.py"]
 
 [tool.pylint.design]
 max-args = 10
@@ -37,22 +93,36 @@ max-attributes = 15
 max-statements = 100
 
 [tool.mypy]
-mypy_path = "src"
+packages = ["caf.space"]
 ignore_missing_imports = true
 allow_redefinition = true
-
-[[tool.mypy.overrides]]
-module = [
-  "caf.space._version",
-]
-ignore_errors = true
 
 [tool.pydocstyle]
 convention = "numpy"
 match = '(?!_test)(?!test_)(?!__init__)(?!ui).*\.py'
+add-ignore = [
+    "D202",    # Temporary compatibility with black
+]
 
+# Tests
 [tool.pytest.ini_options]
-addopts = "--cov=caf.space --cov-report=xml"
+pythonpath = ["src"]
+addopts = "--cov=caf --cov-report=xml -n auto"
 
-[tool.coverage.run]
-omit = ["*/_version.py"]
+[tool.coverage.report]
+include_namespace_packages = true
+
+# Versioning
+[tool.versioningit.vcs]
+method = "git"
+match = ["v*"]
+default-tag = "0.0.1"
+
+[tool.versioningit.onbuild]
+source-file = "src/caf/space/_version.py"
+build-file = "caf/space/_version.py"
+
+[tool.versioningit.format]
+distance = "{base_version}+{distance}.{vcs}{rev}"
+dirty = "{base_version}+{distance}.{vcs}{rev}.dirty"
+distance-dirty = "{base_version}+{distance}.{vcs}{rev}.dirty"#
