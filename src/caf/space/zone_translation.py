@@ -236,7 +236,9 @@ class ZoneTranslation:
 
         return final_zone_corr
 
-    def _post_processing(self, zones: dict, zone_translation: gpd.GeoDataFrame, out_path: Path):
+    def _post_processing(
+        self, zones: dict, zone_translation: gpd.GeoDataFrame, out_path: Path
+    ):
         """
         Log info after producing a zone translation.
 
