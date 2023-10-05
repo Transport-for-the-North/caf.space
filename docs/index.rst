@@ -21,15 +21,18 @@ Installation
 ------------
 caf.space can be installed from pip with the command:
 
-pip install caf.space
+``pip install caf.space``
 
-After that the easiest way to use caf.space is to launch the GUI. This can by done by importing caf.space then calling SpaceUI
+After that caf.space can be run using command line arguments. The easiest is to simply launch the UI
 
-import caf.space as space
+``python -m caf.space``
 
-space.SpaceUI()
+Additional arguments can also be provided for running a caf.space translation from a config file instead
 
-This will launch the GUI in a new window.
+``python -m caf.space --mode spatial --config path/to/config/file``
+
+Here the mode can be set to either 'spatial', 'weighted', or 'GUI', although to launch the GUI no mode need be provided.
+
 
 .. toctree::
    :maxdepth: 4
@@ -50,7 +53,6 @@ Contents
 .. toctree::
 
    input
-   zonesystem
    zone_trans
    weighted_trans
    op_model

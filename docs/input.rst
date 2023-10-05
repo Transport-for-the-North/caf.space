@@ -1,5 +1,4 @@
-Zoning Translation Inputs
--------------------------
 
-.. autoclass:: inputs.ZoningTranslationInputs
-   :members: write_example
+
+.. automodapi:: caf.space.inputs
+    :no-inheritance-diagram:
