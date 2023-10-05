@@ -44,7 +44,7 @@ class ZoneSystemInfo(BaseConfig):
     name : str
         The name of the zone system you are providing. This should
         be as simple as possible, so for and MSOA shapefile, name should
-        simply be.
+        simply be 'msoa'.
     shapefile : Path
         Path to the shapefile.
     id_col : str
