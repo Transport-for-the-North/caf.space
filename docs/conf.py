@@ -19,6 +19,7 @@
 import sys
 import os
 from pathlib import Path
+import caf.space
 
 dir_path = Path(__file__).parents[1]
 source = dir_path / "src" / "caf" / "space"
@@ -37,8 +38,9 @@ author = "Isaac Scott"
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
 
+version = str(caf.space.__version__)
 # The full version, including alpha/beta/rc tags
-release = "0.1"
+release = version
 
 
 # -- General configuration ---------------------------------------------------
