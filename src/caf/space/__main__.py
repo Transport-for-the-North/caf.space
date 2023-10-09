@@ -15,7 +15,7 @@ if __name__ == "__main__":
         log_out = out_path
     else:
         log_out = Path(os.getcwd())
-    with LogHelper("SPACE", details, log_file=log_out / "SPACE.log"):
+    with LogHelper(__package__, details, log_file=log_out / "SPACE.log"):
         if args.mode == "GUI":
             caf.space.SpaceUI()
         elif not args.config_path:

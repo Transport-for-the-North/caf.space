@@ -770,7 +770,7 @@ class NotebookApp(tk.Tk):
 
     def __init__(self):
         super().__init__()
-        self.logger = logging.getLogger("SPACE")
+        self.logger = logging.getLogger(__package__)
         self.notebook = Notebook(self)
         self.notebook.pack(fill="both", expand=True)
 
@@ -791,7 +791,7 @@ class NotebookApp(tk.Tk):
 
     def _redirect_logging(self):
         """Add new handler to root logger which outputs to `self.terminal`."""
-        self._logger = logging.getLogger("SPACE")
+        self._logger = logging.getLogger(__package__)
         self.console_handler = logging.StreamHandler(stream=RedirectStdOut(self.console_text))
         fmt = logging.Formatter("[{levelname}] {message}", style="{")
         self.console_handler.setFormatter(fmt)
@@ -814,7 +814,7 @@ class SpaceUI:
         #     os.remove(self.log_file)
 
         # Initiate logger object
-        self.logger = logging.getLogger("SPACE")
+        self.logger = logging.getLogger(__package__)
         self.logger.setLevel(logging.DEBUG)
 
         # Create file handler which logs everything
