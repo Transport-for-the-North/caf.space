@@ -1,5 +1,4 @@
-Zone translation class
-----------------------
 
-.. automodule:: zone_translation
-   :members:
+
+.. automodapi:: caf.space.zone_translation
+    :no-inheritance-diagram:

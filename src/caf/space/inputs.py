@@ -44,7 +44,7 @@ class ZoneSystemInfo(BaseConfig):
     name : str
         The name of the zone system you are providing. This should
         be as simple as possible, so for and MSOA shapefile, name should
-        simply be.
+        simply be 'msoa'.
     shapefile : Path
         Path to the shapefile.
     id_col : str
@@ -282,7 +282,7 @@ class ZoningTranslationInputs(BaseConfig):
         self.cache_path.mkdir(exist_ok=True, parents=True)
 
     @classmethod
-    def write_example(cls, out_path: Path):
+    def write_example_space(cls, out_path: Path):
         """
         Write out an example config file.
 

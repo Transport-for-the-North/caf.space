@@ -79,7 +79,8 @@ class ZoneTranslation:
         zone 2. Default correspondence is spatial (by zone area), but includes
         options for handling point zones with different data (for example LSOA
         employment data). Also includes option to check adjustment factors from
-        zone 1 to zone 2 add to 1.
+        zone 1 to zone 2 add to 1. Any options for this are set in the config
+        file/class or the UI, depending on how you run the tool.
 
         Returns
         -------
@@ -94,7 +95,7 @@ class ZoneTranslation:
         # Save correspondence output
         out_path = self.cache_path / f"{self.names[0]}_{self.names[1]}"
         out_path.mkdir(exist_ok=True, parents=False)
-        self.post_processing(zones, final_zone_corr, out_path)
+        self._post_processing(zones, final_zone_corr, out_path)
         out_name = f"{self.names[0]}_to_{self.names[1]}_spatial"
         final_zone_corr.to_csv(out_path / f"{out_name}.csv", index=False)
         self.params.save_yaml(out_path / f"{out_name}.yml")
@@ -186,7 +187,7 @@ class ZoneTranslation:
         if "matches" in locals():
             matches[fill_columns] = 1
             weighted_translation = pd.concat([weighted_translation, matches])
-        self.post_processing(zones, weighted_translation, out_path)
+        self._post_processing(zones, weighted_translation, out_path)
         out_name = f"{self.names[0]}_to_{self.names[1]}_{self.method}_{self.lower_zoning.weight_data_year}"
         weighted_translation.to_csv(out_path / f"{out_name}.csv", index=False)
         self.params.save_yaml(out_path / f"{out_name}.yml")
@@ -235,7 +236,9 @@ class ZoneTranslation:
 
         return final_zone_corr
 
-    def post_processing(self, zones: dict, zone_translation: gpd.GeoDataFrame, out_path: Path):
+    def _post_processing(
+        self, zones: dict, zone_translation: gpd.GeoDataFrame, out_path: Path
+    ):
         """
         Log info after producing a zone translation.
 
