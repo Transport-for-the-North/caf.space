@@ -172,7 +172,7 @@ def return_totals(frame: pd.DataFrame, id_col: str, data_col: str) -> pd.DataFra
     -------
     Grouped and summed df
     """
-    totals = frame.groupby(id_col).sum().loc[:, data_col]
+    totals = frame.groupby(id_col)[data_col].sum(numeric_only=True)
     return totals
 
 
