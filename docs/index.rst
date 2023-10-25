@@ -5,7 +5,11 @@ Common Analytical Framework (CAF) Space contain geo-processing functionality use
 for transport planners. Primarily it is a tool for generating standard weighting
 translations in `.csv` format describing how to convert between different zoning systems.
 The aim is to free tools up from directly having to do their own geo-processing, and    
-instead have a single source of truth to get them from!
+instead have a single source of truth to get them from! Other tools include:
+
+* `CAF.Toolkit <https://caftoolkit.readthedocs.io/en/latest/>`_
+
+* `CAF.Distribute <https://cafdistribute.readthedocs.io/en/latest/>`_
 
 Tool info
 ---------
