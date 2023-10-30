@@ -34,6 +34,7 @@ author = "Transport for the North"
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
 
+
 version = str(caf.space.__version__)
 # The full version, including alpha/beta/rc tags
 release = version
