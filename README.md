@@ -15,7 +15,7 @@ Common Analytical Framework (CAF) Space contains geo-processing functionality us
 for transport planners. Primarily it is a tool for generating standard weighting
 translations in .csv format describing how to convert between different zoning systems.
 The aim is to free tools up from directly having to do their own geo-processing, and    
-instead have a single source of truth to get them from! For more info see https://cafspcae.readthedocs.io/en/latest/.
+instead have a single source of truth to get them from! For more info see https://cafspace.readthedocs.io/en/latest/.
 
 <u><h3> Tool info </h3></u>
 The tool has two main options for running a translation, either a purely spatial translation (where overlapping zones are split by area), or a weighted translation where overlapping zones are split by some other type of weighting data like population or employment data. For most purposes a weighted translation will be more accurate, and it is up to the user to decide the most appropriate weighting data to use. For both types of translation the tool runs from a set of parameters within a config class. If you are using the GUI then provide parameters in the first tab. If you are not using the GUI a instance of inputs.ZoningTranslationInputs is required. This can either be loaded from a yaml file, or initialised in the code.
