@@ -88,10 +88,25 @@ class ZoneTranslation:
             Dataframe containing spatial zone translation between zone 1 and zone 2.
         """
         zones = zone_correspondence.read_zone_shapefiles(self.zone_1, self.zone_2)
-        spatial_correspondence = zone_correspondence.spatial_zone_correspondence(
-            zones, self.zone_1, self.zone_2
-        )
-        final_zone_corr = self._slithers_and_rounding(spatial_correspondence)
+        if zones[self.zone_1.name].geo_type == "line":
+            corr = zone_correspondence.line_to_zone_trans(
+                line=zones[self.zone_1.name].feature,
+                zone=zones[self.zone_2.name].feature,
+                line_ids=["A", "B"],
+                zone_id_col=f"{self.zone_2.name}_id",
+            )
+        elif zones[self.zone_2.name].geo_type == "line":
+            corr = zone_correspondence.line_to_zone_trans(
+                line=zones[self.zone_2.name].feature,
+                zone=zones[self.zone_1.name].feature,
+                line_ids=["A", "B"],
+                zone_id_col=f"{self.zone_1.name}_id",
+            )
+        else:
+            corr = zone_correspondence.spatial_zone_correspondence(
+                zones, self.zone_1, self.zone_2
+            )
+        final_zone_corr = self._slithers_and_rounding(corr)
         # Save correspondence output
         out_path = self.cache_path / f"{self.names[0]}_{self.names[1]}"
         out_path.mkdir(exist_ok=True, parents=False)
@@ -280,30 +295,35 @@ class ZoneTranslation:
             "List of missing zones can be found in log file found here: %s",
             log_file,
         )
-        column_list = list(zone_translation.columns)
+        if (zones[self.names[0]].geo_type == "line") or (
+            zones[self.names[1]].geo_type == "line"
+        ):
+            summary_table_1 = zone_translation.groupby(level=["A", "B"]).sum()
+            summary_table_2 = None
+        else:
+            summary_table_1 = zone_translation.groupby(level=f"{self.names[0]}_id").sum()
+            summary_table_2 = zone_translation.groupby(level=f"{self.names[1]}_id").sum()
 
-        summary_table_1 = zone_translation.groupby(column_list[0])[column_list[2]].sum()
-        summary_table_2 = zone_translation.groupby(column_list[1])[column_list[3]].sum()
+        under_1_zones_1 = summary_table_1[summary_table_1 < 0.999999].dropna()
+        if summary_table_2 is not None:
+            under_1_zones_2 = summary_table_2[summary_table_2 < 0.999999].dropna()
 
-        under_1_zones_1 = summary_table_1[summary_table_1 < 0.999999]
-        under_1_zones_2 = summary_table_2[summary_table_2 < 0.999999]
-
-        if len(pd.unique(zone_translation[column_list[0]])) == sum(summary_table_1):
-            self.logger.info("Split factors add up to 1 for %s", column_list[0])
+        if len(under_1_zones_1) == 0:
+            self.logger.info("Split factors add up to 1 for %s", self.names[0])
         else:
             self.logger.warning(
                 "Split factors DO NOT add up to 1 for %s. CHECK "
                 "TRANSLATION IS ACCURATE\n%s",
-                column_list[0],
+                self.names[0],
                 under_1_zones_1,
             )
-
-        if len(pd.unique(zone_translation[column_list[1]])) == sum(summary_table_2):
-            self.logger.info("Split factors add up to 1 for %s", column_list[1])
-        else:
-            self.logger.warning(
-                "Split factors DO NOT add up to 1 for %s. CHECK "
-                "TRANSLATION IS ACCURATE\n%s",
-                column_list[1],
-                under_1_zones_2,
-            )
+        if summary_table_2 is not None:
+            if len(under_1_zones_2) == 0:
+                self.logger.info("Split factors add up to 1 for %s", self.names[1])
+            else:
+                self.logger.warning(
+                    "Split factors DO NOT add up to 1 for %s. CHECK "
+                    "TRANSLATION IS ACCURATE\n%s",
+                    self.names[1],
+                    under_1_zones_2,
+                )

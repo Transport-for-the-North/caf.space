@@ -19,13 +19,14 @@ import fiona
 import os
 from pathlib import Path
 import pandas as pd
-from typing import Optional
+from typing import Optional, Union
 from pydantic import validator
 from enum import Enum
 
 # Third party imports
 from caf.toolkit import BaseConfig
 import argparse
+import geopandas as gpd
 
 # pylint: enable=import-error
 # Local imports
@@ -88,6 +89,12 @@ class ZoneSystemInfo(BaseConfig):
                     f"{schema['properties'].keys()}."
                 )
         return v
+
+
+class LineInfo(BaseConfig):
+    name: str
+    id_cols: list[str]
+    shapefile: Path
 
 
 class TransZoneSystemInfo(ZoneSystemInfo):
@@ -265,7 +272,7 @@ class ZoningTranslationInputs(BaseConfig):
         automatically and shouldn't be included in the config yaml file.
     """
 
-    zone_1: TransZoneSystemInfo
+    zone_1: Union[TransZoneSystemInfo, LineInfo]
     zone_2: TransZoneSystemInfo
     lower_zoning: Optional[LowerZoneSystemInfo] = None
     cache_path: Path = Path(CACHE_PATH)
