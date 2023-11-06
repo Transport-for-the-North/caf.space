@@ -227,8 +227,8 @@ class TestZoneTranslation:
             spatial_trans (_type_): The spatial translation being checked
             weighted_trans (_type_): Weighted translation being checked
         """
-        assert sorted(spatial_trans[f"zone_{number}_id"]) == sorted(
-            weighted_trans[f"zone_{number}_id"]
+        assert sorted(spatial_trans.index.get_level_values(f"zone_{number}_id")) == sorted(
+            weighted_trans.index.get_level_values(f"zone_{number}_id")
         )
 
     @pytest.mark.parametrize(

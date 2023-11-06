@@ -51,7 +51,7 @@ def read_zone_shapefiles(
     out = {}
     for feature in [zone_1, zone_2]:
         zone = gpd.read_file(feature.shapefile)
-        if zone.crs is not None:
+        if zone.crs is None:
             warnings.warn(f"Zone {feature.name} has no CRS, setting crs to EPSG:27700.")
             zone.set_crs = "EPSG:27700"
         else:
@@ -106,8 +106,8 @@ def spatial_zone_correspondence(
     """
     # create geodataframe for intersection of zones
     zone_overlay = gpd.overlay(
-        zones[zone_1.name]["Zone"],
-        zones[zone_2.name]["Zone"],
+        zones[zone_1.name].feature,
+        zones[zone_2.name].feature,
         how="intersection",
         keep_geom_type=False,
     ).reset_index()
@@ -210,6 +210,7 @@ def rounding_correction(
         totals = totals.squeeze()
         return totals, diffs
 
+    to_col = f"{to_zone_name}_id"
     if "factor" in zone_corr.columns:
         zone_corr.reset_index(inplace=True)
         from_col = ["A", "B"]
@@ -221,8 +222,8 @@ def rounding_correction(
         filter = from_col + [to_zone_name]
         factor_filter = from_col + [factor_col]
     else:
-        filter = [from_zone_name, to_zone_name]
-        factor_filter = [from_zone_name, factor_col]
+        filter = [from_col, to_col]
+        factor_filter = [from_col, factor_col]
     counts = zone_corr.groupby(from_col).size()
     zone_corr.set_index(from_col, inplace=True)
     # Set factor to 1 for one to one lookups
@@ -252,8 +253,8 @@ def rounding_correction(
     rest_to_round[factor_col] = rest_to_round[factor_col] * rest_to_round["correction"]
 
     rest_to_round = rest_to_round.drop("correction", axis=1)
-    rest_to_round.set_index(to_zone_name, append=True, inplace=True)
-    zone_corr.set_index(to_zone_name, append=True, inplace=True)
+    rest_to_round.set_index(to_col, append=True, inplace=True)
+    zone_corr.set_index(to_col, append=True, inplace=True)
     zone_corr.loc[rest_to_round.index] = rest_to_round
 
     # Recalculate differences after adjustment
@@ -314,7 +315,7 @@ def round_zone_correspondence(
     if "factor" in zone_corr_no_slithers.columns:
         zone = [i for i in zone_names if "net" not in i][0]
         zone_corr_rounded = rounding_correction(
-            zone_corr_no_slithers.copy(), from_zone_name="line", to_zone_name=f"{zone}_id"
+            zone_corr_no_slithers.copy(), from_zone_name="line", to_zone_name=zone
         )
     else:
         # create rounded zone correspondence
@@ -326,7 +327,7 @@ def round_zone_correspondence(
                     f"{zone_names[0]}_to_{zone_names[1]}",
                 ]
             ].copy(),
-            *zone_names,
+            *zone_names
         )
 
         # Save rounding to final variable to turn to csv
@@ -342,17 +343,12 @@ def round_zone_correspondence(
                 ]
             ].copy(),
             zone_names[1],
-            zone_names[0],
+            zone_names[0]
         )
 
-        zone_corr_rounded_both_ways = zone_corr_rounded_both_ways.merge(
-            zone_corr_rounded[f"{zone_names[1]}_to_{zone_names[0]}"],
-            how="left",
-            left_on=zone_corr_rounded_both_ways.index,
-            right_on=zone_corr_rounded.index,
+        zone_corr_rounded = zone_corr_rounded_both_ways.join(
+            zone_corr_rounded
         )
-
-        zone_corr_rounded = zone_corr_rounded_both_ways.drop(labels="key_0", axis=1)
 
     return zone_corr_rounded
 

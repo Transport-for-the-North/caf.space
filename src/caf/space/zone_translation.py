@@ -201,6 +201,7 @@ class ZoneTranslation:
         out_path.mkdir(exist_ok=True, parents=False)
         if "matches" in locals():
             matches[fill_columns] = 1
+            matches.set_index(weighted_translation.index.names, inplace=True)
             weighted_translation = pd.concat([weighted_translation, matches])
         self._post_processing(zones, weighted_translation, out_path)
         out_name = f"{self.names[0]}_to_{self.names[1]}_{self.method}_{self.lower_zoning.weight_data_year}"
