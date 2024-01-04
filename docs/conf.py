@@ -22,7 +22,6 @@ from pathlib import Path
 import caf.space
 
 
-
 project = "caf.space"
 copyright = "2023, TfN"
 author = "Isaac Scott"
