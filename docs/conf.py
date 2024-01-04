@@ -21,14 +21,7 @@ import os
 from pathlib import Path
 import caf.space
 
-dir_path = Path(__file__).parents[1]
-source = dir_path / "src" / "caf" / "space"
 
-sys.path.insert(0, os.path.abspath(str(source)))
-sys.path.insert(
-    0,
-    os.path.abspath(r"C:\Users\IsaacScott\anaconda3\envs\space\Lib\site-packages"),
-)
 
 project = "caf.space"
 copyright = "2023, TfN"
