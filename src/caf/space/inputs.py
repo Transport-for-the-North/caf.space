@@ -20,7 +20,7 @@ import os
 from pathlib import Path
 import pandas as pd
 from typing import Optional
-from pydantic import validator
+from pydantic import field_validator
 from enum import Enum
 
 # Third party imports
@@ -57,7 +57,7 @@ class ZoneSystemInfo(BaseConfig):
     shapefile: Path
     id_col: str
 
-    @validator("shapefile")
+    @field_validator("shapefile")
     def _path_exists(cls, v):
         """
         Validate a path exists.
@@ -77,9 +77,9 @@ class ZoneSystemInfo(BaseConfig):
             )
         return v
 
-    @validator("id_col")
+    @field_validator("id_col")
     def _id_col_in_file(cls, v, values):
-        with fiona.collection(values["shapefile"]) as source:
+        with fiona.collection(values.data["shapefile"]) as source:
             schema = source.schema
             if v not in schema["properties"].keys():
                 raise ValueError(
@@ -105,7 +105,7 @@ class TransZoneSystemInfo(ZoneSystemInfo):
         to True in the main config class or it will be effectively ignored.
     """
 
-    point_shapefile: Optional[Path]
+    point_shapefile: Optional[Path] = None
 
 
 class LowerZoneSystemInfo(ZoneSystemInfo):
@@ -147,15 +147,15 @@ class LowerZoneSystemInfo(ZoneSystemInfo):
             point_shapefile=None,
         )
 
-    @validator("weight_data")
+    @field_validator("weight_data")
     def _weight_data_exists(cls, v):
         if os.path.isfile(v) is False:
             raise FileNotFoundError(f"The weight data path provided for {v} does not exist.")
         return v
 
-    @validator("data_col", "weight_id_col")
+    @field_validator("data_col", "weight_id_col")
     def _valid_data_col(cls, v, values):
-        cols = pd.read_csv(values["weight_data"], nrows=1).columns
+        cols = pd.read_csv(values.data["weight_data"], nrows=1).columns
         if v not in cols:
             raise ValueError(f"The given col, {v}, does not appear in the weight data.")
         return v
@@ -297,13 +297,13 @@ class ZoningTranslationInputs(BaseConfig):
         """
         zones = {}
         for i in range(1, 3):
-            zones[i] = TransZoneSystemInfo.construct(
+            zones[i] = TransZoneSystemInfo.model_construct(
                 name=f"zone_{i}_name",
                 shapefile=Path(f"path/to/shapefile_{i}"),
                 id_col=f"id_col_for_zone_{i}",
                 point_shapefile=Path(f"path/to/point/shapefile"),
             )
-        lower = LowerZoneSystemInfo.construct(
+        lower = LowerZoneSystemInfo.model_construct(
             name="lower_zone_name",
             shapefile=Path("path/to/lower/shapefile"),
             id_col="id_col_for_lower_zone",
@@ -312,7 +312,7 @@ class ZoningTranslationInputs(BaseConfig):
             weight_id_col="id_col_in_weighting_data",
             weight_data_year=2018,
         )
-        ex = ZoningTranslationInputs.construct(
+        ex = ZoningTranslationInputs.model_construct(
             zone_1=zones[1],
             zone_2=zones[2],
             lower_zoning=lower,
