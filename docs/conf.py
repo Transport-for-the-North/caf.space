@@ -16,11 +16,7 @@
 
 
 # -- Project information -----------------------------------------------------
-import sys
-import os
-from pathlib import Path
 import caf.space
-
 
 project = "caf.space"
 copyright = "2023, TfN"
