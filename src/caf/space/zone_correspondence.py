@@ -80,14 +80,14 @@ def read_zone_shapefiles(
             columns={zone["ID_col"]: f"{name}_id"},
             inplace=True,
         )
-        zone["Zone"][f"{name}_area"] = zone["Zone"].area
 
         if not zone["Zone"].crs:
             warnings.warn(f"Zone {name} has no CRS, setting crs to EPSG:27700.")
-            zone["Zone"].set_crs = "EPSG:27700"
-        else:
-            zone["Zone"].to_crs("EPSG:27700")
+            zone["Zone"].set_crs("EPSG:27700")
+        elif zone["Zone"].crs != "EPSG:27700":
+            zone["Zone"].geometry = zone["Zone"].geometry.to_crs("EPSG:27700")
 
+        zone["Zone"][f"{name}_area"] = zone["Zone"].area
     return zones
 
 
