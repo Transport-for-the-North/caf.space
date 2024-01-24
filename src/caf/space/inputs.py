@@ -20,7 +20,7 @@ import os
 from pathlib import Path
 import pandas as pd
 from typing import Optional, Union
-from pydantic import validator
+from pydantic import field_validator
 from enum import Enum
 
 # Third party imports
@@ -58,7 +58,7 @@ class ZoneSystemInfo(BaseConfig):
     shapefile: Path
     id_col: str
 
-    @validator("shapefile")
+    @field_validator("shapefile")
     def _path_exists(cls, v):
         """
         Validate a path exists.
@@ -78,7 +78,7 @@ class ZoneSystemInfo(BaseConfig):
             )
         return v
 
-    @validator("id_col")
+    @field_validator("id_col")
     def _id_col_in_file(cls, v, values):
         with fiona.collection(values["shapefile"]) as source:
             schema = source.schema
