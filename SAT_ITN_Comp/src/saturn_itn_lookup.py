@@ -6,6 +6,7 @@
 import os
 import sys
 from multiprocessing import Pool
+import warnings
 
 import geopandas as gpd
 import matplotlib as mpl
@@ -170,14 +171,15 @@ class SaturnItnLookup:
             ("satNet", "SATURN_INPUT_COLS", satPath),
         ):
             shp_file = getattr(self, shp)
-            shp_crs = shp_file.crs.get("init")
+            shp_crs = shp_file.crs
             if shp_crs is None:
                 print(f"Cannot determine CRS for {path}")
-            elif shp_crs.lower().strip() != self.BRITISH_GRID_CRS.lower().strip():
-                raise ValueError(
-                    f"Invalid CRS ({shp_crs.upper()}), expected "
+            elif shp_crs != self.BRITISH_GRID_CRS:
+                warnings.warn(
+                    f"Invalid CRS ({shp_crs}), expected "
                     f"{self.BRITISH_GRID_CRS}, for {path}"
                 )
+                shp_file.to_crs(self.BRITISH_GRID_CRS, inplace=True)
             else:
                 print(f"Correct CRS ({shp_crs}) given for {path}")
 
@@ -261,12 +263,12 @@ class SaturnItnLookup:
             "\tCreating boundary using {} with -{}m buffer.".format(*self.ITN_BOUNDARY)
         )
         # Create MultiLineString of the whole ITN
-        multi = MultiLineString(self.itnNet.geometry.tolist())
+        multi = self.itnNet.geometry.tolist()
 
         # Check which type of boundary to use for the ITN layer
         if self.ITN_BOUNDARY[0] == "convex":
             # Get boundary of itn layer
-            self.itnBoundary = multi.convex_hull
+            self.itnBoundary = MultiLineString(multi).convex_hull
         elif self.ITN_BOUNDARY[0] == "concave":
             # Create MultiPoints of the whole ITN
             pointsArr = np.array([j for i in multi for j in i.coords])
