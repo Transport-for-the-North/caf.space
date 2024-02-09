@@ -20,6 +20,7 @@ logging.captureWarnings(True)
 ##### FUNCTIONS #####
 @dataclass
 class ReadOutput:
+    """A read in feature, either line or poly."""
     feature: gpd.GeoDataFrame
     geo_type: str
 
@@ -219,10 +220,8 @@ def rounding_correction(
         from_col = f"{from_zone_name}_id"
         factor_col = f"{from_zone_name}_to_{to_zone_name}"
     if isinstance(from_col, list):
-        filter = from_col + [to_zone_name]
         factor_filter = from_col + [factor_col]
     else:
-        filter = [from_col, to_col]
         factor_filter = [from_col, factor_col]
     counts = zone_corr.groupby(from_col).size()
     zone_corr.set_index(from_col, inplace=True)
@@ -327,7 +326,7 @@ def round_zone_correspondence(
                     f"{zone_names[0]}_to_{zone_names[1]}",
                 ]
             ].copy(),
-            *zone_names
+            *zone_names,
         )
 
         # Save rounding to final variable to turn to csv
@@ -343,17 +342,16 @@ def round_zone_correspondence(
                 ]
             ].copy(),
             zone_names[1],
-            zone_names[0]
+            zone_names[0],
         )
 
-        zone_corr_rounded = zone_corr_rounded_both_ways.join(
-            zone_corr_rounded
-        )
+        zone_corr_rounded = zone_corr_rounded_both_ways.join(zone_corr_rounded)
 
     return zone_corr_rounded
 
 
 def missing_links_check(links: pd.DataFrame, corr: pd.DataFrame, zone_id: str):
+    """Check for missing links in corr dataframe."""
     checker = links.set_index(["A", "B"])
     missing = checker.index.difference(
         checker.loc[corr.reset_index(level=zone_id).index].index
