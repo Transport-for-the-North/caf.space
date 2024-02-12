@@ -225,10 +225,10 @@ class SaturnItnLookup:
         # Initialise other columns and variables required for finding ITN links
         if findLinks:
             # Get the start and end coordinates for links in the ITN and SATURN networks
-            self.itnNet["Vertices"] = self.itnNet.geometry.apply(getCoords, args=(0,))
-            self.itnNet["Vertices2"] = self.itnNet.geometry.apply(getCoords, args=(-1,))
-            self.satNet["Vertices"] = self.satNet.geometry.apply(getCoords, args=(0,))
-            self.satNet["Vertices2"] = self.satNet.geometry.apply(getCoords, args=(-1,))
+            self.itnNet["Vertices"] = self.itnNet.geometry.apply(getCoords, args=(0, ))
+            self.itnNet["Vertices2"] = self.itnNet.geometry.apply(getCoords, args=(-1, ))
+            self.satNet["Vertices"] = self.satNet.geometry.apply(getCoords, args=(0, ))
+            self.satNet["Vertices2"] = self.satNet.geometry.apply(getCoords, args=(-1, ))
 
             # Create the itn boundaries
             self.createBoundaries()
@@ -248,6 +248,7 @@ class SaturnItnLookup:
             # Create the tuples for use a graph nodes
             for i in ("Vertices", "Vertices2"):
                 self.itnNet["{}_Tup".format(i)] = self.itnNet[i].apply(pointToTuple)
+                self.satNet["{}_Tup".format(i)] = self.satNet[i].apply(pointToTuple)
 
             # Create the weighted ITN graph
             self.itnGraph = nx.DiGraph()
@@ -394,8 +395,8 @@ class SaturnItnLookup:
         """Calculate the angle between two links."""
         # Calculate vectors for both links
         try:
-            line1 = [satLink.Vertices, satLink.Vertices2]
-            line2 = [itnLink.Vertices, itnLink.Vertices2]
+            line1 = [satLink.Vertices_Tup, satLink.Vertices2_Tup]
+            line2 = [itnLink.Vertices_Tup, itnLink.Vertices2_Tup]
             return calculateAngle(line1, line2)
         except ValueError as e:
             err = (
@@ -439,9 +440,7 @@ class SaturnItnLookup:
     def findItnNode(self, satNode, itnLinks):
         """Find the closest ITN node within 1m, if there isn't any return None."""
         # Find nodes
-        itnNodes = pd.Series(
-            itnLinks.Vertices.append(itnLinks.Vertices2).apply(pointToTuple).unique()
-        )
+        itnNodes = pd.Series(pd.concat([itnLinks.Vertices_Tup, itnLinks.Vertices2_Tup]).unique())
         itnNodes = gpd.GeoSeries(itnNodes.apply(Point))
         ind = itnNodes.within(satNode.buffer(1))
         # Check how many are found
