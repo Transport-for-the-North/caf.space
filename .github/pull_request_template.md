@@ -9,3 +9,4 @@ Task Checklist
 - [ ] Have new dependencies been added?
   - [ ] Have they been added to either `requirements.txt` or `requirements_dev.txt`.
   - [ ] Have they been added to `setup.cfg`
+- [ ] Have any new features been properly integrated with the API (CLI and GUI)?

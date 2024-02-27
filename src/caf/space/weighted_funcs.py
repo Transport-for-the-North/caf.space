@@ -3,6 +3,7 @@ Contains functionality for creating weighted translations.
 
 These are called in the 'weighted_trans' method in ZoneTranslation.
 """
+
 ##### IMPORTS #####
 from typing import Optional
 import logging
