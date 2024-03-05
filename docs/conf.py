@@ -16,18 +16,7 @@
 
 
 # -- Project information -----------------------------------------------------
-import sys
-import os
-from pathlib import Path
-
-dir_path = Path(__file__).parents[1]
-source = dir_path / "src" / "caf" / "space"
-
-sys.path.insert(0, os.path.abspath(str(source)))
-sys.path.insert(
-    0,
-    os.path.abspath(r"C:\Users\IsaacScott\anaconda3\envs\space\Lib\site-packages"),
-)
+import caf.space
 
 project = "caf.space"
 copyright = "2023, TfN"
@@ -37,8 +26,9 @@ author = "Isaac Scott"
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
 
+version = str(caf.space.__version__)
 # The full version, including alpha/beta/rc tags
-release = "0.1"
+release = version
 
 
 # -- General configuration ---------------------------------------------------
@@ -52,7 +42,10 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.napoleon",
+    "sphinx_automodapi.automodapi",
 ]
+
+numpydoc_show_class_members = False
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -68,14 +61,14 @@ exclude_patterns = []
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "alabaster"
+html_theme = "pydata_sphinx_theme"
 
 master_doc = "index"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ["_static"]
+# html_static_path = ["_static"]
 
 autodoc_mock_imports = ["caf"]
 autodoc_typehints = "description"

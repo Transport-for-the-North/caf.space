@@ -3,20 +3,36 @@
 <h1 align="center">CAF.Space</h1>
 
 <p align="center">
-<a href="https://www.gnu.org/licenses/gpl-3.0.en.html"><img alt="License: GNU GPL v3.0" src="https://img.shields.io/badge/license-GPLv3-blueviolet.svg"></a>
-<a href="https://github.com/PyCQA/pylint"><img alt="linting: pylint" src="https://img.shields.io/badge/linting-pylint-yellowgreen"></a>
-<a href="https://google.github.io/styleguide/pyguide.html"><img alt="code format: Google Style Guide" src="https://img.shields.io/badge/code%20style-Google%20Style%20Guide-blue"></a>
-<a href="https://github.com/psf/black"><img alt="code style: black" src="https://img.shields.io/badge/code%20format-black-000000.svg"></a>
+<a href="https://pypi.org/project/caf.space/"><img alt="Supported Python versions" src="https://img.shields.io/pypi/pyversions/caf.space.svg?style=flat-square"></a>
+<a href="https://pypi.org/project/caf.space/"><img alt="Latest release" src="https://img.shields.io/github/release/transport-for-the-north/caf.space.svg?style=flat-square&maxAge=86400"></a>
+<a href="https://app.codecov.io/gh/Transport-for-the-North/caf.space"><img alt="Coverage" src="https://img.shields.io/codecov/c/github/transport-for-the-north/caf.space.svg?branch=master&style=flat-square&logo=CodeCov"></a>
+<a href="https://github.com/Transport-for-the-North/caf.space/actions?query=event%3Apush"><img alt="Testing Badge" src="https://img.shields.io/github/actions/workflow/status/transport-for-the-north/caf.space/tests.yml?style=flat-square&logo=GitHub&label=Tests"></a>
+<a href="https://www.gnu.org/licenses/gpl-3.0.en.html"><img alt="License: GNU GPL v3.0" src="https://img.shields.io/badge/license-GPLv3-blueviolet.svg?style=flat-square"></a>
+<a href="https://github.com/psf/black"><img alt="code style: black" src="https://img.shields.io/badge/code%20format-black-000000.svg?style=flat-square"></a>
 </p>
 
 Common Analytical Framework (CAF) Space contains geo-processing functionality useful
 for transport planners. Primarily it is a tool for generating standard weighting
 translations in .csv format describing how to convert between different zoning systems.
 The aim is to free tools up from directly having to do their own geo-processing, and    
-instead have a single source of truth to get them from! For more info see https://cafspcae.readthedocs.io/en/latest/.
+instead have a single source of truth to get them from! For more info see https://cafspace.readthedocs.io/en/latest/.
 
 <u><h3> Tool info </h3></u>
 The tool has two main options for running a translation, either a purely spatial translation (where overlapping zones are split by area), or a weighted translation where overlapping zones are split by some other type of weighting data like population or employment data. For most purposes a weighted translation will be more accurate, and it is up to the user to decide the most appropriate weighting data to use. For both types of translation the tool runs from a set of parameters within a config class. If you are using the GUI then provide parameters in the first tab. If you are not using the GUI a instance of inputs.ZoningTranslationInputs is required. This can either be loaded from a yaml file, or initialised in the code.
+
+<u><h3> Command Line Tool </h3></u>
+The tool can be run from command line, with the command:
+
+<b> python -m caf.space </b>
+
+This can be run with no arguments, which will launch the GUI, but there are also 3 arguments for running in different modes.:
+* <b> mode: --mode</b> must be either "GUI" (default value), "spatial", or "weighted". "Gui" launches the GUI and the other two produce spatial or weighted zone translations respectively.
+* <b> config_path: --config</b> must be provided if mode is either "spatial" or "weighted". This is a path to the config file containing parameters for that translation.
+* <b> out_path: --out_path</b> must be provided if either "spatial" or "weighted". This is the directory you want your translation saved to. This directory must exist and will not be generated internally.
+
+Running with all three arguments would look like:
+
+<b> python -m caf.space --mode "spatial" --config "path/to/config.yml" --out_path "path/to/output/folder" </b>
 
 <u><h4> Spatial Correspondence </h4></u>
 For a spatial correspondence, the only user inputs needed are shapefiles for the two zone systems you want a translation between. The parameters required for a spatial translation are as follows:

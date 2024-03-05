@@ -17,6 +17,23 @@ decide the most appropriate weighting data to use. For both types of translation
 runs from a config file (a file called config.yml in the base folder). Parameters for this
 config are described below.
 
+Installation
+------------
+caf.space can be installed from pip with the command:
+
+``pip install caf.space``
+
+After that caf.space can be run using command line arguments. The easiest is to simply launch the UI
+
+``python -m caf.space``
+
+Additional arguments can also be provided for running a caf.space translation from a config file instead
+
+``python -m caf.space --mode spatial --config path/to/config/file``
+
+Here the mode can be set to either 'spatial', 'weighted', or 'GUI', although to launch the GUI no mode need be provided.
+
+
 .. toctree::
    :maxdepth: 4
    :caption: Contents:
@@ -34,9 +51,9 @@ Contents
 --------
 
 .. toctree::
+   :maxdepth: 1
 
    input
-   zonesystem
    zone_trans
    weighted_trans
    op_model

@@ -14,15 +14,18 @@ from __future__ import annotations
 # pylint: disable=import-error
 import logging
 import datetime
+import dataclasses
 import fiona
 import os
 from pathlib import Path
 import pandas as pd
 from typing import Optional
-from pydantic import validator
+from pydantic import field_validator
+from enum import Enum
 
 # Third party imports
 from caf.toolkit import BaseConfig
+import argparse
 
 # pylint: enable=import-error
 # Local imports
@@ -30,6 +33,7 @@ from caf.toolkit import BaseConfig
 ##### CONSTANTS #####
 LOG = logging.getLogger(__name__)
 CACHE_PATH = "I:/Data/Zone Translations/cache"
+MODES = ("spatial", "weighted", "GUI")
 
 
 class ZoneSystemInfo(BaseConfig):
@@ -40,7 +44,7 @@ class ZoneSystemInfo(BaseConfig):
     name : str
         The name of the zone system you are providing. This should
         be as simple as possible, so for and MSOA shapefile, name should
-        simply be.
+        simply be 'msoa'.
     shapefile : Path
         Path to the shapefile.
     id_col : str
@@ -53,7 +57,7 @@ class ZoneSystemInfo(BaseConfig):
     shapefile: Path
     id_col: str
 
-    @validator("shapefile")
+    @field_validator("shapefile")
     def _path_exists(cls, v):
         """
         Validate a path exists.
@@ -73,9 +77,9 @@ class ZoneSystemInfo(BaseConfig):
             )
         return v
 
-    @validator("id_col")
+    @field_validator("id_col")
     def _id_col_in_file(cls, v, values):
-        with fiona.collection(values["shapefile"]) as source:
+        with fiona.collection(values.data["shapefile"]) as source:
             schema = source.schema
             if v not in schema["properties"].keys():
                 raise ValueError(
@@ -101,7 +105,7 @@ class TransZoneSystemInfo(ZoneSystemInfo):
         to True in the main config class or it will be effectively ignored.
     """
 
-    point_shapefile: Optional[Path]
+    point_shapefile: Optional[Path] = None
 
 
 class LowerZoneSystemInfo(ZoneSystemInfo):
@@ -143,18 +147,71 @@ class LowerZoneSystemInfo(ZoneSystemInfo):
             point_shapefile=None,
         )
 
-    @validator("weight_data")
+    @field_validator("weight_data")
     def _weight_data_exists(cls, v):
         if os.path.isfile(v) is False:
             raise FileNotFoundError(f"The weight data path provided for {v} does not exist.")
         return v
 
-    @validator("data_col", "weight_id_col")
+    @field_validator("data_col", "weight_id_col")
     def _valid_data_col(cls, v, values):
-        cols = pd.read_csv(values["weight_data"], nrows=1).columns
+        cols = pd.read_csv(values.data["weight_data"], nrows=1).columns
         if v not in cols:
             raise ValueError(f"The given col, {v}, does not appear in the weight data.")
         return v
+
+
+@dataclasses.dataclass
+class SpaceArguments:
+    """Command Line arguments for running space."""
+
+    config_path: Path
+    mode: str
+    out_path: Path
+
+    @classmethod
+    def parse(cls) -> SpaceArguments:
+        """Parse command line argument."""
+        parser = argparse.ArgumentParser(
+            description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        )
+        parser.add_argument(
+            "--mode",
+            type=str,
+            help="Mode to run translation in; spatial, weighted or GUI.",
+            default="GUI",
+            required=False,
+        )
+        parser.add_argument(
+            "--config",
+            type=Path,
+            help="path to config file containing parameters",
+            default=None,
+            required=False,
+        )
+        parser.add_argument(
+            "--out_path",
+            type=Path,
+            help="Path the translation will be saved in.",
+            default=None,
+            required=False,
+        )
+
+        parsed_args = parser.parse_args()
+        return SpaceArguments(parsed_args.config, parsed_args.mode, parsed_args.out_path)
+
+    def validate(self):
+        """Raise error for invalid input."""
+        if self.config_path:
+            if not self.config_path.is_file():
+                raise FileNotFoundError(f"config file doesn't exist: {self.config_path}")
+
+        if self.out_path:
+            if not self.out_path.is_dir():
+                raise FileNotFoundError(f"{self.out_path} does not exist.")
+
+        if self.mode not in MODES:
+            raise ValueError(f"{self.mode} is not a valid mode for caf.space to run in.")
 
 
 class ZoningTranslationInputs(BaseConfig):
@@ -225,7 +282,7 @@ class ZoningTranslationInputs(BaseConfig):
         self.cache_path.mkdir(exist_ok=True, parents=True)
 
     @classmethod
-    def write_example(cls, out_path: Path):
+    def write_example_space(cls, out_path: Path):
         """
         Write out an example config file.
 
@@ -240,13 +297,13 @@ class ZoningTranslationInputs(BaseConfig):
         """
         zones = {}
         for i in range(1, 3):
-            zones[i] = TransZoneSystemInfo.construct(
+            zones[i] = TransZoneSystemInfo.model_construct(
                 name=f"zone_{i}_name",
                 shapefile=Path(f"path/to/shapefile_{i}"),
                 id_col=f"id_col_for_zone_{i}",
                 point_shapefile=Path(f"path/to/point/shapefile"),
             )
-        lower = LowerZoneSystemInfo.construct(
+        lower = LowerZoneSystemInfo.model_construct(
             name="lower_zone_name",
             shapefile=Path("path/to/lower/shapefile"),
             id_col="id_col_for_lower_zone",
@@ -255,7 +312,7 @@ class ZoningTranslationInputs(BaseConfig):
             weight_id_col="id_col_in_weighting_data",
             weight_data_year=2018,
         )
-        ex = ZoningTranslationInputs.construct(
+        ex = ZoningTranslationInputs.model_construct(
             zone_1=zones[1],
             zone_2=zones[2],
             lower_zoning=lower,
