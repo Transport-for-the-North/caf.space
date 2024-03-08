@@ -4,6 +4,7 @@ import geopandas as gpd
 import shapely
 import numpy as np
 from dataclasses import dataclass
+from pathlib import Path
 import warnings
 import tqdm
 # pylint: disable=import-error,wrong-import-position
@@ -65,9 +66,12 @@ def project_line(longer, shorter_start, shorter_end):
         return lines[-1]
 
 
-def preprocess(gdf, a='A', b='B', buffer_dist=50):
+def preprocess(gdf, use_index=False, a='A', b='B', buffer_dist=50, crs="EPSG:27700"):
+    if gdf.crs != crs:
+        gdf.to_crs(crs, inplace=True)
     inner = gdf.copy()
-    inner.set_index([a,b], inplace=True)
+    if use_index is False:
+        inner.set_index([a,b], inplace=True)
     if 'MultiLineString' in inner.geometry.geom_type.unique():
         inner = inner.explode(index_parts=True).reset_index(level=[a, b]).drop(1)
         inner.set_index([a,b], inplace=True)
@@ -82,10 +86,18 @@ def preprocess(gdf, a='A', b='B', buffer_dist=50):
 def init_join(sat, itn, angle_threshold=60):
     joined = gpd.GeoDataFrame(sat[['angle', 'straightness']], geometry=sat['buffer']).sjoin(itn[['angle','geometry']])
     joined['angle'] = joined.apply(lambda row: relative_angle(row['angle_left'], row['angle_right']), axis=1)
-    joined.rename(columns={'index_right0': 'itn_A', 'index_right1': 'itn_B'}, inplace=True)
-    # Adjust angle to allow larger angles on bendy links
-    joined['mod_angle'] = joined['angle'] * joined['straightness'] ** 2
-    return joined.loc[np.absolute(joined['mod_angle']) < angle_threshold, ['itn_A', 'itn_B', 'angle', 'straightness']]
+    if 'index_right' in joined.columns:
+        joined.rename(columns={'index_right': 'ref_A'}, inplace=True)
+        # Adjust angle to allow larger angles on bendy links
+        joined['mod_angle'] = joined['angle'] * joined['straightness'] ** 2
+        return joined.loc[
+            np.absolute(joined['mod_angle']) < angle_threshold, ['ref_A', 'angle',
+                                                                 'straightness']]
+    else:
+        joined.rename(columns={'index_right0': 'ref_A', 'index_right1': 'ref_B'}, inplace=True)
+        # Adjust angle to allow larger angles on bendy links
+        joined['mod_angle'] = joined['angle'] * joined['straightness'] ** 2
+        return joined.loc[np.absolute(joined['mod_angle']) < angle_threshold, ['ref_A', 'ref_B', 'angle', 'straightness']]
 
 def find_con(longer, shorter):
     line = project_line(longer.geometry, shorter.start, shorter.end)
@@ -105,30 +117,30 @@ def find_con(longer, shorter):
     return ConvergenceValues(score, match_len, full_len, angle)
 
 if __name__ == "__main__":
-    sat = gpd.read_file(r"Y:\Data Strategy\GIS Shapefiles\NoHAM_2018_base_network\noham_clipped.shp")
-    itn = gpd.read_file(r"E:\tmjt_data\out\TMJT_link_reprojected_FILTERED.shp")
-    sat_processed = preprocess(sat).reset_index()
-    sat_processed = sat_processed[(sat_processed['A'] > 10000) & (sat_processed['B'] > 10000)]
-    sat_processed.set_index(['A','B'], inplace=True)
-    itn_processed = preprocess(itn, 'a', 'b')
-    joined = init_join(sat_processed, itn_processed).sort_index()
+    home_dir = Path(r"C:\Users\IsaacScott\projects\trafficmaster")
+    itn = gpd.read_file(home_dir / "man_itn.gpkg")
+    itn = itn[itn['rdclass'] !='ZC']
+    osm = gpd.read_file(home_dir / "manchester_os").set_index('unique_id')
+    itn_processed = preprocess(itn, a='a', b='b').reset_index()
+    itn_processed.set_index(['a', 'b'], inplace=True)
+    osm_processed = preprocess(osm, use_index=True)
+    joined = init_join(itn_processed, osm_processed).sort_index()
     out_out = {}
     returned_lengths = {}
     actual_length = {}
     for multi in tqdm.tqdm(joined.index.unique()):
-        feature = sat_processed.loc[multi]
-        itn_links = joined.loc[multi, ['itn_A', 'itn_B', 'angle', 'straightness']]
+        feature = itn_processed.loc[multi]
+        ref_links = joined.loc[multi, ['ref_A', 'angle', 'straightness']]
         out = {}
-        for link in itn_links.iterrows():
-            itn_A = link[1]['itn_A']
-            itn_B = link[1]['itn_B']
+        for link in ref_links.iterrows():
+            ref_A = link[1]['ref_A']
             angle = link[1]['angle']
             straightness = link[1]['straightness']
-            itn_link = itn_processed.loc[itn_A, itn_B]
-            if itn_link.geometry.length > feature.geometry.length:
-                stats = find_con(itn_link, feature)
+            ref_link = osm_processed.loc[ref_A]
+            if ref_link.geometry.length > feature.geometry.length:
+                stats = find_con(ref_link, feature)
             else:
-                stats = find_con(feature, itn_link)
+                stats = find_con(feature, ref_link)
             # hausdorff measure the furthest a feature ever is, so crow fly is better
             if stats is None:
                 continue
@@ -137,31 +149,11 @@ if __name__ == "__main__":
             #     # TODO need to take angle into account too - a short intersecting line can score well
             # else:
             #     convergence = np.inf
-            out[(itn_A, itn_B)] = (stats.rmse, stats.full_length, stats.crow_fly_length, stats.angle, angle, straightness)
+            out[ref_A] = (stats.rmse, stats.full_length, stats.crow_fly_length, stats.angle, angle, straightness)
         out = pd.DataFrame.from_dict(out, orient='index', columns=['convergence', 'full_length', 'crow_fly_length', 'segment_angle', 'angle', 'straightness'])
-        # if len(out[out['convergence'] < 0.5]) > 0:
-        #     filtered = out[out['convergence'] < 0.5]
-        # else:
-        #     filtered = out[out['convergence'] == out['convergence'].min()]
-        #     warnings.warn(f"No good matches for {multi}, returning the best."
-        #                   f"This could be due to a one way road, try increasing the "
-        #                   f"buffer distance to include more links.")
         filtered = out[out['convergence'] == out['convergence'].min()]
         out_out[multi] = filtered
         actual_length[multi] = feature.geometry.length
-        returned_lengths[multi] = itn_processed.loc[filtered.index].length
+        returned_lengths[multi] = osm_processed.loc[filtered.index].length
     df = pd.concat(out_out).reset_index()
-    df.index = pd.MultiIndex.from_tuples(df['level_2'])
-    df = df.set_index(['level_0', 'level_1'], append=True).drop(columns=['level_2'])
-    df.index.names = ['itn_A', 'itn_B', 'sat_A', 'sat_B']
-    sat_len = pd.DataFrame.from_dict(actual_length, orient='index', columns=['sat_length'])
-    match_len = pd.concat(returned_lengths)
-    match_len.name = 'match_length'
-    match_len.index.names = ['sat_A', 'sat_B', 'itn_A', 'itn_B']
-    sat_len.index = pd.MultiIndex.from_tuples(sat_len.index)
-    sat_len.index.names = ['sat_A', 'sat_B']
-    df = match_len.to_frame().join(sat_len).join(df).rename(columns={0: 'match_len'})
     print('debugging')
-
-
-
