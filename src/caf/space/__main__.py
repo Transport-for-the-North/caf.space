@@ -1,4 +1,5 @@
 """Main module."""
+
 import os
 from pathlib import Path
 import caf.space
