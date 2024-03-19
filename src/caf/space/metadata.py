@@ -1,4 +1,5 @@
 """Module for metadata. None of this is currently used but hasn't been deleted."""
+
 from __future__ import annotations
 import datetime
 from pathlib import Path
