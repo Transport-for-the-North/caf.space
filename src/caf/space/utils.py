@@ -8,6 +8,7 @@ import pandas as pd
 import geopandas as gpd
 import numpy as np
 from scipy.spatial import cKDTree
+import shapely
 
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
@@ -120,3 +121,46 @@ def points_update(
     points.set_index(id_col, inplace=True)
     points.drop(list(matches[matches_id]), axis=0, inplace=True)
     return points.reset_index()
+
+def line_to_points(line_gdf, id_col):
+    """
+    Decompose a line geodataframe into points.
+
+    This points gdf will only contain an arbitrary index range(len(gdf)), and
+    columns containing the id_col from the original gdf, and the new point
+    geometry.
+    """
+    points = line_gdf[[id_col, 'geometry']].copy()
+    points['point_geom'] = line_gdf.apply(lambda x: [shapely.Point(y) for y in x.geometry.coords])
+    points = points.explode('point_geom')
+    return gpd.GeoDataFrame(points[id_col], geometry=points['point_geom'])
+
+def calc_gradient(a: shapely.Point, b: shapely.Point):
+    run = np.sqrt((a.y - b.y) ** 2 + (a.x - b.x) ** 2)
+    rise = a.z - b.z
+    return rise / run
+
+def line_gradients(line):
+    points = line.coords
+    grads = []
+    for idx in range(len(points) - 1):
+        a = shapely.Point(points[idx])
+        b = shapely.Point(points[idx+1])
+        gradient = calc_gradient(a, b)
+        mid_point = shapely.Point([(a.x + b.x)/2, (a.y + b.y)/2, (a.z + b.z)/2])
+        grads.append((mid_point, gradient))
+    return grads
+
+def grad_points_gdf(gdf):
+    grad_list = gdf.geometry.apply(lambda x: line_gradients(x)).explode().to_list()
+    grad_frame = gpd.GeoDataFrame(grad_list, columns=['geometry', 'gradient'])
+    return grad_frame
+
+if __name__ == "__main__":
+    line_gdf = gpd.read_file(r"C:\Users\IsaacScott\projects\space\test_itn.shp")
+    grads = grad_points_gdf(line_gdf)
+    print("debugging")
+
+
+
+
