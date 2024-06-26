@@ -57,7 +57,7 @@ def read_zone_shapefiles(
             zone.set_crs = "EPSG:27700"
         elif zone.crs != "EPSG:27700":
             warnings.warn(f"Zone {feature.name} has CRS {zone.crs}. Setting to EPSG:27700.")
-            zone.geometry.to_crs("EPSG:27700", inplace=True)
+            zone.geometry = zone.geometry.to_crs("EPSG:27700")
         zone = zone.dropna(axis=1, how="all")
         LOG.info(
             "Count of %s features: %s",
