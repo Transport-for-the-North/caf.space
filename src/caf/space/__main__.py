@@ -25,12 +25,10 @@ if __name__ == "__main__":
             trans = caf.space.ZoneTranslation(config)
             if args.mode == "spatial":
                 trans.spatial_translation().to_csv(
-                    args.out_path / f"{config.zone_1.name}_{config.zone_2.name}_spatial.csv",
-                    index=False,
+                    args.out_path / f"{config.zone_1.name}_{config.zone_2.name}_spatial.csv"
                 )
             else:
                 trans.weighted_translation().to_csv(
                     args.out_path
-                    / f"{config.zone_1.name}_{config.zone_2.name}_{config.method}.csv",
-                    index=False,
+                    / f"{config.zone_1.name}_{config.zone_2.name}_{config.method}.csv"
                 )
