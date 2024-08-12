@@ -158,17 +158,20 @@ def main(
     target_processed = preprocess(target_links)
     ref_processed = preprocess(ref_links)
     joined = init_join(target_processed, ref_processed)
+    missing_targ = target_processed.drop(joined.index.unique())
     out_out = {}
     actual_length = {}
     for multi in tqdm(joined.index.unique()):
         feature = target_processed.loc[multi]
         links_iter = joined.loc[multi]
+        if len(links_iter) == 0:
+            print('debugging')
         out = {}
         for link in links_iter.iterrows():
             link = link[1]
             ref_A = [link["ref_A"]]
             try:
-                ref_B = link["ref_B"]
+                ref_B = [link["ref_B"]]
             except KeyError:
                 ref_B = []
             refs = tuple(ref_A + ref_B)
@@ -208,20 +211,32 @@ def main(
             actual_length[multi] = feature.geometry.length
     actual_length = pd.Series(actual_length, name='target_link_length')
     df = pd.concat(out_out)
+    df.index = pd.MultiIndex.from_tuples(df['level_2'])
+    df.set_index(['level_0', 'level_1'], inplace=True, append=True)
+    df.drop('level_2', axis=1, inplace=True)
     targ_names = target_links.list_ident
     ref_names = ref_links.list_ident
-    df.index.names = targ_names + ref_names
+    df.index.names = ref_names +targ_names
     actual_length.index.names = targ_names
     df = actual_length.to_frame().join(df)
     df['overlap'] = df['ref_length'] / df['target_link_length']
-    return df
+    return df, missing_targ
+
+def process_missing(lookup, gdf, threshold):
+    # Completely missing will be assigned np.inf. User can decide what
+    # threshold to try another method beneath.
+    missing_ind = lookup[lookup['convergence'] > threshold].index
+    missing = gdf.loc[missing_ind].copy()
+    matching = gdf.drop(missing_ind).copy()
 
 
 if __name__ == "__main__":
     home_dir = Path(r"C:\Users\IsaacScott\projects\trafficmaster")
-    itn = gpd.read_file(home_dir / "man_itn.gpkg")
+    itn = gpd.read_file(r"E:\tmjt_data\out\TMJT_link.shp", engine='pyogrio')
     itn = itn[itn["rdclass"] != "ZC"]
-    osm = gpd.read_file(home_dir / "manchester_os").set_index('unique_id')
-    osm = LinkInfo(gdf=osm, identifier='unique_id', name='osm')
+    # osm = gpd.read_file(home_dir / "manchester_os").set_index('unique_id')
+    # osm = LinkInfo(gdf=osm, identifier='unique_id', name='osm')
     itn = LinkInfo(gdf=itn, identifier=['a', 'b'], name='itn')
-    main(osm, itn)
+    noham = gpd.read_file(r"Y:\Data Strategy\GIS Shapefiles\NoHAM_2018_base_network\NoHAM_2018.shp", engine='pyogrio')
+    noham = LinkInfo(gdf=noham[(noham['A']>10000) & (noham['B']>10000)], identifier=['A','B'], name='noham')
+    out, missing = main(itn, noham)
