@@ -10,7 +10,6 @@ import sys
 import logging
 
 # Third Party
-from tkinterweb import HtmlFrame, Notebook
 from caf.space import inputs, zone_translation
 
 # Local Imports
@@ -773,7 +772,7 @@ class NotebookApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.logger = logging.getLogger(__package__)
-        self.notebook = Notebook(self)
+        self.notebook = ttk.Notebook(self)
         self.notebook.pack(fill="both", expand=True)
 
         # Add MyUI instance as a tab
@@ -781,9 +780,6 @@ class NotebookApp(tk.Tk):
         my_ui = UiTab(master=my_ui_tab)
         my_ui.pack(fill="both", expand=True)
         self.notebook.add(my_ui_tab, text="Zone translation parameters")
-        readme_tab = HtmlFrame(self.notebook, messages_enabled=False)
-        readme_tab.load_website("https://cafspcae.readthedocs.io/en/latest/")
-        self.notebook.add(readme_tab, text="Documentation")
         console_tab = ttk.Frame(self.notebook)
         self.console_text = ConsoleFrame(console_tab)
         self._redirect_logging()

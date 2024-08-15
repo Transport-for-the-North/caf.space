@@ -21,7 +21,6 @@ from pathlib import Path
 import pandas as pd
 from typing import Optional
 from pydantic import field_validator
-from enum import Enum
 
 # Third party imports
 from caf.toolkit import BaseConfig
