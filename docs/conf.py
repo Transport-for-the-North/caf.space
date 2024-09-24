@@ -13,16 +13,22 @@
 # import os
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
-
-
-# -- Project information -----------------------------------------------------
+import sys
+import os
+from pathlib import Path
 import caf.space
 
-project = "caf.space"
-copyright = "2023, TfN"
-author = "Isaac Scott"
-# Napoleon settings
+dir_path = Path(__file__).parents[1]
+source = dir_path / "src" / "caf" / "space"
 
+sys.path.insert(0, os.path.abspath(str(source)))
+
+# -- Project information -----------------------------------------------------
+project = "caf.space"
+copyright = "2023, Transport for the North"
+author = "Transport for the North"
+
+# Napoleon settings
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
 

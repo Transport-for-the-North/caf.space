@@ -10,7 +10,6 @@ import sys
 import logging
 
 # Third Party
-from tkinterweb import HtmlFrame, Notebook
 from caf.space import inputs, zone_translation
 
 # Local Imports
@@ -22,6 +21,7 @@ from caf.space import inputs, zone_translation
 # # # CONSTANTS # # #
 SHAPE_FILEFILTER = (("Shapefiles", "*.shp"), ("All files", "*.*"))
 CSV_FILEFILTER = (("CSV", "*.csv"), ("All files", "*.*"))
+GEO_PREFIXES = ["shp", "gpkg", "geojson", "json"]
 
 # # # CLASSES # # #
 # pylint: disable=too-many-ancestors, too-many-instance-attributes, unused-argument
@@ -355,7 +355,8 @@ class ZoneFrame(ttk.LabelFrame):
         """
         Confirm that this frame is sufficiently provided.
         """
-        return self.shape_var.get().endswith(".shp")
+        prefix = self.shape_var.get().split(".")[-1]
+        return prefix in GEO_PREFIXES
 
 
 class LowerZoneFrame(ttk.LabelFrame):
@@ -470,7 +471,8 @@ class LowerZoneFrame(ttk.LabelFrame):
         -------
         Bool
         """
-        return self.shape_var.get().endswith(".shp") and self.weight_var.get().endswith(".csv")
+        prefix = self.shape_var.get().split(".")[-1]
+        return prefix in GEO_PREFIXES
 
 
 class ParametersFrame(ttk.LabelFrame):
@@ -773,7 +775,7 @@ class NotebookApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.logger = logging.getLogger(__package__)
-        self.notebook = Notebook(self)
+        self.notebook = ttk.Notebook(self)
         self.notebook.pack(fill="both", expand=True)
 
         # Add MyUI instance as a tab
@@ -781,9 +783,6 @@ class NotebookApp(tk.Tk):
         my_ui = UiTab(master=my_ui_tab)
         my_ui.pack(fill="both", expand=True)
         self.notebook.add(my_ui_tab, text="Zone translation parameters")
-        readme_tab = HtmlFrame(self.notebook, messages_enabled=False)
-        readme_tab.load_website("https://cafspcae.readthedocs.io/en/latest/")
-        self.notebook.add(readme_tab, text="Documentation")
         console_tab = ttk.Frame(self.notebook)
         self.console_text = ConsoleFrame(console_tab)
         self._redirect_logging()
