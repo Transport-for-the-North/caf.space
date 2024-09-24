@@ -695,7 +695,8 @@ class UiTab(ttk.Frame):
         params, output_path = self.main_params.get()
         trans = zone_translation.ZoneTranslation(params)
         trans.weighted_translation().to_csv(
-            output_path / f"{params.zone_1.name}_{params.zone_2.name}_{params.method}.csv"
+            output_path / f"{params.zone_1.name}_{params.zone_2.name}_{params.method}.csv",
+            index=False,
         )
 
     def run_spatial(self):
@@ -709,7 +710,8 @@ class UiTab(ttk.Frame):
         params, output_path = self.main_params.get()
         trans = zone_translation.ZoneTranslation(params)
         trans.spatial_translation().to_csv(
-            output_path / f"{params.zone_1.name}_{params.zone_2.name}_spatial.csv"
+            output_path / f"{params.zone_1.name}_{params.zone_2.name}_spatial.csv",
+            index=False,
         )
 
 
