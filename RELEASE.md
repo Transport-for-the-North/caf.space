@@ -22,4 +22,3 @@ Below, a brief summary of patches made since the previous version can be found.
 ### Next Release Notes
 - Update to work with latest geopandas (e.g. 1.x)
 - Fix some issues with pydantic validators
-- Update documentation to match other caf packages
