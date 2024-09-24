@@ -53,7 +53,7 @@ edit_install = [
 "Bug Tracker" = "https://github.com/Transport-for-the-North/caf.space/issues"
 Homepage = "https://github.com/Transport-for-the-North/caf.space"
 Source = "https://github.com/Transport-for-the-North/caf.space"
-Documentation = "https://cafspcae.readthedocs.io/en/latest/"
+Documentation = "http://cafspace.rtfd.io/"
 
 # Packaging options
 [tool.setuptools.packages.find]
