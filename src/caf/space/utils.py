@@ -47,9 +47,9 @@ def generate_points(point_folder: Path, points_name: str, zones_path: Path, join
         update = main_zones.loc[
             point_polys.loc[i, "geometry"].buffer(1).overlaps(main_zones.geometry), join_col
         ].to_list()
-        main_zones.loc[
-            main_zones[join_col] == point_polys.loc[i, join_col], join_col
-        ] = update[0]
+        main_zones.loc[main_zones[join_col] == point_polys.loc[i, join_col], join_col] = (
+            update[0]
+        )
     dissolved = main_zones.dissolve(by=join_col)
     point_polys.geometry = point_polys.centroid
     point_polys.to_file(point_folder / "point_zones.shp")
