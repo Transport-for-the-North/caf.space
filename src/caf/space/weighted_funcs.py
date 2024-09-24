@@ -3,6 +3,7 @@ Contains functionality for creating weighted translations.
 
 These are called in the 'weighted_trans' method in ZoneTranslation.
 """
+
 ##### IMPORTS #####
 from typing import Optional
 import logging
@@ -40,11 +41,16 @@ def _weighted_lower(
     """
     lower_zone = gpd.read_file(lower_zoning.shapefile)
     lower_zone.set_index(lower_zoning.id_col, inplace=True)
-    weighting = pd.read_csv(
-        lower_zoning.weight_data,
-        index_col=lower_zoning.weight_id_col,
-    )
-    weighted = lower_zone.join(weighting)
+    if lower_zoning.weight_data is not None:
+        weighting = pd.read_csv(
+            lower_zoning.weight_data,
+            index_col=lower_zoning.weight_id_col,
+        )
+        weighted = lower_zone.join(weighting)
+    else:
+        weighted = lower_zone
+        if lower_zoning.data_col not in weighted.columns:
+            raise ValueError("Data col not in lower zoning.")
     missing = weighted[lower_zoning.data_col].isna().sum()
     if missing > 0:
         warnings.warn(
