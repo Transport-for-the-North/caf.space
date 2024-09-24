@@ -21,6 +21,7 @@ from caf.space import inputs, zone_translation
 # # # CONSTANTS # # #
 SHAPE_FILEFILTER = (("Shapefiles", "*.shp"), ("All files", "*.*"))
 CSV_FILEFILTER = (("CSV", "*.csv"), ("All files", "*.*"))
+GEO_PREFIXES = ["shp", "gpkg", "geojson", "json"]
 
 # # # CLASSES # # #
 # pylint: disable=too-many-ancestors, too-many-instance-attributes, unused-argument
@@ -354,7 +355,8 @@ class ZoneFrame(ttk.LabelFrame):
         """
         Confirm that this frame is sufficiently provided.
         """
-        return self.shape_var.get().endswith(".shp")
+        prefix = self.shape_var.get().split(".")[-1]
+        return prefix in GEO_PREFIXES
 
 
 class LowerZoneFrame(ttk.LabelFrame):
@@ -469,7 +471,8 @@ class LowerZoneFrame(ttk.LabelFrame):
         -------
         Bool
         """
-        return self.shape_var.get().endswith(".shp") and self.weight_var.get().endswith(".csv")
+        prefix = self.shape_var.get().split(".")[-1]
+        return prefix in GEO_PREFIXES
 
 
 class ParametersFrame(ttk.LabelFrame):

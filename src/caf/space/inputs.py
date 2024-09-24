@@ -20,7 +20,7 @@ import os
 from pathlib import Path
 import pandas as pd
 from typing import Optional
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 
 # Third party imports
 from caf.toolkit import BaseConfig
@@ -56,37 +56,17 @@ class ZoneSystemInfo(BaseConfig):
     shapefile: Path
     id_col: str
 
-    @field_validator("shapefile")
-    def _path_exists(cls, v):
-        """
-        Validate a path exists.
-
-        Raises
-        ------
-        ValueError: Informs user the path given is incorrect.
-
-        Returns
-        -------
-        Unchanged path if no error is raised.
-        """
-        if os.path.isfile(v) is False:
-            raise ValueError(
-                f"The path provided for {v} does not exist."
-                "If this path is on a network drive make sure you are connected"
-            )
-        return v
-
-    @field_validator("id_col")
-    def _id_col_in_file(cls, v, values):
-        with fiona.collection(values.data["shapefile"]) as source:
+    @model_validator(mode="before")
+    def _id_col_in_file(cls, values):
+        with fiona.collection(values["shapefile"]) as source:
             schema = source.schema
-            if v not in schema["properties"].keys():
+            if values["id_col"] not in schema["properties"].keys():
                 raise ValueError(
-                    f"The id_col provided, {v}, does not appear"
+                    f"The id_col provided, {values['id_col']}, does not appear"
                     f" in the given shapefile. Please choose from:"
                     f"{schema['properties'].keys()}."
                 )
-        return v
+        return values
 
 
 class TransZoneSystemInfo(ZoneSystemInfo):
@@ -152,11 +132,12 @@ class LowerZoneSystemInfo(ZoneSystemInfo):
             raise FileNotFoundError(f"The weight data path provided for {v} does not exist.")
         return v
 
-    @field_validator("data_col", "weight_id_col")
-    def _valid_data_col(cls, v, values):
-        cols = pd.read_csv(values.data["weight_data"], nrows=1).columns
-        if v not in cols:
-            raise ValueError(f"The given col, {v}, does not appear in the weight data.")
+    @model_validator(mode="before")
+    def _valid_data_col(cls, values):
+        cols = pd.read_csv(values["weight_data"], nrows=1).columns
+        for v in [values["data_col"], values["weight_id_col"]]:
+            if v not in cols:
+                raise ValueError(f"The given col, {v}, does not appear in the weight data.")
         return v
 
 
