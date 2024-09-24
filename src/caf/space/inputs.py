@@ -138,7 +138,7 @@ class LowerZoneSystemInfo(ZoneSystemInfo):
         for v in [values["data_col"], values["weight_id_col"]]:
             if v not in cols:
                 raise ValueError(f"The given col, {v}, does not appear in the weight data.")
-        return v
+        return values
 
 
 @dataclasses.dataclass
