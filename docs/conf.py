@@ -25,15 +25,20 @@ sys.path.insert(0, os.path.abspath(str(source)))
 
 # -- Project information -----------------------------------------------------
 project = "caf.space"
-copyright = "2023, Transport for the North"
+copyright = "2024, Transport for the North"
 author = "Transport for the North"
 
 # Napoleon settings
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
 
+# Local Imports
+# The short X.Y version.
+
 import caf.space
+
 version = str(caf.space.__version__)
+
 # The full version, including alpha/beta/rc tags
 release = version
 
@@ -53,6 +58,8 @@ extensions = [
 ]
 
 numpydoc_show_class_members = False
+
+automodapi_inheritance_diagram = False
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
