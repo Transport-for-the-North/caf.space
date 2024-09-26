@@ -1,11 +1,19 @@
 """Main module."""
+
 import os
 from pathlib import Path
 import caf.space
 from caf.toolkit import LogHelper, ToolDetails
 
 
-if __name__ == "__main__":
+def main():
+    """main function of caf space.
+
+    Raises
+    ------
+    ValueError
+        if a translation config is not provided when required
+    """
     args = caf.space.inputs.SpaceArguments.parse()
     args.validate()
     out_path = args.out_path
@@ -34,3 +42,7 @@ if __name__ == "__main__":
                     / f"{config.zone_1.name}_{config.zone_2.name}_{config.method}.csv",
                     index=False,
                 )
+
+
+if __name__ == "__main__":
+    main()
