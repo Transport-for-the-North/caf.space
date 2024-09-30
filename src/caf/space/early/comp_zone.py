@@ -5,6 +5,7 @@
 # Third Party
 import geopandas as gpd
 import pandas as pd
+from functools import reduce
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
 # Local imports here
@@ -62,3 +63,57 @@ def produce_zoning(ext_zones: ZoneSystemInfo,
     int_gdf.rename(columns={int_zones.id_col: f"{int_zones.name}_{ext_zones.name}_id"}, inplace=True)
     ext_gdf.rename(columns={ext_zones.id_col: f"{int_zones.name}_{ext_zones.name}_id"}, inplace=True)
     return gpd.GeoDataFrame(pd.concat([int_gdf, ext_gdf]), geometry='geometry')
+
+
+def filter_intersecting_features(geodataframes):
+    filtered_gdfs = []
+
+    # Iterate over each GeoDataFrame
+    for i, gdf in enumerate(geodataframes):
+        # Start with the current GeoDataFrame
+        filtered_gdf = gdf.copy()
+
+        # Intersect with all other GeoDataFrames
+        for j, other_gdf in enumerate(geodataframes):
+            if i != j:  # Skip the current GeoDataFrame itself
+                # Perform spatial join to retain only features that intersect with other_gdf
+                filtered_gdf = gpd.sjoin(filtered_gdf, other_gdf, how="inner", op="intersects")
+
+                # Drop unnecessary columns from the spatial join result to clean up
+                filtered_gdf = filtered_gdf.drop(
+                    columns=[col for col in filtered_gdf.columns if col.endswith('_right')],
+                    errors='ignore')
+
+        # Append the filtered GeoDataFrame to the list
+        filtered_gdfs.append(filtered_gdf.drop_duplicates(subset='geometry'))
+
+    return filtered_gdfs
+
+def minimum_common_zoning(zone_systems: list[gpd.GeoDataFrame], size_threshold: int):
+    filtered_gdfs = filter_intersecting_features(zone_systems)
+    tiles: gpd.GeoDataFrame = reduce(lambda x, y: gpd.overlay(x, y), filtered_gdfs)
+    out: gpd.GeoDataFrame = tiles[tiles.area > size_threshold]
+    out['geometry'] = out['geometry'].snap(out['geometry'])
+
+
+
+if __name__ == "__main__":
+    from shapely.geometry import Polygon
+    normits = gpd.read_file(r"E:\shapefiles\normits_v1.shp")
+    normits = normits[normits.area > 1000]
+    cornwall = normits[normits['ZONE NAME'] == 'Cornwall']
+    new_corn = cornwall['geometry'].snap(cornwall.unary_union, tolerance=100)
+    # Create three polygons with slightly offset vertices
+    polygon_1 = Polygon([(0, 0), (2, 0), (2, 2), (0, 2), (0, 0)])  # Square
+    polygon_2 = Polygon(
+        [(0.1, 0.1), (2.1, 0.1), (2.1, 2.1), (0.1, 2.1), (0.1, 0.1)])  # Slightly offset
+    polygon_3 = Polygon(
+        [(0.2, 0.2), (2.2, 0.2), (2.2, 2.2), (0.2, 2.2), (0.2, 0.2)])  # Slightly more offset
+
+    # Create three GeoDataFrames
+    gdf_1 = gpd.GeoDataFrame({'geometry': [polygon_1]}, crs="EPSG:4326")
+    gdf_2 = gpd.GeoDataFrame({'geometry': [polygon_2]}, crs="EPSG:4326")
+    gdf_3 = gpd.GeoDataFrame({'geometry': [polygon_3]}, crs="EPSG:4326")
+
+    gdf_1['geometry'] = gdf_1['geometry'].snap(gdf_2['geometry'], tolerance=1)
+    print('debugging')

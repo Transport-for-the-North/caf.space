@@ -113,9 +113,9 @@ class LowerZoneSystemInfo(ZoneSystemInfo):
         should consider whether your weighting data is appropriate.
     """
 
-    weight_data: Path
+    weight_data: Optional[Path] = None
     data_col: str
-    weight_id_col: str
+    weight_id_col: Optional[str] = None
     weight_data_year: int
 
     def _lower_to_higher(self) -> TransZoneSystemInfo:
@@ -134,8 +134,15 @@ class LowerZoneSystemInfo(ZoneSystemInfo):
 
     @model_validator(mode="before")
     def _valid_data_col(cls, values):
-        cols = pd.read_csv(values["weight_data"], nrows=1).columns
-        for v in [values["data_col"], values["weight_id_col"]]:
+        if "weight_data" in values.keys():
+            cols = pd.read_csv(values["weight_data"], nrows=1).columns
+            id_col = values["weight_id_col"]
+        else:
+            with fiona.collection(values["shapefile"]) as source:
+                schema = source.schema
+                cols = list(schema['properties'].keys())
+            id_col=values["id_col"]
+        for v in [values["data_col"], id_col]:
             if v not in cols:
                 raise ValueError(f"The given col, {v}, does not appear in the weight data.")
         return values
