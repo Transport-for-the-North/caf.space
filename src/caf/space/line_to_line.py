@@ -122,7 +122,7 @@ def init_join(targ, ref, angle_threshold=60):
             ["ref_A", "angle", "straightness"],
         ]
     else:
-        joined.rename(columns={"index_right0": "ref_A", "index_right1": "ref_B"}, inplace=True)
+        joined.rename(columns={"a": "ref_A", "b": "ref_B"}, inplace=True)
         # Adjust angle to allow larger angles on bendy links
         joined["mod_angle"] = joined["angle"] * joined["straightness"] ** 2
         return joined.loc[
@@ -177,6 +177,10 @@ def main(
             refs = tuple(ref_A + ref_B)
             straightness = link["straightness"]
             ref_link = ref_processed.loc[refs]
+            if len(ref_link) > 1:
+                ref_link = ref_link.iloc[0].squeeze()
+            else:
+                ref_link = ref_link.squeeze()
             if ref_link.geometry.length > feature.geometry.length:
                 stats = find_con(ref_link, feature)
             else:
@@ -206,11 +210,20 @@ def main(
             )
             if len(multi) == 1:
                 multi = multi[0]
-            filtered = out[out["convergence"] == out["convergence"].min()]
-            out_out[multi] = filtered
+            out.sort_values(by='convergence', inplace=True)
+            temp_length = 0
+            out_ind = []
+            for idx in range(len(out)):
+                temp_length += out.iloc[idx]['ref_length']
+                if temp_length < feature.geometry.length:
+                    out_ind.append(out.index[idx])
+                else:
+                    break
+            # filtered = out[out["convergence"] == out["convergence"].min()]
+            out_out[multi] = out.loc[out_ind]
             actual_length[multi] = feature.geometry.length
     actual_length = pd.Series(actual_length, name='target_link_length')
-    df = pd.concat(out_out)
+    df = pd.concat(out_out).reset_index()
     df.index = pd.MultiIndex.from_tuples(df['level_2'])
     df.set_index(['level_0', 'level_1'], inplace=True, append=True)
     df.drop('level_2', axis=1, inplace=True)
@@ -231,12 +244,14 @@ def process_missing(lookup, gdf, threshold):
 
 
 if __name__ == "__main__":
-    home_dir = Path(r"C:\Users\IsaacScott\projects\trafficmaster")
-    itn = gpd.read_file(r"E:\tmjt_data\out\TMJT_link.shp", engine='pyogrio')
-    itn = itn[itn["rdclass"] != "ZC"]
+    home_dir = Path(r"E:\tmjt_data\out\lookup")
+    itn = gpd.read_file(r"T:\AK\ForJourneyTimes\JTOutput\tmjt_gb_lsoa.gpkg", engine='pyogrio')
+    # itn = itn[itn["rdclass"] != "ZC"]
     # osm = gpd.read_file(home_dir / "manchester_os").set_index('unique_id')
     # osm = LinkInfo(gdf=osm, identifier='unique_id', name='osm')
     itn = LinkInfo(gdf=itn, identifier=['a', 'b'], name='itn')
-    noham = gpd.read_file(r"Y:\Data Strategy\GIS Shapefiles\NoHAM_2018_base_network\NoHAM_2018.shp", engine='pyogrio')
+    noham = gpd.read_file(r"T:\AK\ForJourneyTimes\SATURNNetwork\NoHAM_Base.shp", engine='pyogrio')
     noham = LinkInfo(gdf=noham[(noham['A']>10000) & (noham['B']>10000)], identifier=['A','B'], name='noham')
     out, missing = main(itn, noham)
+    out.to_csv(home_dir / "sat_rami_lookup.csv")
+    print('debugging')
