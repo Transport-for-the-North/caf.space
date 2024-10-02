@@ -5,11 +5,13 @@
 # Third Party
 import geopandas as gpd
 import pandas as pd
+import warnings
 from functools import reduce
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
 # Local imports here
-from caf.space.inputs import ZoneSystemInfo
+from caf.space.inputs import ZoneSystemInfo, TransZoneSystemInfo
+from caf.space import ZoneTranslation, ZoningTranslationInputs
 # pylint: enable=import-error,wrong-import-position
 
 # # # CONSTANTS # # #
@@ -17,6 +19,19 @@ from caf.space.inputs import ZoneSystemInfo
 # # # CLASSES # # #
 
 # # # FUNCTIONS # # #
+def check_nesting(target_zoning: TransZoneSystemInfo, ref_zoning: list[TransZoneSystemInfo]):
+    out = {}
+    for zones in ref_zoning:
+        config = ZoningTranslationInputs(zone_1=target_zoning,
+                                         zone_2=zones)
+        trans = ZoneTranslation(config).spatial_translation()
+        factor_col = f"{target_zoning.name}_to_{zones.name}"
+        non_nested = trans[trans[factor_col] < 1]
+        if len(non_nested > 0):
+            warnings.warn(f"Non-nested zones between {zones.name} and {target_zoning.name}."
+                          f"{non_nested}")
+        out[zones.name] = non_nested
+    return out
 def produce_zoning(ext_zones: ZoneSystemInfo,
                    int_zones: ZoneSystemInfo,
                    int_bound: ZoneSystemInfo):
