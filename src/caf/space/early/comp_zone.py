@@ -7,6 +7,8 @@ import geopandas as gpd
 import pandas as pd
 import warnings
 from functools import reduce
+import pathlib
+import os
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
 # Local imports here
@@ -20,10 +22,14 @@ from caf.space import ZoneTranslation, ZoningTranslationInputs
 
 # # # FUNCTIONS # # #
 def check_nesting(target_zoning: TransZoneSystemInfo, ref_zoning: list[TransZoneSystemInfo]):
+    local_cache = pathlib.Path('local_cache')
+    local_cache.mkdir(exist_ok=True, parents=False)
     out = {}
     for zones in ref_zoning:
         config = ZoningTranslationInputs(zone_1=target_zoning,
-                                         zone_2=zones)
+                                         zone_2=zones,
+                                         sliver_tolerance=0.95,
+                                         cache_path=local_cache)
         trans = ZoneTranslation(config).spatial_translation()
         factor_col = f"{target_zoning.name}_to_{zones.name}"
         non_nested = trans[trans[factor_col] < 1]
@@ -32,6 +38,7 @@ def check_nesting(target_zoning: TransZoneSystemInfo, ref_zoning: list[TransZone
                           f"{non_nested}")
         out[zones.name] = non_nested
     return out
+
 def produce_zoning(ext_zones: ZoneSystemInfo,
                    int_zones: ZoneSystemInfo,
                    int_bound: ZoneSystemInfo):
@@ -113,6 +120,26 @@ def minimum_common_zoning(zone_systems: list[gpd.GeoDataFrame], size_threshold: 
 
 
 if __name__ == "__main__":
+    norms = TransZoneSystemInfo(name='norms',
+                                    shapefile=r"Y:\NoRMS\Zoning\Norms\Norms_Zoning-2.11\norms_zoning_freeze_2.11.shp",
+                                    id_col='unique_id')
+
+    normits = TransZoneSystemInfo(name='normits_v2',
+                                      shapefile=r"Y:\Data Strategy\GIS Shapefiles\NorMITs 2024 zone system\NorMITs zone - final\NorMITs_zoning.shp",
+                                      id_col='normits_id')
+
+    noham = TransZoneSystemInfo(name='noham_rebase',
+                               shapefile=r"P:\02_NorTMS Rebase\01_Highway\03.Data\06. Confirmed Zone Structure\2.NoHAM_zone_updates-TfN\NoHAM_zones_v3.4\NoHAM_Zones_v3.4.shp",
+                               id_col="ZONE ID_v3")
+
+    luti = TransZoneSystemInfo(name='luti',
+                              shapefile=r"E:\shapefiles\NLUTI_v4.gpkg",
+                              id_col='zone_id')
+
+    checks = check_nesting(target_zoning=normits,
+                           ref_zoning=[noham, norms, luti]
+                           )
+
     from shapely.geometry import Polygon
     normits = gpd.read_file(r"E:\shapefiles\normits_v1.shp")
     normits = normits[normits.area > 1000]
