@@ -18,8 +18,8 @@ import os
 from pathlib import Path
 
 
-dir_path = Path(__file__).parents[1]
-source = dir_path / "src" / "caf" / "space"
+dir_path = Path(__file__).parents[2]
+source = dir_path / "src"
 
 sys.path.insert(0, os.path.abspath(str(source)))
 
