@@ -140,6 +140,34 @@ class LowerZoneSystemInfo(ZoneSystemInfo):
                 raise ValueError(f"The given col, {v}, does not appear in the weight data.")
         return values
 
+def _create_parser() -> argparse.ArgumentParser:
+    """Create CLI argument parser for running translation with a config."""
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    parser.add_argument(
+        "--mode",
+        type=str,
+        help="Mode to run translation in; spatial, weighted or GUI.",
+        default="GUI",
+        required=False,
+    )
+    parser.add_argument(
+        "--config",
+        type=Path,
+        help="path to config file containing parameters",
+        default=None,
+        required=False,
+    )
+    parser.add_argument(
+        "--out_path",
+        type=Path,
+        help="Path the translation will be saved in.",
+        default=None,
+        required=False,
+    )
+
+    return parser
 
 @dataclasses.dataclass
 class SpaceArguments:
@@ -152,30 +180,7 @@ class SpaceArguments:
     @classmethod
     def parse(cls) -> SpaceArguments:
         """Parse command line argument."""
-        parser = argparse.ArgumentParser(
-            description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter
-        )
-        parser.add_argument(
-            "--mode",
-            type=str,
-            help="Mode to run translation in; spatial, weighted or GUI.",
-            default="GUI",
-            required=False,
-        )
-        parser.add_argument(
-            "--config",
-            type=Path,
-            help="path to config file containing parameters",
-            default=None,
-            required=False,
-        )
-        parser.add_argument(
-            "--out_path",
-            type=Path,
-            help="Path the translation will be saved in.",
-            default=None,
-            required=False,
-        )
+        parser = _create_parser()
 
         parsed_args = parser.parse_args()
         return SpaceArguments(parsed_args.config, parsed_args.mode, parsed_args.out_path)

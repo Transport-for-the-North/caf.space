@@ -47,7 +47,7 @@ More details can be found in :ref:`tool usage`.
 Python
 ^^^^^^
 
-When using caf.space functionality within Python the recommended alias is `cs`:
+When using caf.space functionality within Python the recommended alias is ``cs``:
 
 .. code:: python
 

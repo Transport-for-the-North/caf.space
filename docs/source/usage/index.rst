@@ -13,14 +13,8 @@ most purposes a weighted translation will be more accurate, and it is up to the 
 decide the most appropriate weighting data to use.
 
 
-Graphical User Interface
-------------------------
+.. toctree::
+    :maxdepth: 2
 
-.. todo::
-    Does CAF space have a GUI?
-
-Command-Line Interface
-----------------------
-
-.. todo::
-    Does CAF space have a CLI?
+    gui
+    cli
