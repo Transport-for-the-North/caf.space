@@ -75,7 +75,7 @@ autodoc_typehints = "description"
 
 # Auto summary options
 autosummary_generate = True
-autosummary_imported_members = True
+autosummary_imported_members = False
 modindex_common_prefix = ["caf.", "caf.space."]
 
 # -- Options for Sphinx Examples gallery -------------------------------------
