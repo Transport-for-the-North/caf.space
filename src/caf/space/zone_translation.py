@@ -5,13 +5,17 @@ Module containing ZoneTranslation class.
 Class for producing zone translations from a set of inputs, provided by the
 ZoneTranslationInputs class in 'inputs'.
 """
+# Built-Ins
 import logging
 import warnings
 from pathlib import Path
-import pandas as pd
-import geopandas as gpd
 
-from caf.space import weighted_funcs, zone_correspondence, inputs, utils
+# Third Party
+import geopandas as gpd
+import pandas as pd
+
+# Local Imports
+from caf.space import inputs, utils, weighted_funcs, zone_correspondence
 
 ##### CONSTANTS #####
 LOG = logging.getLogger("SPACE")

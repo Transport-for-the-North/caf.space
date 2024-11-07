@@ -1,10 +1,16 @@
 """
 Module for testing the weighted_funcs module
 """
+
+# Built-Ins
 from copy import deepcopy
-import pytest
-import pandas as pd
+
+# Third Party
 import geopandas as gpd
+import pandas as pd
+import pytest
+
+# Local Imports
 from caf.space import weighted_funcs, zone_correspondence
 
 

@@ -4,20 +4,24 @@ Contains functionality for creating weighted translations.
 These are called in the 'weighted_trans' method in ZoneTranslation.
 """
 
-##### IMPORTS #####
-from typing import Optional
+# Built-Ins
 import logging
 import warnings
 from functools import reduce
-import pandas as pd
 
+##### IMPORTS #####
+from typing import Optional
 
+# Third Party
 # pylint: disable=import-error
 import geopandas as gpd
+import pandas as pd
+
+# Local Imports
+from caf.space import inputs
 
 # pylint: enable=import-error
 
-from caf.space import inputs
 
 ##### CONSTANTS #####
 logging.captureWarnings(True)

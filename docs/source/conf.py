@@ -25,7 +25,7 @@ project = "caf.space"
 copyright = "2024, Transport for the North"
 author = "Transport for the North"
 
-# Third Party
+# Local Imports
 import caf.space
 
 version = str(caf.space.__version__)
@@ -92,6 +92,7 @@ intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
 }
 intersphinx_timeout = 30
+
 
 # -- Options for Todo extension ----------------------------------------------
 def get_env_bool(name: str, default: bool) -> bool:

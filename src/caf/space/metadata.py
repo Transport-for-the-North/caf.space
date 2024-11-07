@@ -1,10 +1,12 @@
 """Module for metadata. None of this is currently used but hasn't been deleted."""
 
 from __future__ import annotations
+
+# Built-Ins
 import datetime
 from pathlib import Path
 
-
+# Third Party
 # Third party imports
 # pylint: disable=no-name-in-module
 from caf.toolkit import BaseConfig

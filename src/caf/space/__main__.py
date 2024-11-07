@@ -1,9 +1,14 @@
 """Main module."""
 
+# Built-Ins
 import os
 from pathlib import Path
-import caf.space
+
+# Third Party
 from caf.toolkit import LogHelper, ToolDetails
+
+# Local Imports
+import caf.space
 
 
 def main():
