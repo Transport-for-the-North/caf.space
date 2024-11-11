@@ -141,20 +141,20 @@ class ZoneTranslation:
                         points_1,
                         points_2,
                         1000,
-                        self.zone_1.id_col,
-                        self.zone_2.id_col,
-                        self.zone_1.name,
-                        self.zone_2.name,
+                        id_col_1=self.zone_1.id_col,
+                        id_col_2=self.zone_2.id_col,
+                        name_1=self.zone_1.name,
+                        name_2=self.zone_2.name,
                     )
                 else:
                     matches = utils.find_point_matches(
                         points_2,
                         points_1,
                         1000,
-                        self.zone_2.id_col,
-                        self.zone_1.id_col,
-                        self.zone_2.name,
-                        self.zone_1.name,
+                        id_col_1=self.zone_2.id_col,
+                        id_col_2=self.zone_1.id_col,
+                        name_1=self.zone_2.name,
+                        name_2=self.zone_1.name,
                     )
                 points_1 = utils.points_update(
                     points_1, matches, self.zone_1.id_col, f"{self.zone_1.name}_id"
@@ -171,10 +171,10 @@ class ZoneTranslation:
             self.zone_1,
             self.zone_2,
             self.lower_zoning,
-            self.point_handling,
-            self.point_tolerance,
-            points_1,
-            points_2,
+            point_handling=self.point_handling,
+            point_tolerance=self.point_tolerance,
+            zone_1_points=points_1,
+            zone_2_points=points_2,
         )
         weighted_translation = weighted_translation[
             [
