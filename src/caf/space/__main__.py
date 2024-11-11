@@ -12,7 +12,7 @@ import caf.space
 
 
 def main():
-    """main function of caf space.
+    """Entry-point for caf.space.
 
     Raises
     ------
