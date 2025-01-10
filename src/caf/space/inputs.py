@@ -10,21 +10,25 @@ ultimately used as input parameters for the ZoneTranslation class.
 ##### IMPORTS #####
 from __future__ import annotations
 
+# Built-Ins
+import argparse
+import dataclasses
+import datetime
+
 # Standard imports
 # pylint: disable=import-error
 import logging
-import datetime
-import dataclasses
-import fiona
 import os
 from pathlib import Path
-import pandas as pd
 from typing import Optional
-from pydantic import field_validator, model_validator
+
+# Third Party
+import fiona
+import pandas as pd
 
 # Third party imports
 from caf.toolkit import BaseConfig
-import argparse
+from pydantic import field_validator, model_validator
 
 # pylint: enable=import-error
 # Local imports
@@ -141,6 +145,36 @@ class LowerZoneSystemInfo(ZoneSystemInfo):
         return values
 
 
+def _create_parser() -> argparse.ArgumentParser:
+    """Create CLI argument parser for running translation with a config."""
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    parser.add_argument(
+        "--mode",
+        type=str,
+        help="Mode to run translation in; spatial, weighted or GUI.",
+        default="GUI",
+        required=False,
+    )
+    parser.add_argument(
+        "--config",
+        type=Path,
+        help="path to config file containing parameters",
+        default=None,
+        required=False,
+    )
+    parser.add_argument(
+        "--out_path",
+        type=Path,
+        help="Path the translation will be saved in.",
+        default=None,
+        required=False,
+    )
+
+    return parser
+
+
 @dataclasses.dataclass
 class SpaceArguments:
     """Command Line arguments for running space."""
@@ -152,30 +186,7 @@ class SpaceArguments:
     @classmethod
     def parse(cls) -> SpaceArguments:
         """Parse command line argument."""
-        parser = argparse.ArgumentParser(
-            description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter
-        )
-        parser.add_argument(
-            "--mode",
-            type=str,
-            help="Mode to run translation in; spatial, weighted or GUI.",
-            default="GUI",
-            required=False,
-        )
-        parser.add_argument(
-            "--config",
-            type=Path,
-            help="path to config file containing parameters",
-            default=None,
-            required=False,
-        )
-        parser.add_argument(
-            "--out_path",
-            type=Path,
-            help="Path the translation will be saved in.",
-            default=None,
-            required=False,
-        )
+        parser = _create_parser()
 
         parsed_args = parser.parse_args()
         return SpaceArguments(parsed_args.config, parsed_args.mode, parsed_args.out_path)
