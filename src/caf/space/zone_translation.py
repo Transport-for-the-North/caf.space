@@ -92,6 +92,9 @@ class ZoneTranslation:
             zones, self.zone_1, self.zone_2
         )
         final_zone_corr = self._slithers_and_rounding(spatial_correspondence)
+        final_zone_corr[final_zone_corr.columns[:2]] = final_zone_corr[
+            final_zone_corr.columns[:2]
+        ].astype(str)
         # Save correspondence output
         out_path = self.cache_path / f"{self.names[0]}_{self.names[1]}"
         out_path.mkdir(exist_ok=True, parents=False)
@@ -182,6 +185,9 @@ class ZoneTranslation:
         weighted_translation.reset_index(inplace=True)
 
         weighted_translation = self._slithers_and_rounding(weighted_translation)
+        weighted_translation[weighted_translation.columns[:2]] = weighted_translation[
+            weighted_translation.columns[:2]
+        ].astype(str)
         out_path = self.cache_path / f"{self.names[0]}_{self.names[1]}"
         out_path.mkdir(exist_ok=True, parents=False)
         if "matches" in locals():
