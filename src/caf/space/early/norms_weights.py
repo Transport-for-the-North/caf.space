@@ -2,6 +2,7 @@ import pandas as pd
 import geopandas as gpd
 from shapely import Point
 from typing import Union
+import caf.space as cs
 
 
 def convert(weight: pd.DataFrame, lookup: pd.DataFrame):
@@ -95,7 +96,7 @@ def centroid_shapefile(
     gdf = gpd.GeoDataFrame(centroids, geometry="geometry", crs=crs)
     return gdf
 
-def oa_centroids(oa_shape: gpd.GeoDataFrame, oa_lsoa_lookup: pd.DataFrame, oa_weight: pd.DataFrame):
+def oa_centroids(lower_shape: cs.TransZoneSystemInfo, low_to_high_lookup: pd.DataFrame, lower_weight_id: str, lower_weight: pd.DataFrame, upper_id: str):
     """
     Summary
     -------
@@ -115,19 +116,49 @@ def oa_centroids(oa_shape: gpd.GeoDataFrame, oa_lsoa_lookup: pd.DataFrame, oa_we
 
     pd.DataFrame: A dataframe of lsoa centroids, with columns for 'x' and 'y'.
     """
-    join_1 = oa_shape.merge(oa_lsoa_lookup, left_on='geo_code', right_on='oa11_id')
-    cent = join_1.merge(oa_weight, left_on="geo_code", right_on="OA_code")[
-        ['lsoa2011_id', 'Jobs', 'geometry']]
-    cent['x_weight'] = cent.centroid.x * cent['Jobs']
-    cent['y_weight'] = cent.centroid.y * cent['Jobs']
-    grouped = cent.groupby('lsoa2011_id').sum()
-    grouped['x'] = grouped['x_weight'] / grouped['Jobs']
-    grouped['y'] = grouped['y_weight'] / grouped['Jobs']
-    return grouped
+    lower_gdf = gpd.read_file(lower_shape.shapefile)
+    join_1 = lower_gdf.merge(low_to_high_lookup, left_on=lower_shape.id_col, right_on=f"{lower_shape.name}_id")
+    cent = join_1.merge(lower_weight, left_on=lower_shape.id_col, right_on=lower_weight_id)[['val', upper_id, 'geometry']]
+    cent['x_weight'] = cent.centroid.x * cent['val']
+    cent['y_weight'] = cent.centroid.y * cent['val']
+    grouped = cent.groupby(upper_id)[['val', 'x_weight', 'y_weight']].sum()
+    grouped['x'] = grouped['x_weight'] / grouped['val']
+    grouped['y'] = grouped['y_weight'] / grouped['val']
+    return grouped[['x','y']]
 
 if __name__ == "__main__":
-    emp_weight = pd.read_csv(r"I:\Data\Zone Translations\weighting vectors\lsoa_emp_2018_weighting.csv", index_col=0)
-    pop_weight = pd.read_csv(r"I:\Data\Zone Translations\weighting vectors\lsoa_pop_2018_weighting.csv", index_col=0)
+    emp_weight = pd.read_csv(r"I:\Data\Zone Translations\weighting vectors\oa_emp_2021_weighting.csv", index_col=0)
+    pop_weight = pd.read_csv(r"I:\Data\Zone Translations\weighting vectors\oa_pop_2021_weighting.csv", index_col=0)
+    hh_weight = pd.read_csv(r"I:\Data\Zone Translations\weighting vectors\oa_hh_2021_weighting.csv", index_col=0)
+    oa_shape = gpd.read_file(r"Y:\Data Strategy\GIS Shapefiles\Output_Areas\OA_2021\OA_2021_EW_BFC_V8.shp")
+    oa_conf = cs.TransZoneSystemInfo(name="oa_21", shapefile=r"Y:\Data Strategy\GIS Shapefiles\Output_Areas\OA_2021\OA_2021_EW_BFC_V8.shp", id_col="OA21CD")
+    ##### Above here stays the same #####
+    ##### Put confs for zone systems here
+
+    normits_conf = cs.TransZoneSystemInfo(name='normits_v3.3', shapefile=r"Y:\Data Strategy\GIS Shapefiles\NorMITs 2024 zone system\NorMITs zone\v3.3\NorMITs_zoning_v3.3.shp",
+                                          id_col="normits_id")
+
+    confs = [normits_conf]
+
+    for conf in confs:
+        trans_conf = cs.ZoningTranslationInputs(zone_1=oa_conf, zone_2=conf)
+
+        trans = cs.ZoneTranslation(trans_conf).spatial_translation()
+
+        pop_cent = oa_centroids(oa_conf, oa_normits, 'oa21cd', pop_weight, f'{conf.zone_2.name}_id')
+        emp_cent = oa_centroids(oa_conf, oa_normits, 'oa21cd', emp_weight, f'{conf.zone_2.name}_id')
+        hh_cent = oa_centroids(oa_conf, oa_normits, 'oa21cd', hh_weight, f'{conf.zone_2.name}_id')
+
+
+
+
+
+
+
+
+
+
+
     lookup = pd.read_csv(r"I:\Data\Zone Translations\norms2018_to_lsoa_correspondence.csv", index_col=1)
     lsoa_shape = gpd.read_file(r"Y:\Data Strategy\GIS Shapefiles\LSOA & Scottish Data Zones 2011\LSOA & Scottish Data Zones 2011.shp")
     lsoa_shape.set_index('LSOA11CD', inplace=True)
