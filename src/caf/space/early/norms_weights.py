@@ -96,7 +96,7 @@ def centroid_shapefile(
     gdf = gpd.GeoDataFrame(centroids, geometry="geometry", crs=crs)
     return gdf
 
-def oa_centroids(lower_shape: cs.TransZoneSystemInfo, low_to_high_lookup: pd.DataFrame, lower_weight_id: str, lower_weight: pd.DataFrame, upper_id: str):
+def oa_centroids(lower_shape: cs.TransZoneSystemInfo, low_to_high_lookup: pd.DataFrame, lower_weight_id: str, lower_weight: pd.DataFrame, upper_shape: cs.TransZoneSystemInfo):
     """
     Summary
     -------
@@ -118,10 +118,11 @@ def oa_centroids(lower_shape: cs.TransZoneSystemInfo, low_to_high_lookup: pd.Dat
     """
     lower_gdf = gpd.read_file(lower_shape.shapefile)
     join_1 = lower_gdf.merge(low_to_high_lookup, left_on=lower_shape.id_col, right_on=f"{lower_shape.name}_id")
-    cent = join_1.merge(lower_weight, left_on=lower_shape.id_col, right_on=lower_weight_id)[['val', upper_id, 'geometry']]
+    cent = join_1.merge(lower_weight, left_on=lower_shape.id_col, right_on=lower_weight_id)[['val', f"{upper_shape.name}_id", 'geometry', 'oa_21_to_noham']]
+    cent['val'] *= cent[f'{lower_shape.name}_to_{upper_shape.name}']
     cent['x_weight'] = cent.centroid.x * cent['val']
     cent['y_weight'] = cent.centroid.y * cent['val']
-    grouped = cent.groupby(upper_id)[['val', 'x_weight', 'y_weight']].sum()
+    grouped = cent.groupby(f"{upper_shape.name}_id")[['val', 'x_weight', 'y_weight']].sum()
     grouped['x'] = grouped['x_weight'] / grouped['val']
     grouped['y'] = grouped['y_weight'] / grouped['val']
     return grouped[['x','y']]
@@ -138,15 +139,17 @@ if __name__ == "__main__":
     normits_conf = cs.TransZoneSystemInfo(name='normits_v3.3', shapefile=r"Y:\Data Strategy\GIS Shapefiles\NorMITs 2024 zone system\NorMITs zone\v3.3\NorMITs_zoning_v3.3.shp",
                                           id_col="normits_id")
 
-    confs = [normits_conf]
+    noham_conf = cs.TransZoneSystemInfo(name='noham', shapefile=r"Y:\Data Strategy\GIS Shapefiles\NoHAM Zones\North_Zones_v2.10\noham_zones_freeze_2.10.shp", id_col='id')
+
+    confs = [noham_conf]
 
     for conf in confs:
-        trans_conf = cs.ZoningTranslationInputs(zone_1=oa_conf, zone_2=conf)
+        trans_conf = cs.ZoningTranslationInputs(zone_1=oa_conf, zone_2=conf, sliver_tolerance=0.8)
 
-        trans = cs.ZoneTranslation(trans_conf).spatial_translation()
+        trans = pd.read_csv(r"I:\Data\Zone Translations\cache\noham_oa_21\noham_to_oa_21_spatial.csv")
 
         pop_cent = oa_centroids(oa_conf, oa_normits, 'oa21cd', pop_weight, f'{conf.zone_2.name}_id')
-        emp_cent = oa_centroids(oa_conf, oa_normits, 'oa21cd', emp_weight, f'{conf.zone_2.name}_id')
+        emp_cent = oa_centroids(oa_conf, trans, 'oa21cd', emp_weight, conf)
         hh_cent = oa_centroids(oa_conf, oa_normits, 'oa21cd', hh_weight, f'{conf.zone_2.name}_id')
 
 
