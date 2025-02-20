@@ -138,7 +138,7 @@ class LowerZoneSystemInfo(ZoneSystemInfo):
 
     @model_validator(mode="after")
     def _valid_data_col(cls, values):
-        if "weight_data" in values.keys():
+        if values.weight_data is not None:
             cols = pd.read_csv(values.weight_data, nrows=1).columns
             id_col = values.weight_id_col
         else:
