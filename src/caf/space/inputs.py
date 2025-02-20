@@ -60,13 +60,13 @@ class ZoneSystemInfo(BaseConfig):
     shapefile: Path
     id_col: str
 
-    @model_validator(mode="before")
+    @model_validator(mode="after")
     def _id_col_in_file(cls, values):
-        with fiona.collection(values["shapefile"]) as source:
+        with fiona.collection(values.shapefile) as source:
             schema = source.schema
-            if values["id_col"] not in schema["properties"].keys():
+            if values.id_col not in schema["properties"].keys():
                 raise ValueError(
-                    f"The id_col provided, {values['id_col']}, does not appear"
+                    f"The id_col provided, {values.id_col}, does not appear"
                     f" in the given shapefile. Please choose from:"
                     f"{schema['properties'].keys()}."
                 )
@@ -117,9 +117,9 @@ class LowerZoneSystemInfo(ZoneSystemInfo):
         should consider whether your weighting data is appropriate.
     """
 
-    weight_data: Path
+    weight_data: Optional[Path] = None
     data_col: str
-    weight_id_col: str
+    weight_id_col: Optional[str] = None
     weight_data_year: int
 
     def _lower_to_higher(self) -> TransZoneSystemInfo:
@@ -136,10 +136,17 @@ class LowerZoneSystemInfo(ZoneSystemInfo):
             raise FileNotFoundError(f"The weight data path provided for {v} does not exist.")
         return v
 
-    @model_validator(mode="before")
+    @model_validator(mode="after")
     def _valid_data_col(cls, values):
-        cols = pd.read_csv(values["weight_data"], nrows=1).columns
-        for v in [values["data_col"], values["weight_id_col"]]:
+        if values.weight_data is not None:
+            cols = pd.read_csv(values.weight_data, nrows=1).columns
+            id_col = values.weight_id_col
+        else:
+            with fiona.collection(values.shapefile) as source:
+                schema = source.schema
+                cols = list(schema['properties'].keys())
+            id_col=values.id_col
+        for v in [values.data_col, id_col]:
             if v not in cols:
                 raise ValueError(f"The given col, {v}, does not appear in the weight data.")
         return values
