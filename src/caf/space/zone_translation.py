@@ -75,7 +75,7 @@ class ZoneTranslation:
         self.logger.addHandler(self.handler)
         self.logger.setLevel(logging.INFO)
 
-    def spatial_translation(self) -> pd.DataFrame:
+    def spatial_translation(self, return_gdf: bool = False) -> pd.DataFrame:
         """
         Create spatial zone translation.
 
@@ -93,9 +93,11 @@ class ZoneTranslation:
         """
         zones = zone_correspondence.read_zone_shapefiles(self.zone_1, self.zone_2)
         spatial_correspondence = zone_correspondence.spatial_zone_correspondence(
-            zones, self.zone_1, self.zone_2
+            zones, self.zone_1, self.zone_2, keep_geom=return_gdf
         )
-        final_zone_corr = self._slithers_and_rounding(spatial_correspondence)
+        final_zone_corr = self._slithers_and_rounding(spatial_correspondence, return_gdf=return_gdf)
+        if return_gdf:
+            return final_zone_corr
         # Save correspondence output
         out_path = self.cache_path / f"{self.names[0]}_{self.names[1]}"
         out_path.mkdir(exist_ok=True, parents=False)
@@ -197,7 +199,7 @@ class ZoneTranslation:
         self.params.save_yaml(out_path / f"{out_name}.yml")
         return weighted_translation
 
-    def _slithers_and_rounding(self, translation: pd.DataFrame) -> pd.DataFrame:
+    def _slithers_and_rounding(self, translation: pd.DataFrame, return_gdf: bool = False) -> pd.DataFrame:
         """
         Process slithers and rounding parameters.
 
@@ -227,6 +229,8 @@ class ZoneTranslation:
                 final_zone_corr = zone_correspondence.round_zone_correspondence(
                     spatial_correspondence_no_slithers, self.names
                 )
+                if return_gdf:
+                    final_zone_corr = gpd.GeoDataFrame(data=final_zone_corr.set_index([f"{self.zone_1.name}_id", f"{self.zone_2.name}_id"]), geometry=spatial_correspondence_no_slithers.set_index([f"{self.zone_1.name}_id", f"{self.zone_2.name}_id"]).geometry)
             else:
                 final_zone_corr = spatial_correspondence_no_slithers
         else:
@@ -237,7 +241,6 @@ class ZoneTranslation:
                 )
             else:
                 final_zone_corr = translation
-
         return final_zone_corr
 
     def _post_processing(
