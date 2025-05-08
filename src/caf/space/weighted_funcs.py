@@ -3,20 +3,25 @@ Contains functionality for creating weighted translations.
 
 These are called in the 'weighted_trans' method in ZoneTranslation.
 """
-##### IMPORTS #####
-from typing import Optional
+
+# Built-Ins
 import logging
 import warnings
 from functools import reduce
-import pandas as pd
 
+##### IMPORTS #####
+from typing import Optional
 
+# Third Party
 # pylint: disable=import-error
 import geopandas as gpd
+import pandas as pd
+
+# Local Imports
+from caf.space import inputs
 
 # pylint: enable=import-error
 
-from caf.space import inputs
 
 ##### CONSTANTS #####
 logging.captureWarnings(True)
@@ -40,11 +45,16 @@ def _weighted_lower(
     """
     lower_zone = gpd.read_file(lower_zoning.shapefile)
     lower_zone.set_index(lower_zoning.id_col, inplace=True)
-    weighting = pd.read_csv(
-        lower_zoning.weight_data,
-        index_col=lower_zoning.weight_id_col,
-    )
-    weighted = lower_zone.join(weighting)
+    if lower_zoning.weight_data is not None:
+        weighting = pd.read_csv(
+            lower_zoning.weight_data,
+            index_col=lower_zoning.weight_id_col,
+        )
+        weighted = lower_zone.join(weighting)
+    else:
+        weighted = lower_zone
+        if lower_zoning.data_col not in weighted.columns:
+            raise ValueError("Data col not in lower zoning.")
     missing = weighted[lower_zoning.data_col].isna().sum()
     if missing > 0:
         warnings.warn(
@@ -106,6 +116,7 @@ def _create_tiles(
     zone_1: inputs.TransZoneSystemInfo,
     zone_2: inputs.TransZoneSystemInfo,
     lower_zoning: inputs.LowerZoneSystemInfo,
+    *,
     point_handling: bool,
     point_tolerance: float,
     zone_1_points: Optional[gpd.GeoDataFrame] = None,
@@ -181,8 +192,9 @@ def get_weighted_translation(
     zone_1: inputs.TransZoneSystemInfo,
     zone_2: inputs.TransZoneSystemInfo,
     lower_zoning: inputs.LowerZoneSystemInfo,
-    point_handling: bool,
-    point_tolerance: float,
+    *,
+    point_handling: bool = False,
+    point_tolerance: float = 1,
     zone_1_points: Optional[gpd.GeoDataFrame] = None,
     zone_2_points: Optional[gpd.GeoDataFrame] = None,
 ) -> pd.DataFrame:
@@ -211,10 +223,10 @@ def get_weighted_translation(
         zone_1,
         zone_2,
         lower_zoning,
-        point_handling,
-        point_tolerance,
-        zone_1_points,
-        zone_2_points,
+        point_handling=point_handling,
+        point_tolerance=point_tolerance,
+        zone_1_points=zone_1_points,
+        zone_2_points=zone_2_points,
     )
     # produce total weights by each respective zone system.
     totals_1 = return_totals(tiles, f"{zone_1.name}_id", lower_zoning.data_col).to_frame()
@@ -237,8 +249,9 @@ def final_weighted(
     zone_1: inputs.TransZoneSystemInfo,
     zone_2: inputs.TransZoneSystemInfo,
     lower_zoning: inputs.LowerZoneSystemInfo,
-    point_handling: bool,
-    point_tolerance: float,
+    *,
+    point_handling: bool = False,
+    point_tolerance: float = 1,
     zone_1_points: Optional[gpd.GeoDataFrame] = None,
     zone_2_points: Optional[gpd.GeoDataFrame] = None,
 ) -> pd.DataFrame:
@@ -262,10 +275,10 @@ def final_weighted(
         zone_1,
         zone_2,
         lower_zoning,
-        point_handling,
-        point_tolerance,
-        zone_1_points,
-        zone_2_points,
+        point_handling=point_handling,
+        point_tolerance=point_tolerance,
+        zone_1_points=zone_1_points,
+        zone_2_points=zone_2_points,
     )
     full_df[f"{zone_1.name}_to_{zone_2.name}"] = (
         full_df[f"{lower_zoning.data_col}_overlap"] / full_df[f"{lower_zoning.data_col}_1"]

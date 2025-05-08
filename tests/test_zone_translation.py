@@ -1,17 +1,20 @@
 """
     Module for testing the zone_translation module
 """
+
+# Built-Ins
+from copy import deepcopy
 from math import sqrt
 from pathlib import Path
-import pytest
-import pandas as pd
+
+# Third Party
 import geopandas as gpd
-from copy import deepcopy
+import pandas as pd
+import pytest
 
+# Local Imports
 # pylint: disable=import-error, wrong-import-position
-from caf.space import zone_translation
-from caf.space import inputs
-
+from caf.space import inputs, zone_translation
 
 # pylint: enable=import-error,wrong-import-position
 

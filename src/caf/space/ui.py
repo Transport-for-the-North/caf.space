@@ -1,19 +1,17 @@
 # -*- coding: utf-8 -*-
 "User interface for caf.space."
 # Built-Ins
-from functools import partial
-import tkinter as tk
-from tkinter import ttk, filedialog
-from pathlib import Path
-from typing import Optional
-import sys
 import logging
-
-# Third Party
-from tkinterweb import HtmlFrame, Notebook
-from caf.space import inputs, zone_translation
+import sys
+import tkinter as tk
+from functools import partial
+from pathlib import Path
+from tkinter import filedialog, ttk
+from typing import Optional
 
 # Local Imports
+from caf.space import inputs, zone_translation
+
 # pylint: disable=import-error,wrong-import-position
 # Local imports here
 
@@ -22,6 +20,7 @@ from caf.space import inputs, zone_translation
 # # # CONSTANTS # # #
 SHAPE_FILEFILTER = (("Shapefiles", "*.shp"), ("All files", "*.*"))
 CSV_FILEFILTER = (("CSV", "*.csv"), ("All files", "*.*"))
+GEO_PREFIXES = ["shp", "gpkg", "geojson", "json"]
 
 # # # CLASSES # # #
 # pylint: disable=too-many-ancestors, too-many-instance-attributes, unused-argument
@@ -59,6 +58,7 @@ class FileWidget(ttk.Frame):
         parent,
         variable: Optional[tk.StringVar] = None,
         label="",
+        *,
         browse="open",
         widths=(20, 20),
         file_filter=(("All files", "*.*")),
@@ -158,6 +158,7 @@ class LabelledTextEntry(ttk.Frame):
         parent,
         label: str,
         variable: Optional[tk.StringVar] = None,
+        *,
         label_width: int = 20,
         text_width=20,
     ):
@@ -220,7 +221,7 @@ class NumberScroller(ttk.Frame):
     label_width (int): The width of the label.
     """
 
-    def __init__(self, parent, scroll_range, label, default_value, label_width=20):
+    def __init__(self, parent, scroll_range, label, default_value, *, label_width=20):
         super().__init__(parent)
         self.link_var = tk.IntVar(value=default_value)
         self.label = ttk.Label(self, text=label, width=label_width)
@@ -355,7 +356,8 @@ class ZoneFrame(ttk.LabelFrame):
         """
         Confirm that this frame is sufficiently provided.
         """
-        return self.shape_var.get().endswith(".shp")
+        prefix = self.shape_var.get().split(".")[-1]
+        return prefix in GEO_PREFIXES
 
 
 class LowerZoneFrame(ttk.LabelFrame):
@@ -470,7 +472,8 @@ class LowerZoneFrame(ttk.LabelFrame):
         -------
         Bool
         """
-        return self.shape_var.get().endswith(".shp") and self.weight_var.get().endswith(".csv")
+        prefix = self.shape_var.get().split(".")[-1]
+        return prefix in GEO_PREFIXES
 
 
 class ParametersFrame(ttk.LabelFrame):
@@ -773,7 +776,7 @@ class NotebookApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.logger = logging.getLogger(__package__)
-        self.notebook = Notebook(self)
+        self.notebook = ttk.Notebook(self)
         self.notebook.pack(fill="both", expand=True)
 
         # Add MyUI instance as a tab
@@ -781,9 +784,6 @@ class NotebookApp(tk.Tk):
         my_ui = UiTab(master=my_ui_tab)
         my_ui.pack(fill="both", expand=True)
         self.notebook.add(my_ui_tab, text="Zone translation parameters")
-        readme_tab = HtmlFrame(self.notebook, messages_enabled=False)
-        readme_tab.load_website("https://cafspcae.readthedocs.io/en/latest/")
-        self.notebook.add(readme_tab, text="Documentation")
         console_tab = ttk.Frame(self.notebook)
         self.console_text = ConsoleFrame(console_tab)
         self._redirect_logging()

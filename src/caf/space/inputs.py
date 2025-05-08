@@ -8,29 +8,24 @@ ultimately used as input parameters for the ZoneTranslation class.
 """
 
 ##### IMPORTS #####
+
 from __future__ import annotations
 
-# Standard imports
-# pylint: disable=import-error
-import logging
-import datetime
+# Built-Ins
+import argparse
 import dataclasses
-import fiona
+import datetime
+import logging
 import os
 from pathlib import Path
-import pandas as pd
 from typing import Optional, Union
 
-from pydantic import field_validator
-from enum import Enum
-
-# Third party imports
-from caf.toolkit import BaseConfig
-import argparse
+# Third Party
+import fiona
 import geopandas as gpd
-
-# pylint: enable=import-error
-# Local imports
+import pandas as pd
+from caf.toolkit import BaseConfig
+from pydantic import field_validator, model_validator
 
 ##### CONSTANTS #####
 LOG = logging.getLogger(__name__)
@@ -59,37 +54,17 @@ class ZoneSystemInfo(BaseConfig):
     shapefile: Path
     id_col: str
 
-    @field_validator("shapefile")
-    def _path_exists(cls, v):
-        """
-        Validate a path exists.
-
-        Raises
-        ------
-        ValueError: Informs user the path given is incorrect.
-
-        Returns
-        -------
-        Unchanged path if no error is raised.
-        """
-        if os.path.isfile(v) is False:
-            raise ValueError(
-                f"The path provided for {v} does not exist."
-                "If this path is on a network drive make sure you are connected"
-            )
-        return v
-
-    @field_validator("id_col")
-    def _id_col_in_file(cls, v, values):
-        with fiona.collection(values.data["shapefile"]) as source:
+    @model_validator(mode="before")
+    def _id_col_in_file(cls, values):
+        with fiona.collection(values["shapefile"]) as source:
             schema = source.schema
-            if v not in schema["properties"].keys():
+            if values["id_col"] not in schema["properties"].keys():
                 raise ValueError(
-                    f"The id_col provided, {v}, does not appear"
+                    f"The id_col provided, {values['id_col']}, does not appear"
                     f" in the given shapefile. Please choose from:"
                     f"{schema['properties'].keys()}."
                 )
-        return v
+        return values
 
 
 class LineInfo(BaseConfig):
@@ -161,12 +136,43 @@ class LowerZoneSystemInfo(ZoneSystemInfo):
             raise FileNotFoundError(f"The weight data path provided for {v} does not exist.")
         return v
 
-    @field_validator("data_col", "weight_id_col")
-    def _valid_data_col(cls, v, values):
-        cols = pd.read_csv(values.data["weight_data"], nrows=1).columns
-        if v not in cols:
-            raise ValueError(f"The given col, {v}, does not appear in the weight data.")
-        return v
+    @model_validator(mode="before")
+    def _valid_data_col(cls, values):
+        cols = pd.read_csv(values["weight_data"], nrows=1).columns
+        for v in [values["data_col"], values["weight_id_col"]]:
+            if v not in cols:
+                raise ValueError(f"The given col, {v}, does not appear in the weight data.")
+        return values
+
+
+def _create_parser() -> argparse.ArgumentParser:
+    """Create CLI argument parser for running translation with a config."""
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    parser.add_argument(
+        "--mode",
+        type=str,
+        help="Mode to run translation in; spatial, weighted or GUI.",
+        default="GUI",
+        required=False,
+    )
+    parser.add_argument(
+        "--config",
+        type=Path,
+        help="path to config file containing parameters",
+        default=None,
+        required=False,
+    )
+    parser.add_argument(
+        "--out_path",
+        type=Path,
+        help="Path the translation will be saved in.",
+        default=None,
+        required=False,
+    )
+
+    return parser
 
 
 @dataclasses.dataclass
@@ -180,30 +186,7 @@ class SpaceArguments:
     @classmethod
     def parse(cls) -> SpaceArguments:
         """Parse command line argument."""
-        parser = argparse.ArgumentParser(
-            description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter
-        )
-        parser.add_argument(
-            "--mode",
-            type=str,
-            help="Mode to run translation in; spatial, weighted or GUI.",
-            default="GUI",
-            required=False,
-        )
-        parser.add_argument(
-            "--config",
-            type=Path,
-            help="path to config file containing parameters",
-            default=None,
-            required=False,
-        )
-        parser.add_argument(
-            "--out_path",
-            type=Path,
-            help="Path the translation will be saved in.",
-            default=None,
-            required=False,
-        )
+        parser = _create_parser()
 
         parsed_args = parser.parse_args()
         return SpaceArguments(parsed_args.config, parsed_args.mode, parsed_args.out_path)

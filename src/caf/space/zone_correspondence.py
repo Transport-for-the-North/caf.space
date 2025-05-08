@@ -3,13 +3,18 @@ Contains functionality for creating spatial zone translation.
 
 Also checks on various things for translations (rounding, slithers).
 """
+
+# Built-Ins
 import logging
-from typing import Tuple, Union
 import warnings
+from typing import Tuple, Union
 from dataclasses import dataclass
 
+# Third Party
 import geopandas as gpd
 import pandas as pd
+
+# Local Imports
 from caf.space import inputs
 
 ##### CONSTANTS #####

@@ -4,12 +4,11 @@
 from pathlib import Path
 
 # Third Party
-import pandas as pd
 import geopandas as gpd
 import numpy as np
+import pandas as pd
 from scipy.spatial import cKDTree
 
-# Local Imports
 # pylint: disable=import-error,wrong-import-position
 # Local imports here
 # pylint: enable=import-error,wrong-import-position
@@ -47,9 +46,9 @@ def generate_points(point_folder: Path, points_name: str, zones_path: Path, join
         update = main_zones.loc[
             point_polys.loc[i, "geometry"].buffer(1).overlaps(main_zones.geometry), join_col
         ].to_list()
-        main_zones.loc[
-            main_zones[join_col] == point_polys.loc[i, join_col], join_col
-        ] = update[0]
+        main_zones.loc[main_zones[join_col] == point_polys.loc[i, join_col], join_col] = (
+            update[0]
+        )
     dissolved = main_zones.dissolve(by=join_col)
     point_polys.geometry = point_polys.centroid
     point_polys.to_file(point_folder / "point_zones.shp")
@@ -60,6 +59,7 @@ def find_point_matches(
     gda: gpd.GeoDataFrame,
     gdb: gpd.GeoDataFrame,
     max_dist: int,
+    *,
     id_col_1: str,
     id_col_2: str,
     name_1: str,

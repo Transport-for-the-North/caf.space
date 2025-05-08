@@ -1,11 +1,24 @@
 """Main module."""
+
+# Built-Ins
 import os
 from pathlib import Path
-import caf.space
+
+# Third Party
 from caf.toolkit import LogHelper, ToolDetails
 
+# Local Imports
+import caf.space
 
-if __name__ == "__main__":
+
+def main():
+    """Entry-point for caf.space.
+
+    Raises
+    ------
+    ValueError
+        if a translation config is not provided when required
+    """
     args = caf.space.inputs.SpaceArguments.parse()
     args.validate()
     out_path = args.out_path
@@ -32,3 +45,7 @@ if __name__ == "__main__":
                     args.out_path
                     / f"{config.zone_1.name}_{config.zone_2.name}_{config.method}.csv"
                 )
+
+
+if __name__ == "__main__":
+    main()

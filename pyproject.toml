@@ -12,6 +12,9 @@ requires-python = ">=3.9"
 authors = [
     { name = "Transport for the North" },
 ]
+
+
+
 classifiers = [
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.9",
@@ -20,14 +23,13 @@ classifiers = [
 ]
 dependencies = [
     "caf.toolkit>=0.2.1",
-    "geopandas>=0.9",
+    "geopandas>=1",
     "fiona>=1.8",
     "shapely>=1.8",
     "numpy>=1.21",
     "pandas>=1.3",
     "pydantic>=2.0.0",
     "openpyxl>=3.0",
-    "tkinterweb>=3.17",
 ]
 
 [project.optional-dependencies]
@@ -54,7 +56,7 @@ edit_install = [
 "Bug Tracker" = "https://github.com/Transport-for-the-North/caf.space/issues"
 Homepage = "https://github.com/Transport-for-the-North/caf.space"
 Source = "https://github.com/Transport-for-the-North/caf.space"
-Documentation = "https://cafspcae.readthedocs.io/en/latest/"
+Documentation = "http://cafspace.rtfd.io/"
 
 # Packaging options
 [tool.setuptools.packages.find]
@@ -62,6 +64,9 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 "caf.space" = ["py.typed"]
+
+[project.scripts]
+"caf.space" = "caf.space.__main__:main"
 
 # Linters
 [tool.black]
@@ -126,3 +131,15 @@ build-file = "caf/space/_version.py"
 distance = "{base_version}+{distance}.{vcs}{rev}"
 dirty = "{base_version}+{distance}.{vcs}{rev}.dirty"
 distance-dirty = "{base_version}+{distance}.{vcs}{rev}.dirty"#
+
+[tool.isort]
+profile = "black"
+src_paths = ["src", "tests"]
+
+skip = ["__init__.py", "_version.py"]
+skip_glob = [".*"]
+
+# Section commenting
+import_heading_stdlib = "Built-Ins"
+import_heading_thirdparty = "Third Party"
+import_heading_firstparty = "Local Imports"

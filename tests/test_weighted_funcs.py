@@ -1,10 +1,16 @@
 """
 Module for testing the weighted_funcs module
 """
+
+# Built-Ins
 from copy import deepcopy
-import pytest
-import pandas as pd
+
+# Third Party
 import geopandas as gpd
+import pandas as pd
+import pytest
+
+# Local Imports
 from caf.space import weighted_funcs, zone_correspondence
 
 
@@ -52,8 +58,8 @@ def fixture_overlaps(weighted_config, zones):
         weighted_config.zone_1,
         weighted_config.zone_2,
         weighted_config.lower_zoning,
-        False,
-        1,
+        point_handling=False,
+        point_tolerance=1,
     )
     return overlaps
 
