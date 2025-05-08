@@ -26,6 +26,7 @@ logging.captureWarnings(True)
 @dataclass
 class ReadOutput:
     """A read in feature, either line or poly."""
+
     feature: gpd.GeoDataFrame
     geo_type: str
 
@@ -83,7 +84,6 @@ def read_zone_shapefiles(
             zone[f"{feature.name}_area"] = zone.area
             out[feature.name] = ReadOutput(feature=zone, geo_type="zone")
     return out
-
 
 
 def spatial_zone_correspondence(
@@ -220,7 +220,7 @@ def rounding_correction(
     to_col = f"{to_zone_name}_id"
     if "factor" in zone_corr.columns:
         zone_corr.reset_index(inplace=True)
-        from_col = ["A", "B"]
+        from_col: Union[list[str], str] = ["A", "B"]
         factor_col = "factor"
     else:
         from_col = f"{from_zone_name}_id"
