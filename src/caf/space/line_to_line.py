@@ -92,9 +92,14 @@ def preprocess(link_info: LinkInfo, buffer_dist=50, crs="EPSG:27700"):
         gdf.to_crs(crs, inplace=True)
     inner = gdf.copy()
     if isinstance(link_info.identifier, list):
-        inner.set_index(link_info.identifier, inplace=True)
+        inner['id'] = inner[link_info.identifier[0]].astype(str) + '_' + inner[link_info.identifier[1]].astype(str)
+    else:
+        inner.rename(columns={link_info.identifier: 'id'}, inplace=True)
+    inner.set_index('id', inplace=True)
     inner["start"] = shapely.get_point(inner.geometry, 0)
     inner["end"] = shapely.get_point(inner.geometry, -1)
+    # MultiLineStrings break this - temp fix should be looked into
+    inner = inner[~inner['end'].isna()]
     inner["angle"] = inner.geometry.apply(calc_angle)
     inner["buffer"] = inner.buffer(buffer_dist, cap_style="flat")
     inner["crow_fly"] = shapely.get_point(inner.geometry, 0).distance(
@@ -113,22 +118,13 @@ def init_join(targ, ref, angle_threshold=60):
     joined["angle"] = joined.apply(
         lambda row: relative_angle(row["angle_left"], row["angle_right"]), axis=1
     )
-    if "index_right" in joined.columns:
-        joined.rename(columns={"index_right": "ref_A"}, inplace=True)
-        # Adjust angle to allow larger angles on bendy links
-        joined["mod_angle"] = joined["angle"] * joined["straightness"] ** 2
-        return joined.loc[
-            np.absolute(joined["mod_angle"]) < angle_threshold,
-            ["ref_A", "angle", "straightness"],
-        ]
-    else:
-        joined.rename(columns={"a": "ref_A", "b": "ref_B"}, inplace=True)
-        # Adjust angle to allow larger angles on bendy links
-        joined["mod_angle"] = joined["angle"] * joined["straightness"] ** 2
-        return joined.loc[
-            np.absolute(joined["mod_angle"]) < angle_threshold,
-            ["ref_A", "ref_B", "angle", "straightness"],
-        ]
+    # Adjust angle to allow larger angles on bendy links
+    joined.rename(columns={"id_right": "id_ref"}, inplace=True)
+    joined["mod_angle"] = joined["angle"] * joined["straightness"] ** 2
+    return joined.loc[
+        np.absolute(joined["mod_angle"]) < angle_threshold,
+        ["id_ref", "angle", "straightness"],
+    ]
 
 
 def find_con(longer, shorter):
@@ -164,23 +160,35 @@ def main(
     for multi in tqdm(joined.index.unique()):
         feature = target_processed.loc[multi]
         links_iter = joined.loc[multi]
-        if len(links_iter) == 0:
-            print('debugging')
         out = {}
-        for link in links_iter.iterrows():
-            link = link[1]
-            ref_A = [link["ref_A"]]
-            try:
-                ref_B = [link["ref_B"]]
-            except KeyError:
-                ref_B = []
-            refs = tuple(ref_A + ref_B)
-            straightness = link["straightness"]
-            ref_link = ref_processed.loc[refs]
-            if len(ref_link) > 1:
-                ref_link = ref_link.iloc[0].squeeze()
-            else:
+        if isinstance(links_iter, pd.DataFrame):
+            for link in links_iter.iterrows():
+                link = link[1]
+                ref = [link["id_ref"]]
+                refs = ref
+                straightness = link["straightness"]
+                ref_link = ref_processed.loc[refs]
                 ref_link = ref_link.squeeze()
+                if ref_link.geometry.length > feature.geometry.length:
+                    stats = find_con(ref_link, feature)
+                else:
+                    stats = find_con(feature, ref_link)
+                if len(refs) == 1:
+                    refs = refs[0]
+                out[refs] = (
+                    stats.rmse,
+                    stats.full_length,
+                    stats.crow_fly_length,
+                    stats.angle,
+                    stats.angle,
+                    straightness,
+                )
+        else:
+            ref = [links_iter["id_ref"]]
+            refs = ref
+            straightness = links_iter["straightness"]
+            ref_link = ref_processed.loc[refs]
+            ref_link = ref_link.squeeze()
             if ref_link.geometry.length > feature.geometry.length:
                 stats = find_con(ref_link, feature)
             else:
@@ -195,42 +203,38 @@ def main(
                 stats.angle,
                 straightness,
             )
-        else:
-            out = pd.DataFrame.from_dict(
-                out,
-                orient="index",
-                columns=[
-                    "convergence",
-                    "ref_length",
-                    "ref_crow_fly",
-                    "segment_angle",
-                    "angle",
-                    "targ_straightness",
-                ],
-            )
-            if len(multi) == 1:
-                multi = multi[0]
-            out.sort_values(by='convergence', inplace=True)
-            temp_length = 0
-            out_ind = []
-            for idx in range(len(out)):
-                temp_length += out.iloc[idx]['ref_length']
-                if temp_length < feature.geometry.length:
-                    out_ind.append(out.index[idx])
-                else:
-                    break
-            # filtered = out[out["convergence"] == out["convergence"].min()]
-            out_out[multi] = out.loc[out_ind]
-            actual_length[multi] = feature.geometry.length
+        out = pd.DataFrame.from_dict(
+            out,
+            orient="index",
+            columns=[
+                "convergence",
+                "ref_length",
+                "ref_crow_fly",
+                "segment_angle",
+                "angle",
+                "targ_straightness",
+            ],
+        )
+        if len(multi) == 1:
+            multi = multi[0]
+        out.sort_values(by='convergence', inplace=True)
+        temp_length = 0
+        out_ind = []
+        for idx in range(len(out)):
+            temp_length += out.iloc[idx]['ref_length']
+            if temp_length < feature.geometry.length:
+                out_ind.append(out.index[idx])
+            else:
+                break
+        # filtered = out[out["convergence"] == out["convergence"].min()]
+        out_out[multi] = out.loc[out_ind]
+        actual_length[multi] = feature.geometry.length
+
     actual_length = pd.Series(actual_length, name='target_link_length')
     df = pd.concat(out_out).reset_index()
-    df.index = pd.MultiIndex.from_tuples(df['level_2'])
-    df.set_index(['level_0', 'level_1'], inplace=True, append=True)
-    df.drop('level_2', axis=1, inplace=True)
-    targ_names = target_links.list_ident
-    ref_names = ref_links.list_ident
-    df.index.names = ref_names +targ_names
-    actual_length.index.names = targ_names
+    df.set_index(['level_0', 'level_1'], inplace=True)
+    df.index.names = ['targ', 'ref']
+    actual_length.index.name = 'targ'
     df = actual_length.to_frame().join(df)
     df['overlap'] = df['ref_length'] / df['target_link_length']
     return df, missing_targ
@@ -245,13 +249,13 @@ def process_missing(lookup, gdf, threshold):
 
 if __name__ == "__main__":
     home_dir = Path(r"E:\tmjt_data\out\lookup")
-    itn = gpd.read_file(r"T:\AK\ForJourneyTimes\JTOutput\tmjt_gb_lsoa.gpkg", engine='pyogrio')
+    itn = gpd.read_file(r"O:\10.Internal_Requests\24 MRNmatchingNoHAM2023\MRN\mrnpaths.shp", engine='pyogrio')
     # itn = itn[itn["rdclass"] != "ZC"]
     # osm = gpd.read_file(home_dir / "manchester_os").set_index('unique_id')
     # osm = LinkInfo(gdf=osm, identifier='unique_id', name='osm')
-    itn = LinkInfo(gdf=itn, identifier=['a', 'b'], name='itn')
-    noham = gpd.read_file(r"T:\AK\ForJourneyTimes\SATURNNetwork\NoHAM_Base.shp", engine='pyogrio')
+    itn = LinkInfo(gdf=itn, identifier='path_id', name='mrn')
+    noham = gpd.read_file(r"O:\10.Internal_Requests\24 MRNmatchingNoHAM2023\NoHAM\NoHAM_Base.shp", engine='pyogrio')
     noham = LinkInfo(gdf=noham[(noham['A']>10000) & (noham['B']>10000)], identifier=['A','B'], name='noham')
-    out, missing = main(itn, noham)
+    out, missing = main(noham, itn)
     out.to_csv(home_dir / "sat_rami_lookup.csv")
     print('debugging')
