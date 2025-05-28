@@ -150,6 +150,7 @@ def find_con(longer, shorter):
 def main(
     ref_links: LinkInfo,
     target_links: LinkInfo,
+    filter_out: bool = False
 ):
     target_processed = preprocess(target_links)
     ref_processed = preprocess(ref_links)
@@ -185,17 +186,16 @@ def main(
                 )
         else:
             ref = [links_iter["id_ref"]]
-            refs = ref
             straightness = links_iter["straightness"]
-            ref_link = ref_processed.loc[refs]
+            ref_link = ref_processed.loc[ref]
             ref_link = ref_link.squeeze()
             if ref_link.geometry.length > feature.geometry.length:
                 stats = find_con(ref_link, feature)
             else:
                 stats = find_con(feature, ref_link)
-            if len(refs) == 1:
-                refs = refs[0]
-            out[refs] = (
+            if len(ref) == 1:
+                ref = ref[0]
+            out[ref] = (
                 stats.rmse,
                 stats.full_length,
                 stats.crow_fly_length,
@@ -218,16 +218,19 @@ def main(
         if len(multi) == 1:
             multi = multi[0]
         out.sort_values(by='convergence', inplace=True)
-        temp_length = 0
-        out_ind = []
-        for idx in range(len(out)):
-            temp_length += out.iloc[idx]['ref_length']
-            if temp_length < feature.geometry.length:
-                out_ind.append(out.index[idx])
-            else:
-                break
-        # filtered = out[out["convergence"] == out["convergence"].min()]
-        out_out[multi] = out.loc[out_ind]
+        if filter_out:
+            temp_length = 0
+            out_ind = []
+            for idx in range(len(out)):
+                temp_length += out.iloc[idx]['ref_length']
+                if temp_length < feature.geometry.length:
+                    out_ind.append(out.index[idx])
+                else:
+                    break
+            # filtered = out[out["convergence"] == out["convergence"].min()]
+            out_out[multi] = out.loc[out_ind]
+        else:
+            out_out[multi] = out
         actual_length[multi] = feature.geometry.length
 
     actual_length = pd.Series(actual_length, name='target_link_length')
@@ -256,6 +259,6 @@ if __name__ == "__main__":
     itn = LinkInfo(gdf=itn, identifier='path_id', name='mrn')
     noham = gpd.read_file(r"O:\10.Internal_Requests\24 MRNmatchingNoHAM2023\NoHAM\NoHAM_Base.shp", engine='pyogrio')
     noham = LinkInfo(gdf=noham[(noham['A']>10000) & (noham['B']>10000)], identifier=['A','B'], name='noham')
-    out, missing = main(noham, itn)
+    out, missing = main(noham, itn, False)
     out.to_csv(home_dir / "sat_rami_lookup.csv")
     print('debugging')
