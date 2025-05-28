@@ -132,8 +132,8 @@ def find_con(longer, shorter):
     shorter_angle = shorter.angle
     shorter_geometry = shorter.geometry
     if line.length < shorter.geometry.length * 0.9:
-        if line.length < shorter.geometry.length / 2:
-            return ConvergenceValues(np.inf, 0, 0, 0)
+        # if line.length < shorter.geometry.length / 2:
+        #     return ConvergenceValues(np.inf, 0, 0, 0)
         shorter_geometry = project_line(
             shorter_geometry, shapely.get_point(line, 0), shapely.get_point(line, -1)
         )
@@ -259,6 +259,6 @@ if __name__ == "__main__":
     itn = LinkInfo(gdf=itn, identifier='path_id', name='mrn')
     noham = gpd.read_file(r"O:\10.Internal_Requests\24 MRNmatchingNoHAM2023\NoHAM\NoHAM_Base.shp", engine='pyogrio')
     noham = LinkInfo(gdf=noham[(noham['A']>10000) & (noham['B']>10000)], identifier=['A','B'], name='noham')
-    out, missing = main(noham, itn, False)
+    out, missing = main(noham, itn, True)
     out.to_csv(home_dir / "sat_rami_lookup.csv")
     print('debugging')
