@@ -128,7 +128,7 @@ def preprocess(link_info: LinkInfo, buffer_dist=50, crs="EPSG:27700"):
     inner["crow_fly"] = shapely.get_point(inner.geometry, 0).distance(
         shapely.get_point(inner.geometry, -1)
     )
-    inner['length'] = inner.geometry.length
+    inner["length"] = inner.geometry.length
     inner["straightness"] = inner["crow_fly"] / inner.length
     return inner[
         ["start", "end", "angle", "buffer", "crow_fly", "length", "straightness", "geometry"]
@@ -162,13 +162,17 @@ def init_join(targ, ref, angle_threshold=60):
     joined["mod_angle"] = joined["angle"] * joined["straightness"] ** 2
     return joined.loc[
         np.absolute(joined["mod_angle"]) < angle_threshold,
-        ["id_ref", "angle", "straightness"],
+        "id_ref",
     ]
 
 
-def find_con(longer, shorter, longer_suffix: str="", shorter_suffix: str = ""):
+def find_con(longer, shorter, longer_suffix: str = "", shorter_suffix: str = ""):
     """Find convergence between two links."""
-    line = project_line(longer[f"geometry{longer_suffix}"], shorter[f"start{shorter_suffix}"], shorter[f"end{shorter_suffix}"])
+    line = project_line(
+        longer[f"geometry{longer_suffix}"],
+        shorter[f"start{shorter_suffix}"],
+        shorter[f"end{shorter_suffix}"],
+    )
     shorter_angle = shorter[f"angle{shorter_suffix}"]
     shorter_geometry = shorter[f"geometry{shorter_suffix}"]
     if line.length < shorter_geometry.length * 0.9:
@@ -181,24 +185,50 @@ def find_con(longer, shorter, longer_suffix: str="", shorter_suffix: str = ""):
     shorter_len = shorter[f"crow_fly{shorter_suffix}"]
     longer_len = longer[f"crow_fly{longer_suffix}"]
     full_len = shorter_geometry.length
-    return pd.Series([score, shorter_len, longer_len, shorter[f"geometry{shorter_suffix}"].length, longer[f"geometry{longer_suffix}"].length, full_len, angle], index=["distance", f"crow_fly{shorter_suffix}", f"crow_fly{longer_suffix}", f"length{shorter_suffix}", f"length{longer_suffix}", "overlap_length", "angle"])
+    return pd.Series(
+        [
+            score,
+            shorter_len,
+            longer_len,
+            shorter[f"geometry{shorter_suffix}"].length,
+            longer[f"geometry{longer_suffix}"].length,
+            full_len,
+            angle,
+        ],
+        index=[
+            "distance",
+            f"crow_fly{shorter_suffix}",
+            f"crow_fly{longer_suffix}",
+            f"length{shorter_suffix}",
+            f"length{longer_suffix}",
+            "overlap_length",
+            "angle",
+        ],
+    )
 
 
 def main(ref_links: LinkInfo, target_links: LinkInfo, filter_out: bool = False):
     target_processed = preprocess(target_links)
-    target_processed.index.name = 'id_targ'
+    target_processed.index.name = "id_targ"
     ref_processed = preprocess(ref_links)
-    ref_processed.index.name = 'id_ref'
+    ref_processed.index.name = "id_ref"
     joined = init_join(target_processed, ref_processed)
     missing_targ = target_processed.drop(joined.index.unique())
-    big_join = target_processed.join(joined["id_ref"]).set_index('id_ref', append=True).join(ref_processed, lsuffix='_targ', rsuffix='_ref')
-    ref_first = big_join.loc[big_join['length_targ'] < big_join['length_ref']]
-    targ_first = big_join.loc[big_join['length_targ'] >= big_join['length_ref']]
+    big_join = (
+        target_processed.join(joined)
+        .set_index("id_ref", append=True)
+        .join(ref_processed, lsuffix="_targ", rsuffix="_ref")
+    )
+    ref_first = big_join.loc[big_join["length_targ"] < big_join["length_ref"]]
+    targ_first = big_join.loc[big_join["length_targ"] >= big_join["length_ref"]]
     results_a = ref_first.apply(
         lambda row: find_con(
             row.loc[["geometry_ref", "crow_fly_ref"]],
-            row.loc[["geometry_targ", "angle_targ", "start_targ", "end_targ", "crow_fly_targ"]],
-            '_ref', '_targ'
+            row.loc[
+                ["geometry_targ", "angle_targ", "start_targ", "end_targ", "crow_fly_targ"]
+            ],
+            "_ref",
+            "_targ",
         ),
         axis=1,
     )
@@ -206,12 +236,17 @@ def main(ref_links: LinkInfo, target_links: LinkInfo, filter_out: bool = False):
         lambda row: find_con(
             row.loc[["geometry_targ", "crow_fly_targ"]],
             row.loc[["geometry_ref", "angle_ref", "start_ref", "end_ref", "crow_fly_ref"]],
-            '_targ', '_ref'
+            "_targ",
+            "_ref",
         ),
         axis=1,
     )
     results = pd.concat([results_a, results_b])
-    return results.reset_index(level='id_targ').sort_values(by=['id_targ', 'distance']).set_index('id_targ', append=True)
+    return (
+        results.reset_index(level="id_targ")
+        .sort_values(by=["id_targ", "distance"])
+        .set_index("id_targ", append=True)
+    )
 
 
 def process_missing(lookup, gdf, threshold):
