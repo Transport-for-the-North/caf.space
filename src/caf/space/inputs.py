@@ -99,10 +99,11 @@ class LowerZoneSystemInfo(ZoneSystemInfo):
 
     Parameters
     ----------
-    weight_data: Path
+    weight_data: Path, optional
         File path to the weighting data for the lower zone system. This
         should be saved as a csv, and only needs two columns (an ID
-        column and a column of weighting data)
+        column and a column of weighting data). If there is weighting data already in the shapefile,
+        this is not needed.
     data_col: str
         The name of the column in the weighting data csv containing the
         weight data.
@@ -110,7 +111,7 @@ class LowerZoneSystemInfo(ZoneSystemInfo):
         The name of the columns in the weighting data containing the
         zone ids. This will be used to join the weighting data to the
         lower zoning, so the IDs must match, but the names of the ID
-        columns may be different.
+        columns may be different. Required if weight_data is provided.
     weight_data_year: int
         The year the weighting data comes from. This is used for writing files
         to the cache and is important for logging. If you don't know this you
@@ -213,8 +214,8 @@ class ZoningTranslationInputs(BaseConfig):
     ----------
     zone_1: TransZoneSystemInfo
         Zone system 1 information
-    zone_2: TransZoneSystemInfo
-        Zone system 2 information
+    zone_2 | None: TransZoneSystemInfo = None
+        Zone system 2 information. Unless performing a centroid calculation , this must be provided.
     lower_zoning: LowerZoneSystemInfo
         Information about the lower zone system, used for performing
         weighted translations. This should be as small a zone system as
@@ -257,7 +258,7 @@ class ZoningTranslationInputs(BaseConfig):
     """
 
     zone_1: TransZoneSystemInfo
-    zone_2: TransZoneSystemInfo
+    zone_2: TransZoneSystemInfo | None = None
     lower_zoning: Optional[LowerZoneSystemInfo] = None
     cache_path: Path = Path(CACHE_PATH)
     method: Optional[str] = None

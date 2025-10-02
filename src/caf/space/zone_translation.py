@@ -48,14 +48,16 @@ class ZoneTranslation:
     """
 
     def __init__(self, params: inputs.ZoningTranslationInputs):
+        if params.zone_2 is None and params.lower_zoning is None:
+            raise ValueError("At least one of zone_2 and lower_zoning must be provided.")
         self.params = params
-        self.zone_1 = params.zone_1
-        self.zone_2 = params.zone_2
-
         self.cache_path = params.cache_path
-        if params.lower_zoning:
+        self.zone_1 = params.zone_1
+        if params.zone_2 is not None:
+            self.zone_2 = params.zone_2
+        if params.lower_zoning is not None:
             self.lower_zoning = params.lower_zoning
-        if params.method:
+        if params.method is not None:
             self.method = params.method
         self.slither_tolerance = params.sliver_tolerance
         self.rounding = params.rounding
@@ -63,12 +65,16 @@ class ZoneTranslation:
         self.point_handling = params.point_handling
         self.point_tolerance = params.point_tolerance
         self.run_date = params.run_date
-        sorted_names = sorted([params.zone_1.name, params.zone_2.name])
-        self.names = (sorted_names[0], sorted_names[1])
         self.logger = logging.getLogger("SPACE")
+        if params.zone_2 is not None:
+            sorted_names = sorted([params.zone_1.name, params.zone_2.name])
+        else:
+            sorted_names = [params.zone_1.name, params.lower_zoning.name]
+        self.names = (sorted_names[0], sorted_names[1])
         self.handler = logging.FileHandler(
             self.cache_path / f"{self.names[0]}_{self.names[1]}.log", mode="w"
         )
+
         self.handler.setFormatter(
             logging.Formatter("%(asctime)s [%(name)-20.20s] [%(levelname)-8.8s]  %(message)s")
         )
@@ -95,7 +101,9 @@ class ZoneTranslation:
         spatial_correspondence = zone_correspondence.spatial_zone_correspondence(
             zones, self.zone_1, self.zone_2, keep_geom=return_gdf
         )
-        final_zone_corr = self._slithers_and_rounding(spatial_correspondence, return_gdf=return_gdf)
+        final_zone_corr = self._slithers_and_rounding(
+            spatial_correspondence, return_gdf=return_gdf
+        )
         if return_gdf:
             return final_zone_corr
         # Save correspondence output
@@ -199,7 +207,44 @@ class ZoneTranslation:
         self.params.save_yaml(out_path / f"{out_name}.yml")
         return weighted_translation
 
-    def _slithers_and_rounding(self, translation: pd.DataFrame, return_gdf: bool = False) -> pd.DataFrame:
+    def weighted_centroids(self):
+        """
+        Summary
+        -------
+        Create centroids based on weighting data.
+
+        Returns
+        -------
+        pd.DataFrame: A dataframe of centroids, with columns for 'x' and 'y'.
+        The zone ids will be in the index.
+        """
+        trans_conf = inputs.ZoningTranslationInputs(
+            zone_1=self.zone_1, zone_2=self.lower_zoning._lower_to_higher()
+        )
+        lookup = ZoneTranslation(trans_conf).spatial_translation(return_gdf=True)
+        lower_weight = pd.read_csv(
+            self.lower_zoning.weight_data, index_col=self.lower_zoning.weight_id_col
+        )
+        lower_weight.index.name = f"{self.lower_zoning.name}_id"
+        cent = lookup.join(lower_weight)
+        cent["val"] *= cent[f"{self.lower_zoning.name}_to_{self.zone_1.name}"]
+        cent["x_weight"] = cent.centroid.x * cent[self.lower_zoning.data_col]
+        cent["y_weight"] = cent.centroid.y * cent[self.lower_zoning.data_col]
+        grouped = cent.groupby(f"{self.zone_1.name}_id")[
+            [self.lower_zoning.data_col, "x_weight", "y_weight"]
+        ].sum()
+        grouped["x"] = grouped["x_weight"] / grouped[self.lower_zoning.data_col]
+        grouped["y"] = grouped["y_weight"] / grouped[self.lower_zoning.data_col]
+        out_path = self.cache_path / f"{self.names[0]}_{self.names[1]}"
+        out_path.mkdir(exist_ok=True, parents=False)
+        out_name = f"{self.names[0]}_to_{self.names[1]}_weighted_centroids"
+        grouped[["x", "y"]].to_csv(out_path / f"{out_name}.csv")
+        self.params.save_yaml(out_path / f"{out_name}.yml")
+        return grouped[["x", "y"]]
+
+    def _slithers_and_rounding(
+        self, translation: pd.DataFrame, return_gdf: bool = False
+    ) -> pd.DataFrame:
         """
         Process slithers and rounding parameters.
 
@@ -230,7 +275,14 @@ class ZoneTranslation:
                     spatial_correspondence_no_slithers, self.names
                 )
                 if return_gdf:
-                    final_zone_corr = gpd.GeoDataFrame(data=final_zone_corr.set_index([f"{self.zone_1.name}_id", f"{self.zone_2.name}_id"]), geometry=spatial_correspondence_no_slithers.set_index([f"{self.zone_1.name}_id", f"{self.zone_2.name}_id"]).geometry)
+                    final_zone_corr = gpd.GeoDataFrame(
+                        data=final_zone_corr.set_index(
+                            [f"{self.zone_1.name}_id", f"{self.zone_2.name}_id"]
+                        ),
+                        geometry=spatial_correspondence_no_slithers.set_index(
+                            [f"{self.zone_1.name}_id", f"{self.zone_2.name}_id"]
+                        ).geometry,
+                    )
             else:
                 final_zone_corr = spatial_correspondence_no_slithers
         else:
