@@ -209,8 +209,6 @@ class ZoneTranslation:
 
     def weighted_centroids(self):
         """
-        Summary
-        -------
         Create centroids based on weighting data.
 
         Returns
