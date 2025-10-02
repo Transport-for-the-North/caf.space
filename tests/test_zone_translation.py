@@ -105,6 +105,19 @@ def fixture_expected_points() -> pd.DataFrame:
     # fmt: on
     return output
 
+@pytest.fixture(name="expected_centroids", scope="class")
+def fixture_expected_centroids() -> pd.DataFrame:
+    # fmt: off
+    output = pd.DataFrame(
+        {
+            "x": [1.94, 6.16, 3.38],
+            "y": [5.26, 5.66, 1.58]
+        },
+        index=pd.Index(["A","B","C"], name='zone_1_id')
+    )
+    # fmt: on
+    return output
+
 
 @pytest.fixture(name="expected_point_to_point", scope="class")
 def fixture_expetced_point_to_point(expected_weighted) -> pd.DataFrame:
@@ -265,3 +278,7 @@ class TestZoneTranslation:
         df_2 = expected.groupby(["zone_1_id", "zone_2_id"]).sum()
         df_2.sort_index(inplace=True)
         pd.testing.assert_frame_equal(df_1, df_2)
+
+    def test_centroids(self, centroids, expected_centroids):
+        rounded = centroids.round(2)
+        pd.testing.assert_frame_equal(rounded, expected_centroids)

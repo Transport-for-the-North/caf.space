@@ -225,7 +225,7 @@ class ZoneTranslation:
         )
         lower_weight.index.name = f"{self.lower_zoning.name}_id"
         cent = lookup.join(lower_weight)
-        cent["val"] *= cent[f"{self.lower_zoning.name}_to_{self.zone_1.name}"]
+        cent[self.lower_zoning.data_col] *= cent[f"{self.lower_zoning.name}_to_{self.zone_1.name}"]
         cent["x_weight"] = cent.centroid.x * cent[self.lower_zoning.data_col]
         cent["y_weight"] = cent.centroid.y * cent[self.lower_zoning.data_col]
         grouped = cent.groupby(f"{self.zone_1.name}_id")[
