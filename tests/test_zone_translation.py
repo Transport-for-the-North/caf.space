@@ -105,6 +105,7 @@ def fixture_expected_points() -> pd.DataFrame:
     # fmt: on
     return output
 
+
 @pytest.fixture(name="expected_centroids", scope="class")
 def fixture_expected_centroids() -> pd.DataFrame:
     # fmt: off

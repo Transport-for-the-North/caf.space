@@ -352,10 +352,12 @@ def fixture_weighted_trans(weighted_config) -> pd.DataFrame:
     trans = zone_translation.ZoneTranslation(weighted_config).weighted_translation()
     return trans
 
+
 @pytest.fixture(name="centroids", scope="session")
 def fixture_centroids(weighted_config) -> pd.DataFrame:
     trans = zone_translation.ZoneTranslation(weighted_config).weighted_centroids()
     return trans
+
 
 @pytest.fixture(name="points_config", scope="session")
 def fixture_points_config(main_dir, weighted_config, point_zones, point_shapefile_2) -> Path:
