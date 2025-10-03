@@ -145,7 +145,9 @@ class ZoneTranslation:
         if self.zone_1.point_shapefile:
             if self.zone_2.point_shapefile:
                 points_1 = gpd.read_file(self.zone_1.point_shapefile)
+                points_1 = utils.set_crs(points_1, self.zone_1.name)
                 points_2 = gpd.read_file(self.zone_2.point_shapefile)
+                points_2 = utils.set_crs(points_2, self.zone_2.name)
                 if len(points_1) > len(points_2):
                     matches = utils.find_point_matches(
                         points_1,
@@ -174,8 +176,10 @@ class ZoneTranslation:
                 )
             else:
                 points_1 = gpd.read_file(self.zone_1.point_shapefile)
+                points_1 = utils.set_crs(points_1, self.zone_1.name)
         elif self.zone_2.point_shapefile:
             points_2 = gpd.read_file(self.zone_2.point_shapefile)
+            points_2 = utils.set_crs(points_2, self.zone_2.name)
         weighted_translation = weighted_funcs.final_weighted(
             zones,
             self.zone_1,

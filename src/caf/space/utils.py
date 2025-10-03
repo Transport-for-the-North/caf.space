@@ -7,6 +7,7 @@ from pathlib import Path
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+import warnings
 from scipy.spatial import cKDTree
 
 # pylint: disable=import-error,wrong-import-position
@@ -120,3 +121,9 @@ def points_update(
     points.set_index(id_col, inplace=True)
     points.drop(list(matches[matches_id]), axis=0, inplace=True)
     return points.reset_index()
+
+def set_crs(gdf: gpd.GeoDataFrame, name: str):
+    if gdf.crs is None:
+        warnings.warn(f"Zone {name} has no CRS, setting crs to EPSG:27700.", stacklevel=2)
+        gdf.set_crs("EPSG:27700")
+    return gdf
