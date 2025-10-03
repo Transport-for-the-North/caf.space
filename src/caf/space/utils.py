@@ -124,6 +124,7 @@ def points_update(
 
 
 def set_crs(gdf: gpd.GeoDataFrame, name: str):
+    """Set crs of gdf if missing."""
     if gdf.crs is None:
         warnings.warn(f"Zone {name} has no CRS, setting crs to EPSG:27700.", stacklevel=2)
         gdf.set_crs("EPSG:27700")
