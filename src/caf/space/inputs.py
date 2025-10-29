@@ -144,7 +144,7 @@ class LowerZoneSystemInfo(ZoneSystemInfo):
             for v in [self.data_col, self.weight_id_col]:
                 if v not in cols:
                     raise ValueError(f"The given col, {v}, does not appear in the weight data.")
-            return self
+        return self
 
 
 def _create_parser() -> argparse.ArgumentParser:
