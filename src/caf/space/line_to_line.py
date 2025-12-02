@@ -3,10 +3,12 @@ import pandas as pd
 import geopandas as gpd
 import shapely
 import numpy as np
-from dataclasses import dataclass
+from pydantic.dataclasses import dataclass
+from pydantic import BeforeValidator
+from caf.toolkit.config_base import BaseConfig
 from pathlib import Path
 from tqdm import tqdm
-from typing import Union
+from typing import Union, Annotated
 
 # pylint: disable=import-error,wrong-import-position
 # Local imports here
@@ -16,6 +18,12 @@ from typing import Union
 
 
 # # # CLASSES # # #
+def _read_gpd(gpd_path: Path | gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    if isinstance(gpd_path, gpd.GeoDataFrame):
+        return gpd_path
+    return gpd.read_file(gpd_path, engine="pyogrio")
+
+
 @dataclass
 class ConvergenceValues:
     rmse: float
@@ -27,12 +35,17 @@ class ConvergenceValues:
 @dataclass
 class LinkInfo:
     identifier: Union[str, list[str]]
-    gdf: gpd.GeoDataFrame
+    gdf: Annotated[gpd.GeoDataFrame, BeforeValidator(_read_gpd)]
     name: str
 
     @property
     def list_ident(self):
         return [self.identifier] if isinstance(self.identifier, str) else self.identifier
+
+
+class Line2LineConf(BaseConfig):
+    target: LinkInfo
+    reference: LinkInfo
 
 
 # # # FUNCTIONS # # #
