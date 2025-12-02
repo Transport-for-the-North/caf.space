@@ -166,7 +166,7 @@ def fixture_point_zones(main_dir) -> Path:
             Polygon([(0, 1), (0, 4), (3, 4), (3, 0), (1, 0), (1, 1)]),
             Polygon([(3, 0), (3, 4), (8, 4), (8, 0)]),
         ],
-        crs="EPSG:27700"
+        crs="EPSG:27700",
     )
     file = main_dir / "pseudo_point.shp"
     points.to_file(file)

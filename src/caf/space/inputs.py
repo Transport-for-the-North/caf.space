@@ -139,11 +139,13 @@ class LowerZoneSystemInfo(ZoneSystemInfo):
 
     @model_validator(mode="after")
     def _valid_data_col(self):
-        if (weight := self.weight_data) is not None:    
+        if (weight := self.weight_data) is not None:
             cols = pd.read_csv(weight, nrows=1).columns
             for v in [self.data_col, self.weight_id_col]:
                 if v not in cols:
-                    raise ValueError(f"The given col, {v}, does not appear in the weight data.")
+                    raise ValueError(
+                        f"The given col, {v}, does not appear in the weight data."
+                    )
         return self
 
 
