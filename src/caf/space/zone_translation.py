@@ -221,7 +221,12 @@ class ZoneTranslation:
         The zone ids will be in the index.
         """
         trans_conf = inputs.ZoningTranslationInputs(
-            zone_1=self.zone_1, zone_2=self.lower_zoning._lower_to_higher()
+            zone_1=self.zone_1,
+            zone_2=self.lower_zoning._lower_to_higher(),
+            cache_path=self.cache_path,
+            sliver_tolerance=self.slither_tolerance,
+            rounding=self.rounding,
+            filter_slivers=self.filter_slithers,
         )
         lookup = ZoneTranslation(trans_conf).spatial_translation(return_gdf=True)
         lower_weight = pd.read_csv(
