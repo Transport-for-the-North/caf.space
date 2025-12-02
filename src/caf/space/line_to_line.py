@@ -47,6 +47,12 @@ class Line2LineConf(BaseConfig):
     target: LinkInfo
     reference: LinkInfo
 
+    """
+    target: The line layer you want info for. This layer will be iterated through, with matches 
+    found in reference for each line in target.
+    reference: The line layer which will be matched to target.
+    """
+
 
 # # # FUNCTIONS # # #
 
@@ -220,10 +226,10 @@ def find_con(longer, shorter, longer_suffix: str = "", shorter_suffix: str = "")
     )
 
 
-def main(ref_links: LinkInfo, target_links: LinkInfo, filter_out: bool = False):
-    target_processed = preprocess(target_links)
+def main(conf: Line2LineConf):
+    target_processed = preprocess(Line2LineConf.target)
     target_processed.index.name = "id_targ"
-    ref_processed = preprocess(ref_links)
+    ref_processed = preprocess(Line2LineConf.reference)
     ref_processed.index.name = "id_ref"
     joined = init_join(target_processed, ref_processed)
     missing_targ = target_processed.drop(joined.index.unique())
