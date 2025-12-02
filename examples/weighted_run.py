@@ -1,6 +1,6 @@
 """
-Example of weighted centroid run
-================================
+Example of weighted translation run
+===================================
 """
 
 import caf.space as cs
