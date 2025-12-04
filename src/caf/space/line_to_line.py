@@ -32,13 +32,15 @@ class ConvergenceValues:
     angle: float
 
 
-@dataclass(config=pydantic.ConfigDict(arbitrary_types_allowed=True))
+@dataclass
 class LinkInfo:
     identifier: Union[str, list[str]]
     file: inputs.GeoDataFile
     name: str
 
     _gdf: gpd.GeoDataFrame | None = None
+
+    __pydantic_config__ = pydantic.ConfigDict(arbitrary_types_allowed=True)
 
     @property
     def gdf(self) -> gpd.GeoDataFrame:
@@ -63,9 +65,9 @@ class LinkInfo:
 class Line2LineConf(BaseConfig):
     model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
 
-    target: LinkInfo
+    target: LinkInfo | list[LinkInfo]
     reference: LinkInfo
-    output: pathlib.Path
+    output_folder: pydantic.DirectoryPath
 
     """
     target: The line layer you want info for. This layer will be iterated through, with matches 
@@ -256,53 +258,67 @@ def find_con(longer, shorter, longer_suffix: str = "", shorter_suffix: str = "")
 
 
 def main(conf: Line2LineConf):
-    target_processed = preprocess(conf.target)
-    target_processed.index.name = "id_targ"
     ref_processed = preprocess(conf.reference)
     ref_processed.index.name = "id_ref"
-    joined = init_join(target_processed, ref_processed)
-    missing_targ = target_processed.drop(joined.index.unique())
-    big_join = (
-        target_processed.join(joined)
-        .set_index("id_ref", append=True)
-        .join(ref_processed, lsuffix="_targ", rsuffix="_ref")
-    )
-    ref_first = big_join.loc[big_join["length_targ"] < big_join["length_ref"]]
-    targ_first = big_join.loc[big_join["length_targ"] >= big_join["length_ref"]]
-    results_a = ref_first.apply(
-        lambda row: find_con(
-            row.loc[["geometry_ref", "crow_fly_ref"]],
-            row.loc[
-                [
-                    "geometry_targ",
-                    "angle_targ",
-                    "start_targ",
-                    "end_targ",
-                    "crow_fly_targ",
-                ]
-            ],
-            "_ref",
-            "_targ",
-        ),
-        axis=1,
-    )
-    results_b = targ_first.apply(
-        lambda row: find_con(
-            row.loc[["geometry_targ", "crow_fly_targ"]],
-            row.loc[
-                ["geometry_ref", "angle_ref", "start_ref", "end_ref", "crow_fly_ref"]
-            ],
-            "_targ",
-            "_ref",
-        ),
-        axis=1,
-    )
-    results = pd.concat([results_a, results_b])
-    return (
-        results.reset_index(level="id_targ")
-        .sort_values(by=["id_targ", "distance"])
-        .set_index("id_targ", append=True)
-    )
+
+    if isinstance(conf.target, list):
+        targets = conf.target
+    else:
+        targets = [conf.target]
+
+    for target in targets:
+        target_processed = preprocess(target)
+        target_processed.index.name = "id_targ"
+        joined = init_join(target_processed, ref_processed)
+        missing_targ = target_processed.drop(joined.index.unique())
+        big_join = (
+            target_processed.join(joined)
+            .set_index("id_ref", append=True)
+            .join(ref_processed, lsuffix="_targ", rsuffix="_ref")
+        )
+        ref_first = big_join.loc[big_join["length_targ"] < big_join["length_ref"]]
+        targ_first = big_join.loc[big_join["length_targ"] >= big_join["length_ref"]]
+        results_a = ref_first.apply(
+            lambda row: find_con(
+                row.loc[["geometry_ref", "crow_fly_ref"]],
+                row.loc[
+                    [
+                        "geometry_targ",
+                        "angle_targ",
+                        "start_targ",
+                        "end_targ",
+                        "crow_fly_targ",
+                    ]
+                ],
+                "_ref",
+                "_targ",
+            ),
+            axis=1,
+        )
+        results_b = targ_first.apply(
+            lambda row: find_con(
+                row.loc[["geometry_targ", "crow_fly_targ"]],
+                row.loc[
+                    [
+                        "geometry_ref",
+                        "angle_ref",
+                        "start_ref",
+                        "end_ref",
+                        "crow_fly_ref",
+                    ]
+                ],
+                "_targ",
+                "_ref",
+            ),
+            axis=1,
+        )
+        results = pd.concat([results_a, results_b])
+        results = (
+            results.reset_index(level="id_targ")
+            .sort_values(by=["id_targ", "distance"])
+            .set_index("id_targ", append=True)
+        )
+        results.to_csv(conf.output_folder / f"{target.name}-{conf.reference.name}.csv")
 
 
 def process_missing(lookup, gdf, threshold):
@@ -333,8 +349,7 @@ def _run() -> None:
         raise FileNotFoundError(config_path)
 
     config = Line2LineConf.load_yaml(config_path)
-    out = main(config)
-    out.to_csv(config.output)
+    main(config)
 
 
 if __name__ == "__main__":
