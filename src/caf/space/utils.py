@@ -4,13 +4,12 @@
 from pathlib import Path
 
 # Third Party
-import pandas as pd
 import geopandas as gpd
 import numpy as np
+import pandas as pd
 from scipy.spatial import cKDTree
 import shapely
 
-# Local Imports
 # pylint: disable=import-error,wrong-import-position
 # Local imports here
 # pylint: enable=import-error,wrong-import-position
@@ -61,6 +60,7 @@ def find_point_matches(
     gda: gpd.GeoDataFrame,
     gdb: gpd.GeoDataFrame,
     max_dist: int,
+    *,
     id_col_1: str,
     id_col_2: str,
     name_1: str,

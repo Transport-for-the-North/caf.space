@@ -1,18 +1,17 @@
 # -*- coding: utf-8 -*-
 "User interface for caf.space."
 # Built-Ins
-from functools import partial
-import tkinter as tk
-from tkinter import ttk, filedialog
-from pathlib import Path
-from typing import Optional
-import sys
 import logging
-
-# Third Party
-from caf.space import inputs, zone_translation
+import sys
+import tkinter as tk
+from functools import partial
+from pathlib import Path
+from tkinter import filedialog, ttk
+from typing import Optional
 
 # Local Imports
+from caf.space import inputs, zone_translation
+
 # pylint: disable=import-error,wrong-import-position
 # Local imports here
 
@@ -59,6 +58,7 @@ class FileWidget(ttk.Frame):
         parent,
         variable: Optional[tk.StringVar] = None,
         label="",
+        *,
         browse="open",
         widths=(20, 20),
         file_filter=(("All files", "*.*")),
@@ -158,6 +158,7 @@ class LabelledTextEntry(ttk.Frame):
         parent,
         label: str,
         variable: Optional[tk.StringVar] = None,
+        *,
         label_width: int = 20,
         text_width=20,
     ):
@@ -220,7 +221,7 @@ class NumberScroller(ttk.Frame):
     label_width (int): The width of the label.
     """
 
-    def __init__(self, parent, scroll_range, label, default_value, label_width=20):
+    def __init__(self, parent, scroll_range, label, default_value, *, label_width=20):
         super().__init__(parent)
         self.link_var = tk.IntVar(value=default_value)
         self.label = ttk.Label(self, text=label, width=label_width)

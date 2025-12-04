@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
+# Built-Ins
 import argparse
 import pathlib
 from typing import Union
 
+# Third Party
 import geopandas as gpd
 import numpy as np
 import pandas as pd
@@ -11,6 +13,7 @@ import shapely
 from caf.toolkit.config_base import BaseConfig
 from pydantic.dataclasses import dataclass
 
+# Local Imports
 from caf.space import inputs
 
 # pylint: disable=import-error,wrong-import-position

@@ -3,18 +3,18 @@
 Fixtures used across multiple test modules.
 """
 # Built-Ins
-from pathlib import Path
 from copy import deepcopy
+from pathlib import Path
 
 # Third Party
-import pytest
-
-# pylint: disable=import-error
-from shapely.geometry import Polygon, Point
 import geopandas as gpd
 
 # pylint: enable=import-error
 import pandas as pd
+import pytest
+
+# pylint: disable=import-error
+from shapely.geometry import Point, Polygon
 
 # Local Imports
 # pylint: disable=import-error,wrong-import-position
