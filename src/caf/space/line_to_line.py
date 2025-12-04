@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
+import argparse
 import pathlib
-from pathlib import Path
 from typing import Union
 
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+import pydantic
 import shapely
 from caf.toolkit.config_base import BaseConfig
 from pydantic.dataclasses import dataclass
@@ -18,6 +19,7 @@ from caf.space import inputs
 
 # # # CONSTANTS # # #
 
+_CONFIG = pathlib.Path("line_to_line.yml")
 
 # # # CLASSES # # #
 
@@ -30,7 +32,7 @@ class ConvergenceValues:
     angle: float
 
 
-@dataclass
+@dataclass(config=pydantic.ConfigDict(arbitrary_types_allowed=True))
 class LinkInfo:
     identifier: Union[str, list[str]]
     file: inputs.GeoDataFile
@@ -53,12 +55,17 @@ class LinkInfo:
 
     @property
     def list_ident(self):
-        return [self.identifier] if isinstance(self.identifier, str) else self.identifier
+        return (
+            [self.identifier] if isinstance(self.identifier, str) else self.identifier
+        )
 
 
 class Line2LineConf(BaseConfig):
+    model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
+
     target: LinkInfo
     reference: LinkInfo
+    output: pathlib.Path
 
     """
     target: The line layer you want info for. This layer will be iterated through, with matches 
@@ -163,7 +170,16 @@ def preprocess(link_info: LinkInfo, buffer_dist=50, crs="EPSG:27700"):
     inner["length"] = inner.geometry.length
     inner["straightness"] = inner["crow_fly"] / inner.length
     return inner[
-        ["start", "end", "angle", "buffer", "crow_fly", "length", "straightness", "geometry"]
+        [
+            "start",
+            "end",
+            "angle",
+            "buffer",
+            "crow_fly",
+            "length",
+            "straightness",
+            "geometry",
+        ]
     ].sort_index()
 
 
@@ -183,9 +199,9 @@ def init_join(targ, ref, angle_threshold=60):
     -------
 
     """
-    joined = gpd.GeoDataFrame(targ[["angle", "straightness"]], geometry=targ["buffer"]).sjoin(
-        ref[["angle", "geometry"]]
-    )
+    joined = gpd.GeoDataFrame(
+        targ[["angle", "straightness"]], geometry=targ["buffer"]
+    ).sjoin(ref[["angle", "geometry"]])
     joined["angle"] = joined.apply(
         lambda row: relative_angle(row["angle_left"], row["angle_right"]), axis=1
     )
@@ -257,7 +273,13 @@ def main(conf: Line2LineConf):
         lambda row: find_con(
             row.loc[["geometry_ref", "crow_fly_ref"]],
             row.loc[
-                ["geometry_targ", "angle_targ", "start_targ", "end_targ", "crow_fly_targ"]
+                [
+                    "geometry_targ",
+                    "angle_targ",
+                    "start_targ",
+                    "end_targ",
+                    "crow_fly_targ",
+                ]
             ],
             "_ref",
             "_targ",
@@ -267,7 +289,9 @@ def main(conf: Line2LineConf):
     results_b = targ_first.apply(
         lambda row: find_con(
             row.loc[["geometry_targ", "crow_fly_targ"]],
-            row.loc[["geometry_ref", "angle_ref", "start_ref", "end_ref", "crow_fly_ref"]],
+            row.loc[
+                ["geometry_ref", "angle_ref", "start_ref", "end_ref", "crow_fly_ref"]
+            ],
             "_targ",
             "_ref",
         ),
@@ -289,29 +313,29 @@ def process_missing(lookup, gdf, threshold):
     matching = gdf.drop(missing_ind).copy()
 
 
+def _run() -> None:
+    name = pathlib.Path(__file__).stem
+    parser = argparse.ArgumentParser(
+        ".".join((__package__, name)),
+        description=__doc__,
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument(
+        "config",
+        type=pathlib.Path,
+        default=_CONFIG,
+        help="path to line to line YAML config file",
+    )
+
+    args = parser.parse_args()
+    config_path: pathlib.Path = args.config
+    if not config_path.is_file():
+        raise FileNotFoundError(config_path)
+
+    config = Line2LineConf.load_yaml(config_path)
+    out = main(config)
+    out.to_csv(config.output)
+
+
 if __name__ == "__main__":
-    home_dir = Path(r"E:\tmjt_data\out\lookup")
-    itn_path = pathlib.Path(
-        r"O:\10.Internal_Requests\24 MRNmatchingNoHAM2023\MRN\mrnpaths.shp"
-    )
-    noham_path = pathlib.Path(
-        r"O:\10.Internal_Requests\24 MRNmatchingNoHAM2023\NoHAM\NoHAM_Base.shp"
-    )
-
-    itn = LinkInfo(
-        file=inputs.GeoDataFile(itn_path),
-        identifier="path_id",
-        name="mrn",
-    )
-    noham = LinkInfo(
-        file=inputs.GeoDataFile(noham_path),
-        identifier=["A", "B"],
-        name="noham",
-    )
-
-    noham.gdf = noham.gdf[(noham.gdf["A"] > 10000) & (noham.gdf["B"] > 10000)]
-
-    config_ = Line2LineConf(target=itn, reference=noham)
-
-    out = main(config_)
-    out.to_csv(home_dir / "sat_rami_lookup.csv")
+    _run()
