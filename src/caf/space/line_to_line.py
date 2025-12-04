@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
-import pandas as pd
-import geopandas as gpd
-import shapely
-import numpy as np
-from pydantic.dataclasses import dataclass
-from pydantic import BeforeValidator
-from caf.toolkit.config_base import BaseConfig
+import pathlib
 from pathlib import Path
-from tqdm import tqdm
-from typing import Union, Annotated
+from typing import Union
+
+import geopandas as gpd
+import numpy as np
+import pandas as pd
+import shapely
+from caf.toolkit.config_base import BaseConfig
+from pydantic.dataclasses import dataclass
+
+from caf.space import inputs
 
 # pylint: disable=import-error,wrong-import-position
 # Local imports here
@@ -18,10 +20,6 @@ from typing import Union, Annotated
 
 
 # # # CLASSES # # #
-def _read_gpd(gpd_path: Path | gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-    if isinstance(gpd_path, gpd.GeoDataFrame):
-        return gpd_path
-    return gpd.read_file(gpd_path, engine="pyogrio")
 
 
 @dataclass
@@ -35,8 +33,23 @@ class ConvergenceValues:
 @dataclass
 class LinkInfo:
     identifier: Union[str, list[str]]
-    gdf: Annotated[gpd.GeoDataFrame, BeforeValidator(_read_gpd)]
+    file: inputs.GeoDataFile
     name: str
+
+    _gdf: gpd.GeoDataFrame | None = None
+
+    @property
+    def gdf(self) -> gpd.GeoDataFrame:
+        """Link data GeoDataFrame."""
+        if self._gdf is None:
+            self._gdf = self.file.read()
+        return self._gdf
+
+    @gdf.setter
+    def gdf(self, value: gpd.GeoDataFrame) -> None:
+        if not isinstance(value, gpd.GeoDataFrame):
+            raise TypeError(f"gdf should be a GeoDataFrame not {type(value)}")
+        self._gdf = value
 
     @property
     def list_ident(self):
@@ -227,9 +240,9 @@ def find_con(longer, shorter, longer_suffix: str = "", shorter_suffix: str = "")
 
 
 def main(conf: Line2LineConf):
-    target_processed = preprocess(Line2LineConf.target)
+    target_processed = preprocess(conf.target)
     target_processed.index.name = "id_targ"
-    ref_processed = preprocess(Line2LineConf.reference)
+    ref_processed = preprocess(conf.reference)
     ref_processed.index.name = "id_ref"
     joined = init_join(target_processed, ref_processed)
     missing_targ = target_processed.drop(joined.index.unique())
@@ -278,22 +291,27 @@ def process_missing(lookup, gdf, threshold):
 
 if __name__ == "__main__":
     home_dir = Path(r"E:\tmjt_data\out\lookup")
-    itn = gpd.read_file(
-        r"O:\10.Internal_Requests\24 MRNmatchingNoHAM2023\MRN\mrnpaths.shp", engine="pyogrio"
+    itn_path = pathlib.Path(
+        r"O:\10.Internal_Requests\24 MRNmatchingNoHAM2023\MRN\mrnpaths.shp"
     )
-    # itn = itn[itn["rdclass"] != "ZC"]
-    # osm = gpd.read_file(home_dir / "manchester_os").set_index('unique_id')
-    # osm = LinkInfo(gdf=osm, identifier='unique_id', name='osm')
-    itn = LinkInfo(gdf=itn, identifier="path_id", name="mrn")
-    noham = gpd.read_file(
-        r"O:\10.Internal_Requests\24 MRNmatchingNoHAM2023\NoHAM\NoHAM_Base.shp",
-        engine="pyogrio",
+    noham_path = pathlib.Path(
+        r"O:\10.Internal_Requests\24 MRNmatchingNoHAM2023\NoHAM\NoHAM_Base.shp"
+    )
+
+    itn = LinkInfo(
+        file=inputs.GeoDataFile(itn_path),
+        identifier="path_id",
+        name="mrn",
     )
     noham = LinkInfo(
-        gdf=noham[(noham["A"] > 10000) & (noham["B"] > 10000)],
+        file=inputs.GeoDataFile(noham_path),
         identifier=["A", "B"],
         name="noham",
     )
-    out = main(noham, itn, True)
+
+    noham.gdf = noham.gdf[(noham.gdf["A"] > 10000) & (noham.gdf["B"] > 10000)]
+
+    config_ = Line2LineConf(target=itn, reference=noham)
+
+    out = main(config_)
     out.to_csv(home_dir / "sat_rami_lookup.csv")
-    print("debugging")

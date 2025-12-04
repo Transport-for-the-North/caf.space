@@ -10,29 +10,51 @@ ultimately used as input parameters for the ZoneTranslation class.
 ##### IMPORTS #####
 from __future__ import annotations
 
-# Standard imports
-# pylint: disable=import-error
-import logging
-import datetime
+import argparse
 import dataclasses
-import fiona
+import datetime
+
+# Standard imports
+import logging
 import os
 from pathlib import Path
-import pandas as pd
 from typing import Optional
-from pydantic import field_validator, model_validator
 
 # Third party imports
+import fiona
+import geopandas as gpd
+import pandas as pd
 from caf.toolkit import BaseConfig
-import argparse
+from pydantic import field_validator, model_validator
 
-# pylint: enable=import-error
 # Local imports
 
 ##### CONSTANTS #####
 LOG = logging.getLogger(__name__)
 CACHE_PATH = "I:/Data/Zone Translations/cache"
 MODES = ("spatial", "weighted", "GUI")
+
+
+@dataclasses.dataclass
+class GeoDataFile:
+    """Parameters for loading a GeoSpatial file."""
+
+    path: Path
+    layer: str | int | None = None
+
+    def read(self, **kwargs) -> gpd.GeoDataFrame:
+        """Read data from files using :func:`gpd.read_file`.
+
+        See Also
+        --------
+        :func:`gpd.read_file`
+            all keyword arguments are passed directly.
+        """
+        engine = kwargs.pop("engine", "pyogrio")
+        if "layer" in kwargs:
+            raise ValueError("layer argument passed to read_file from class attribute")
+
+        return gpd.read_file(self.path, layer=self.layer, engine=engine, **kwargs)
 
 
 class ZoneSystemInfo(BaseConfig):
