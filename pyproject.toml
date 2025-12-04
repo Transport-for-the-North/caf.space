@@ -67,6 +67,7 @@ where = ["src"]
 
 [project.scripts]
 "caf.space" = "caf.space.__main__:main"
+"caf.space.line_to_line" = "caf.space.line_to_line:_run"
 
 # Linters
 [tool.black]
