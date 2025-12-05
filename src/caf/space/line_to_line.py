@@ -184,7 +184,7 @@ def preprocess(link_info: LinkInfo, buffer_dist=50, crs="EPSG:27700"):
             RuntimeWarning,
             stacklevel=2,
         )
-        _check_geom_type(inner, ("LineString",))
+        _check_geom_type(inner, ("LineString",), error=False)
 
     inner["start"] = shapely.get_point(inner.geometry, 0)
     inner["end"] = shapely.get_point(inner.geometry, -1)
@@ -211,7 +211,9 @@ def preprocess(link_info: LinkInfo, buffer_dist=50, crs="EPSG:27700"):
     ].sort_index()
 
 
-def _check_geom_type(data: gpd.GeoDataFrame, valid_types: Sequence[str]):
+def _check_geom_type(
+    data: gpd.GeoDataFrame, valid_types: Sequence[str], *, error: bool = True
+):
     if data.geom_type.isin(valid_types).all():
         return
 
@@ -219,10 +221,12 @@ def _check_geom_type(data: gpd.GeoDataFrame, valid_types: Sequence[str]):
         data.geom_type[~data.geom_type.isin(valid_types)],
         return_counts=True,
     )
-    raise TypeError(
-        f"geometries should be {', '.join(valid_types)} not: "
-        + ", ".join(f"{i} ({j:,})" for i, j in zip(*counts))
+    message = f"geometries should be {', '.join(valid_types)} not: " + ", ".join(
+        f"{i} ({j:,})" for i, j in zip(*counts)
     )
+    if error:
+        raise TypeError(message)
+    warnings.warn(message, RuntimeWarning, stacklevel=3)
 
 
 def init_join(targ, ref, angle_threshold=60):
