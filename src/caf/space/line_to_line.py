@@ -1,8 +1,11 @@
-# -*- coding: utf-8 -*-
+"""Calculate the correspondence between two sets of line geometries."""
+
 # Built-Ins
 import argparse
+import logging
 import pathlib
-from typing import Union
+import warnings
+from typing import Sequence, Union
 
 # Third Party
 import geopandas as gpd
@@ -16,11 +19,13 @@ from pydantic.dataclasses import dataclass
 # Local Imports
 from caf.space import inputs
 
-# pylint: disable=import-error,wrong-import-position
-# Local imports here
-# pylint: enable=import-error,wrong-import-position
-
 # # # CONSTANTS # # #
+
+if __name__ == "__main__":
+    # Reproduce __name__ using package and file path
+    LOG = logging.getLogger(".".join((__package__, pathlib.Path(__file__).stem)))
+else:
+    LOG = logging.getLogger(__name__)
 
 _CONFIG = pathlib.Path("line_to_line.yml")
 
@@ -150,6 +155,7 @@ def preprocess(link_info: LinkInfo, buffer_dist=50, crs="EPSG:27700"):
     - straightness: Ratio of crow fly distance to link length
     - geometry: Original link geometry
     """
+    LOG.debug("Preprocessing %s", link_info.name)
     gdf = link_info.gdf
     if gdf.crs != crs:
         gdf.to_crs(crs, inplace=True)
@@ -162,7 +168,24 @@ def preprocess(link_info: LinkInfo, buffer_dist=50, crs="EPSG:27700"):
         )
     else:
         inner.rename(columns={link_info.identifier: "id"}, inplace=True)
-    inner.set_index("id", inplace=True)
+
+    nans = inner["id"].isna() | (inner["id"].astype(str).str.strip() == "")
+    if nans.any():
+        raise ValueError(f"identifier column(s) contain {nans.sum():,} null values")
+
+    inner.set_index("id", inplace=True, verify_integrity=True)
+
+    if (inner.geom_type != "LineString").any():
+        _check_geom_type(inner, ("LineString", "MultiLineString"))
+        inner.geometry = inner.line_merge(directed=True)
+        warnings.warn(
+            "Merged geometries containing multiple linestrings into"
+            f" single for each feature for {link_info.name}",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        _check_geom_type(inner, ("LineString",))
+
     inner["start"] = shapely.get_point(inner.geometry, 0)
     inner["end"] = shapely.get_point(inner.geometry, -1)
     # MultiLineStrings break this - temp fix should be looked into
@@ -186,6 +209,20 @@ def preprocess(link_info: LinkInfo, buffer_dist=50, crs="EPSG:27700"):
             "geometry",
         ]
     ].sort_index()
+
+
+def _check_geom_type(data: gpd.GeoDataFrame, valid_types: Sequence[str]):
+    if data.geom_type.isin(valid_types).all():
+        return
+
+    counts = np.unique(
+        data.geom_type[~data.geom_type.isin(valid_types)],
+        return_counts=True,
+    )
+    raise TypeError(
+        f"geometries should be {', '.join(valid_types)} not: "
+        + ", ".join(f"{i} ({j:,})" for i, j in zip(*counts))
+    )
 
 
 def init_join(targ, ref, angle_threshold=60):
@@ -270,6 +307,9 @@ def main(conf: Line2LineConf):
         targets = [conf.target]
 
     for target in targets:
+        LOG.info(
+            "Producing %s and %s link correspondence", conf.reference.name, target.name
+        )
         target_processed = preprocess(target)
         target_processed.index.name = "id_targ"
         joined = init_join(target_processed, ref_processed)
@@ -321,7 +361,10 @@ def main(conf: Line2LineConf):
             .sort_values(by=["id_targ", "distance"])
             .set_index("id_targ", append=True)
         )
-        results.to_csv(conf.output_folder / f"{target.name}-{conf.reference.name}.csv")
+
+        out_path = conf.output_folder / f"{target.name}-{conf.reference.name}.csv"
+        results.to_csv(out_path)
+        LOG.info("Written %s", out_path)
 
 
 def process_missing(lookup, gdf, threshold):
@@ -333,9 +376,10 @@ def process_missing(lookup, gdf, threshold):
 
 
 def _run() -> None:
-    name = pathlib.Path(__file__).stem
+    logging.basicConfig(level=logging.DEBUG)
+
     parser = argparse.ArgumentParser(
-        ".".join((__package__, name)),
+        ".".join((__package__, pathlib.Path(__file__).stem)),
         description=__doc__,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
