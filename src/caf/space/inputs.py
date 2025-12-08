@@ -18,9 +18,11 @@ import datetime
 # Standard imports
 import logging
 import os
+import warnings
 from pathlib import Path
 from typing import Optional
 
+# Third Party
 # Third party imports
 import fiona
 import geopandas as gpd
@@ -42,6 +44,7 @@ class GeoDataFile:
 
     path: Path
     layer: str | int | None = None
+    columns: list[str] | None = None
 
     def read(self, **kwargs) -> gpd.GeoDataFrame:
         """Read data from files using :func:`gpd.read_file`.
@@ -55,7 +58,17 @@ class GeoDataFile:
         if "layer" in kwargs:
             raise ValueError("layer argument passed to read_file from class attribute")
 
-        return gpd.read_file(self.path, layer=self.layer, engine=engine, **kwargs)
+        if self.columns is None:
+            columns = kwargs.pop("columns", None)
+        else:
+            columns = self.columns.copy()
+            if "columns" in kwargs:
+                warnings.warn("columns provided twice, using combination", UserWarning)
+                columns.extend(i for i in kwargs.pop("columns") if i not in columns)
+
+        return gpd.read_file(
+            self.path, layer=self.layer, engine=engine, columns=columns, **kwargs
+        )
 
 
 class ZoneSystemInfo(BaseConfig):
