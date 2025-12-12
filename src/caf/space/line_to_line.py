@@ -2,6 +2,7 @@
 
 # Built-Ins
 import argparse
+import functools
 import logging
 import pathlib
 import warnings
@@ -71,14 +72,13 @@ class LinkInfo:
         return [self.identifier] if isinstance(self.identifier, str) else self.identifier
 
 
-def _check_filename(value: str | None) -> str | None:
+def _check_filename(value: str | None, *, suffixes: tuple[str, ...]) -> str | None:
     if value is None:
         return value
 
-    valid_suffixes = (".gpkg", ".shp", ".geojson")
     value = str(value)
-    if not value.strip().lower().endswith(valid_suffixes):
-        raise ValueError(f"invalid suffix for '{value}', expected one of {valid_suffixes}")
+    if not value.strip().lower().endswith(suffixes):
+        raise ValueError(f"invalid suffix for '{value}', expected one of {suffixes}")
     return value
 
 
@@ -89,7 +89,14 @@ class Line2LineConf(BaseConfig):
     reference: LinkInfo
     output_folder: pydantic.DirectoryPath
     output_network_filename: Annotated[
-        str | None, pydantic.AfterValidator(_check_filename)
+        str | None,
+        pydantic.AfterValidator(
+            functools.partial(_check_filename, suffixes=(".gpkg", ".shp", ".geojson"))
+        ),
+    ] = None
+    original_geometries_output: Annotated[
+        str | None,
+        pydantic.BeforeValidator(functools.partial(_check_filename, suffixes=(".gpkg",))),
     ] = None
 
     """
@@ -106,6 +113,13 @@ class Line2LineConf(BaseConfig):
         else:
             name = self.output_network_filename
         return self.output_folder / name
+
+    @property
+    def output_original_geometries(self) -> pathlib.Path | None:
+        """Optional path to output original geometries to, with reference ID column."""
+        if self.original_geometries_output is None:
+            return None
+        return self.output_folder / self.original_geometries_output
 
 
 # # # FUNCTIONS # # #
@@ -314,54 +328,93 @@ def find_con(longer, shorter, longer_suffix: str = "", shorter_suffix: str = "")
     longer_len = longer[f"crow_fly{longer_suffix}"]
     full_len = shorter_geometry.length
     return pd.Series(
-        [
-            score,
-            shorter_len,
-            longer_len,
-            shorter[f"geometry{shorter_suffix}"].length,
-            longer[f"geometry{longer_suffix}"].length,
-            full_len,
-            angle,
-        ],
-        index=[
-            "distance",
-            f"crow_fly{shorter_suffix}",
-            f"crow_fly{longer_suffix}",
-            f"length{shorter_suffix}",
-            f"length{longer_suffix}",
-            "overlap_length",
-            "angle",
-        ],
+        {
+            "distance": score,
+            f"crow_fly{shorter_suffix}": shorter_len,
+            f"crow_fly{longer_suffix}": longer_len,
+            f"length{shorter_suffix}": shorter[f"geometry{shorter_suffix}"].length,
+            f"length{longer_suffix}": longer[f"geometry{longer_suffix}"].length,
+            "overlap_length": full_len,
+            "angle": angle,
+            "hausdorff_distance": shapely.hausdorff_distance(line, shorter_geometry),
+            "frechet_distance": shapely.frechet_distance(line, shorter_geometry),
+        }
     )
 
 
-def combine(reference: LinkInfo, targets: Sequence[tuple[LinkInfo, dict]]) -> gpd.GeoDataFrame:
+def combine(
+    reference: LinkInfo,
+    targets: Sequence[tuple[LinkInfo, pd.DataFrame]],
+    original_geometries_output: pathlib.Path | None = None,
+) -> gpd.GeoDataFrame:
     """Combine target datasets back to reference geometries."""
     combined = reference.gdf.copy()
     combined = _set_id_column(combined, reference.identifier)
+    combined = combined.rename(columns={"id": "id_ref"}).set_index("id_ref")
 
     for target, replace in targets:
         data = _set_id_column(target.gdf.copy(), target.identifier)
-        data["id"] = data["id"].replace(replace)
-        data = data.drop(columns="geometry")
-        data.columns = [f"{target.name} - {i}" if i != "id" else i for i in data.columns]
+        data = data.rename(columns={"id": "id_targ"}).set_index("id_targ")
 
-        if (nans := data["id"].isna()).any():
-            data = data.loc[~nans]
-            try:
-                data["id"] = data["id"].astype(int)
-            except ValueError:
-                data["id"] = data["id"].astype(str)
-
-            warnings.warn(
-                f"dropped {nans.sum():,} features from {target.name}"
-                " with no corresponding link found",
-                RuntimeWarning,
-            )
-
-        combined = combined.merge(data, on="id", how="left")
+        merge_group = _group_merge(
+            data,
+            replace[["overlap_length", "length_ref"]],
+            target.name,
+            original_geometries_output,
+        )
+        combined = combined.join(merge_group, how="left", validate="1:1")
 
     return combined
+
+
+def _group_merge(
+    data: gpd.GeoDataFrame,
+    correspondence: pd.DataFrame,
+    name: str,
+    target_output: pathlib.Path | None,
+    weights_column: str = "overlap_length",
+) -> pd.DataFrame:
+    """Merge ref and target datasets together and group by reference ID."""
+    merged = data.join(
+        correspondence.reset_index("id_ref"), how="left", validate="1:m"
+    ).reset_index()
+
+    def join(values: pd.Series) -> str:
+        values = values.astype(str)
+        return ", ".join(f"{i} ({j})" for i, j in zip(*np.unique(values, return_counts=True)))
+
+    if target_output is not None:
+        merge_group = merged.groupby("id_targ").aggregate(
+            {
+                **dict.fromkeys(data.columns, "first"),
+                **dict.fromkeys(correspondence.columns, "sum"),
+                "id_ref": (join, "count"),
+            }
+        )
+        merge_group.columns = [
+            f"{i}-{j}" if i == "id_ref" else i for i, j in merge_group.columns
+        ]
+        merge_group = gpd.GeoDataFrame(merge_group, crs=data.crs)
+
+        merge_group.to_file(target_output, layer=name)
+        LOG.info("Written %s geometries to %s", name, target_output)
+
+    def overlap_weighted(group: pd.Series) -> float:
+        return np.average(group, weights=merged.loc[group.index, weights_column])
+
+    numeric_columns = data.select_dtypes(np.number).columns.tolist()
+    merge_group = merged.groupby("id_ref").aggregate(
+        {
+            "id_targ": (join, "count"),
+            **dict.fromkeys(numeric_columns, ("sum", "mean", overlap_weighted)),
+            **dict.fromkeys(
+                filter(lambda x: x not in ("geometry", *numeric_columns), data.columns),
+                ("count", join),
+            ),
+        }
+    )
+    merge_group.columns = [f"{name} - {i}-{j}" for i, j in merge_group.columns]
+    return merge_group
 
 
 def main(conf: Line2LineConf):
@@ -374,21 +427,24 @@ def main(conf: Line2LineConf):
     else:
         targets = [conf.target]
 
-    lookups: list[dict] = []
+    lookups: list[pd.DataFrame] = []
 
     for target in targets:
         LOG.info("Producing %s and %s link correspondence", conf.reference.name, target.name)
         results = _link_correspondence(target, ref_processed, conf.reference.name)
+        # TODO(MB): add some filtering of excess links found based on overlap?
 
         out_path = conf.output_folder / f"{target.name}-{conf.reference.name}.csv"
         results.to_csv(out_path)
         LOG.info("Written %s", out_path)
-
-        replace = results.index.to_frame(index=False).set_index("id_targ").squeeze().to_dict()
-        lookups.append(replace)
+        lookups.append(results)
 
     LOG.info("Adding attributes to %s", conf.reference.name)
-    combined = combine(conf.reference, list(zip(targets, lookups, strict=True)))
+    combined = combine(
+        conf.reference,
+        list(zip(targets, lookups, strict=True)),
+        original_geometries_output=conf.output_original_geometries,
+    )
 
     if conf.reference.file.layer is None:
         layer: str | int = "combined"
@@ -404,13 +460,26 @@ def _link_correspondence(
 ) -> pd.DataFrame:
     target_processed = preprocess(target)
     target_processed.index.name = "id_targ"
+
     joined = init_join(target_processed, reference)
-    missing_targ = target_processed.drop(joined.index.unique())
+
     big_join = (
-        target_processed.join(joined)
+        target_processed.join(joined, validate="1:m")
         .set_index("id_ref", append=True)
-        .join(reference, lsuffix="_targ", rsuffix="_ref")
+        .join(reference, lsuffix="_targ", rsuffix="_ref", validate="m:1")
     )
+
+    missing = big_join.index.get_level_values("id_ref").isna()
+    if missing.sum() > 0:
+        warnings.warn(
+            f"{missing.sum():,} ({missing.sum() / len(target_processed):.1%})"
+            f" features from {target.name} failed to find"
+            f" a corresponding link in {ref_name}",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        big_join = big_join.loc[~missing]
+
     ref_first = big_join.loc[big_join["length_targ"] < big_join["length_ref"]]
     targ_first = big_join.loc[big_join["length_targ"] >= big_join["length_ref"]]
     results_a = ref_first.apply(
@@ -454,24 +523,7 @@ def _link_correspondence(
         .set_index("id_targ", append=True)
     )
 
-    nans = results.index.get_level_values("id_ref").isna().sum()
-    if nans > 0:
-        warnings.warn(
-            f"{nans:,} features from {target.name} failed to find"
-            f" a corresponding link in {ref_name}",
-            RuntimeWarning,
-            stacklevel=2,
-        )
-
     return results
-
-
-def process_missing(lookup, gdf, threshold):
-    # Completely missing will be assigned np.inf. User can decide what
-    # threshold to try another method beneath.
-    missing_ind = lookup[lookup["convergence"] > threshold].index
-    missing = gdf.loc[missing_ind].copy()
-    matching = gdf.drop(missing_ind).copy()
 
 
 def _run() -> None:
