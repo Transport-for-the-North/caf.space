@@ -98,6 +98,7 @@ class Line2LineConf(BaseConfig):
         str | None,
         pydantic.BeforeValidator(functools.partial(_check_filename, suffixes=(".gpkg",))),
     ] = None
+    angle_threshold: int = 60
 
     """
     target: The line layer you want info for. This layer will be iterated through, with matches 
@@ -283,15 +284,6 @@ def init_join(targ, ref, angle_threshold=60):
 
     This will join all links in ref within the buffer of targ, and filter for the
     relative angle between them to be less than the angle_threshold.
-    Parameters
-    ----------
-    targ
-    ref
-    angle_threshold
-
-    Returns
-    -------
-
     """
     joined = gpd.GeoDataFrame(targ[["angle", "straightness"]], geometry=targ["buffer"]).sjoin(
         ref[["angle", "geometry"]]
@@ -299,13 +291,18 @@ def init_join(targ, ref, angle_threshold=60):
     joined["angle"] = joined.apply(
         lambda row: relative_angle(row["angle_left"], row["angle_right"]), axis=1
     )
+
     # Adjust angle to allow larger angles on bendy links
     joined.rename(columns={"id_right": "id_ref"}, inplace=True)
     joined["mod_angle"] = joined["angle"] * joined["straightness"] ** 2
-    return joined.loc[
-        np.absolute(joined["mod_angle"]) < angle_threshold,
-        "id_ref",
-    ]
+    mask = np.absolute(joined["mod_angle"]) < angle_threshold
+
+    LOG.debug(
+        "Dropped %s correspondence links with angles (straightness adjusted) > %s",
+        (~mask).sum(),
+        angle_threshold,
+    )
+    return joined.loc[mask, "id_ref"]
 
 
 def find_con(longer, shorter, longer_suffix: str = "", shorter_suffix: str = ""):
@@ -431,7 +428,12 @@ def main(conf: Line2LineConf):
 
     for target in targets:
         LOG.info("Producing %s and %s link correspondence", conf.reference.name, target.name)
-        results = _link_correspondence(target, ref_processed, conf.reference.name)
+        results = _link_correspondence(
+            target,
+            ref_processed,
+            conf.reference.name,
+            angle_threshold=conf.angle_threshold,
+        )
         # TODO(MB): add some filtering of excess links found based on overlap?
 
         out_path = conf.output_folder / f"{target.name}-{conf.reference.name}.csv"
@@ -456,12 +458,12 @@ def main(conf: Line2LineConf):
 
 
 def _link_correspondence(
-    target: LinkInfo, reference: gpd.GeoDataFrame, ref_name: str
+    target: LinkInfo, reference: gpd.GeoDataFrame, ref_name: str, angle_threshold: int
 ) -> pd.DataFrame:
     target_processed = preprocess(target)
     target_processed.index.name = "id_targ"
 
-    joined = init_join(target_processed, reference)
+    joined = init_join(target_processed, reference, angle_threshold=angle_threshold)
 
     big_join = (
         target_processed.join(joined, validate="1:m")
