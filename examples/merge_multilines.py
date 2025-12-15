@@ -64,9 +64,9 @@ lines
 # Combine index into single ID column for use in :mod:`caf.space.line_to_line`
 
 lines["ID"] = (
-    lines.index.get_level_values(0) + "_" + lines.index.get_level_values(0).astype(str)
+    lines.index.get_level_values(0) + "_" + lines.index.get_level_values(1).astype(str)
 )
-lines = lines.reset_index(0).set_index("ID")
+lines = lines.reset_index(0).set_index("ID", verify_integrity=True)
 lines
 
 # %%

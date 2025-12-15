@@ -71,7 +71,7 @@ class GeoDataFile:
             self.path, layer=self.layer, engine=engine, columns=columns, **kwargs
         )
         if self.index_cols is not None:
-            data = data.set_index(self.index_cols)
+            data = data.set_index(self.index_cols, verify_integrity=True)
         return data
 
 
