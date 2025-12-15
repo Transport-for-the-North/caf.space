@@ -45,6 +45,7 @@ class GeoDataFile:
     path: Path
     layer: str | int | None = None
     columns: list[str] | None = None
+    index_cols: list[str] | str | None = None
 
     def read(self, **kwargs) -> gpd.GeoDataFrame:
         """Read data from files using :func:`gpd.read_file`.
@@ -66,9 +67,12 @@ class GeoDataFile:
                 warnings.warn("columns provided twice, using combination", UserWarning)
                 columns.extend(i for i in kwargs.pop("columns") if i not in columns)
 
-        return gpd.read_file(
+        data = gpd.read_file(
             self.path, layer=self.layer, engine=engine, columns=columns, **kwargs
         )
+        if self.index_cols is not None:
+            data = data.set_index(self.index_cols)
+        return data
 
 
 class ZoneSystemInfo(BaseConfig):
