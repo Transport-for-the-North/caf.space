@@ -434,12 +434,18 @@ def main(conf: Line2LineConf):
             conf.reference.name,
             angle_threshold=conf.angle_threshold,
         )
-        # TODO(MB): add some filtering of excess links found based on overlap?
+        results = _filter_results(results)
 
         out_path = conf.output_folder / f"{target.name}-{conf.reference.name}.csv"
         results.to_csv(out_path)
         LOG.info("Written %s", out_path)
         lookups.append(results)
+
+        LOG.info(
+            "%s reference overlap length summary\n%s",
+            target.name,
+            _length_stats(results, "id_targ"),
+        )
 
     LOG.info("Adding attributes to %s", conf.reference.name)
     combined = combine(
@@ -526,6 +532,69 @@ def _link_correspondence(
     )
 
     return results
+
+
+def _filter_results(results: pd.DataFrame) -> pd.DataFrame:
+    """Remove excess links from correspondence results based on overlap.
+
+    Assumes results are already sorted based on convergence score.
+    """
+    lengths = results.groupby(level="id_targ").agg(
+        {"length_targ": "first", "overlap_length": "sum"}
+    )
+    excess = lengths.loc[lengths["overlap_length"] > lengths["length_targ"]]
+    if len(excess) == 0:
+        LOG.debug("No excess link correspondence found")
+        return results
+
+    drop_indices = []
+    for link in excess.itertuples():
+        cumsum = results.loc[pd.IndexSlice[:, link.Index], "overlap_length"].cumsum()
+        extras = cumsum.index[cumsum > link.length_targ].tolist()
+        # Keep first link which is bigger than target but drop all others
+        drop_indices.extend(extras[1:])
+
+    if len(drop_indices) == 0:
+        LOG.debug("No excess links dropeed, some overlaps > target length")
+        return results
+
+    LOG.info(
+        "Filtered out %s (%s) excess correspondence rows which exceed target link length",
+        len(drop_indices),
+        f"{len(drop_indices) / len(results):.1%}",
+    )
+    return results.drop(index=drop_indices)
+
+
+def _length_stats(
+    results: pd.DataFrame,
+    target_id: str,
+    overlap_col: str = "overlap_length",
+    target_length_col: str = "length_targ",
+    within_check: float = 0.1,
+) -> str:
+    """Summary of comparison between reference overlap and target link length."""
+    lengths = results.groupby(level=target_id).agg(
+        {target_length_col: "first", overlap_col: "sum"}
+    )
+    stats: dict[str, int] = {
+        "Overlap > Target": (lengths[overlap_col] > lengths[target_length_col]).sum(),
+        "Overlap < Target": (lengths[overlap_col] < lengths[target_length_col]).sum(),
+        f"Within {within_check:.0%}": (
+            np.abs(lengths[overlap_col] - lengths[target_length_col]) < within_check
+        ).sum(),
+        "Overlap 0": (lengths[overlap_col] == 0).sum(),
+        "Target 0": (lengths[target_length_col] == 0).sum(),
+        "Overlap <0 or NaN": (lengths[overlap_col].isna() | (lengths[overlap_col] < 0)).sum(),
+        "Target <0 or NaN": (
+            lengths[target_length_col].isna() | (lengths[target_length_col] < 0)
+        ).sum(),
+    }
+
+    width = max(map(len, stats.keys()))
+    return "\n".join(
+        f"{i:<{width}.{width}} : {j} ({j / len(lengths):.1%})" for i, j in stats.items()
+    )
 
 
 def _run() -> None:
