@@ -12,7 +12,6 @@ from __future__ import annotations
 
 # Built-Ins
 import argparse
-import dataclasses
 import datetime
 
 # Standard imports
@@ -28,7 +27,7 @@ import fiona
 import geopandas as gpd
 import pandas as pd
 from caf.toolkit import BaseConfig
-from pydantic import field_validator, model_validator
+from pydantic import dataclasses, field_validator, model_validator
 
 # Local imports
 
