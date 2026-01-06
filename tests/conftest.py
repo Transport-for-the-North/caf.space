@@ -131,7 +131,7 @@ def fixture_point_shapefile(main_dir) -> Path:
     """
     true_point = Point(6, 8)
     point_df = pd.DataFrame(data=["true_point_1"], columns=["zone_1_id"])
-    gdf = gpd.GeoDataFrame(data=point_df, geometry=[true_point])
+    gdf = gpd.GeoDataFrame(data=point_df, geometry=[true_point], crs="EPSG:27700")
     file = main_dir / "point_shape_1.shp"
     gdf.to_file(file)
     return file
@@ -144,7 +144,7 @@ def fixture_point_shapefile_2(main_dir) -> Path:
     """
     true_point = Point(5, 7)
     point_df = pd.DataFrame(data=["true_point_2"], columns=["zone_2_id"])
-    gdf = gpd.GeoDataFrame(data=point_df, geometry=[true_point])
+    gdf = gpd.GeoDataFrame(data=point_df, geometry=[true_point], crs="EPSG:27700")
     file = main_dir / "point_shape_2.shp"
     gdf.to_file(file)
     return file
@@ -166,6 +166,7 @@ def fixture_point_zones(main_dir) -> Path:
             Polygon([(0, 1), (0, 4), (3, 4), (3, 0), (1, 0), (1, 1)]),
             Polygon([(3, 0), (3, 4), (8, 4), (8, 0)]),
         ],
+        crs="EPSG:27700",
     )
     file = main_dir / "pseudo_point.shp"
     points.to_file(file)
@@ -350,6 +351,12 @@ def fixture_weighted_trans(weighted_config) -> pd.DataFrame:
     A complete weighted zone translation stored in a dataframe
     """
     trans = zone_translation.ZoneTranslation(weighted_config).weighted_translation()
+    return trans
+
+
+@pytest.fixture(name="centroids", scope="session")
+def fixture_centroids(weighted_config) -> pd.DataFrame:
+    trans = zone_translation.ZoneTranslation(weighted_config).weighted_centroids()
     return trans
 
 

@@ -41,11 +41,16 @@ def main():
                     args.out_path / f"{config.zone_1.name}_{config.zone_2.name}_spatial.csv",
                     index=False,
                 )
-            else:
+            elif args.mode == "weighted":
                 trans.weighted_translation().to_csv(
                     args.out_path
                     / f"{config.zone_1.name}_{config.zone_2.name}_{config.method}.csv",
                     index=False,
+                )
+            elif args.mode == "centroid":
+                trans.weighted_centroids().to_csv(
+                    args.out_path
+                    / f"{config.zone_1.name}_{config.lower_zoning.name}_{config.method}.csv",
                 )
 
 
