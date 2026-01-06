@@ -47,8 +47,8 @@ def read_zone_shapefiles(
     (GeoDataFrame) and 'ID_col'(str)
     """
     # create geodataframes from zone shapefiles
-    z_1 = gpd.read_file(zone_1.shapefile)
-    z_2 = gpd.read_file(zone_2.shapefile)
+    z_1 = gpd.read_file(zone_1.shapefile, columns=[zone_1.id_col])
+    z_2 = gpd.read_file(zone_2.shapefile, columns=[zone_2.id_col])
 
     z_1 = z_1.dropna(axis=1, how="all")
     z_2 = z_2.dropna(axis=1, how="all")
