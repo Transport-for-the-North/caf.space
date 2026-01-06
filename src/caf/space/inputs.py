@@ -12,31 +12,66 @@ from __future__ import annotations
 
 # Built-Ins
 import argparse
-import dataclasses
 import datetime
 
 # Standard imports
-# pylint: disable=import-error
 import logging
 import os
+import warnings
 from pathlib import Path
 from typing import Optional
 
 # Third Party
-import fiona
-import pandas as pd
-
 # Third party imports
+import fiona
+import geopandas as gpd
+import pandas as pd
 from caf.toolkit import BaseConfig
-from pydantic import field_validator, model_validator
+from pydantic import dataclasses, field_validator, model_validator
 
-# pylint: enable=import-error
 # Local imports
 
 ##### CONSTANTS #####
 LOG = logging.getLogger(__name__)
 CACHE_PATH = "I:/Data/Zone Translations/cache"
 MODES = ("spatial", "weighted", "GUI")
+
+
+@dataclasses.dataclass
+class GeoDataFile:
+    """Parameters for loading a GeoSpatial file."""
+
+    path: Path
+    layer: str | int | None = None
+    columns: list[str] | None = None
+    index_cols: list[str] | str | None = None
+
+    def read(self, **kwargs) -> gpd.GeoDataFrame:
+        """Read data from files using :func:`gpd.read_file`.
+
+        See Also
+        --------
+        :func:`gpd.read_file`
+            all keyword arguments are passed directly.
+        """
+        engine = kwargs.pop("engine", "pyogrio")
+        if "layer" in kwargs:
+            raise ValueError("layer argument passed to read_file from class attribute")
+
+        if self.columns is None:
+            columns = kwargs.pop("columns", None)
+        else:
+            columns = self.columns.copy()
+            if "columns" in kwargs:
+                warnings.warn("columns provided twice, using combination", UserWarning)
+                columns.extend(i for i in kwargs.pop("columns") if i not in columns)
+
+        data = gpd.read_file(
+            self.path, layer=self.layer, engine=engine, columns=columns, **kwargs
+        )
+        if self.index_cols is not None:
+            data = data.set_index(self.index_cols, verify_integrity=True)
+        return data
 
 
 class ZoneSystemInfo(BaseConfig):

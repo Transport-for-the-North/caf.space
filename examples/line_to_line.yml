@@ -1,0 +1,29 @@
+output_folder: NoHAM - ITN
+output_network_filename: ITN-NoHAM_AB.shp
+original_geometries_output: NoHAM-ITN_toid.shp
+
+# Angle cutoff when determining corresponding links
+angle_threshold: 60
+
+# Reference links for correspondence
+reference:
+  name: ITN
+  identifier:
+    - toid
+  file:
+    path: path/to/itn.shp
+    columns:
+      - toid
+
+# List of other networks to find correspondence with
+target:
+  - name: NoHAM
+    identifier:
+      - A
+      - B
+    file:
+      path: path/to/noham.shp
+      columns:
+        - A
+        - B
+

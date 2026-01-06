@@ -7,6 +7,7 @@ from pathlib import Path
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+import shapely
 from scipy.spatial import cKDTree
 
 # pylint: disable=import-error,wrong-import-position
@@ -120,3 +121,76 @@ def points_update(
     points.set_index(id_col, inplace=True)
     points.drop(list(matches[matches_id]), axis=0, inplace=True)
     return points.reset_index()
+
+
+def line_to_points(line_gdf, id_col):
+    """
+    Decompose a line geodataframe into points.
+
+    This points gdf will only contain an arbitrary index range(len(gdf)), and
+    columns containing the id_col from the original gdf, and the new point
+    geometry.
+    """
+    points = line_gdf[[id_col, "geometry"]].copy()
+    points["point_geom"] = line_gdf.apply(
+        lambda x: [shapely.Point(y) for y in x.geometry.coords], axis=1
+    )
+    points = points.explode("point_geom")
+    return gpd.GeoDataFrame(points[id_col], geometry=points["point_geom"])
+
+
+def calc_gradient(a: shapely.Point, b: shapely.Point):
+    run = np.sqrt((a.y - b.y) ** 2 + (a.x - b.x) ** 2)
+    rise = a.z - b.z
+    return rise / run
+
+
+def calc_midpoint(a: shapely.Point, b: shapely.Point):
+    return shapely.Point([a.x / 2 + b.x / 2, a.y / 2 + b.y / 2, a.z / 2 + b.z / 2])
+
+
+def line_gradients(line):
+    points = line.coords
+    grads = []
+    for idx in range(len(points) - 1):
+        a = shapely.Point(points[idx])
+        b = shapely.Point(points[idx + 1])
+        gradient = calc_gradient(a, b)
+        mid_point = shapely.Point([(a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2])
+        grads.append((mid_point, gradient))
+    return grads
+
+
+def gradients_alt(points):
+    a = points.iloc[:-1]
+    b = points.iloc[1:]
+    a.columns = ["a_id", "a_geom"]
+    b.columns = ["b_id", "b_geom"]
+    b.index -= 1
+    df = pd.concat([a, b], axis=1)
+    df = df[df["a_id"] == df["b_id"]]
+    run = np.sqrt(
+        (df["a_geom"].x - df["b_geom"].x) ** 2 + (df["a_geom"].y - df["b_geom"].y) ** 2
+    )
+    rise = df["b_geom"].z - df["a_geom"].z
+    df["gradient"] = rise / run
+    df["gradient"] = df.apply(lambda x: calc_gradient(x.a_geom, x.b_geom), axis=1)
+    df["geometry"] = df.apply(lambda x: calc_midpoint(x.a, x.b), axis=1)
+    df.set_index("a_id", inplace=True)
+    df.index.name = "id"
+    return gpd.GeoDataFrame(df[["gradient", "geometry"]])
+
+
+def grad_points_gdf(gdf):
+    grad_list = gdf.geometry.apply(lambda x: line_gradients(x)).explode().to_list()
+    grad_frame = gpd.GeoDataFrame(grad_list, columns=["geometry", "gradient"])
+    return grad_frame
+
+
+if __name__ == "__main__":
+    # line_gdf = gpd.read_file(r"E:\shapefiles\RoadLink_STB_TransportfortheNorth.gpkg", engine='pyogrio')
+    points = gpd.read_file(r"E:\shapefiles\itn_points", engine="pyogrio").drop("z", axis=1)
+    gradients = gradients_alt(points)
+    grads = grad_points_gdf(line_gdf)
+    grads.to_file(r"E:\shapefiles\grad_points.gpkg")
+    print("debugging")
