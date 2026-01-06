@@ -10,29 +10,68 @@ ultimately used as input parameters for the ZoneTranslation class.
 ##### IMPORTS #####
 from __future__ import annotations
 
-# Standard imports
-# pylint: disable=import-error
-import logging
-import datetime
-import dataclasses
-import fiona
-import os
-from pathlib import Path
-import pandas as pd
-from typing import Optional
-from pydantic import field_validator, model_validator
-
-# Third party imports
-from caf.toolkit import BaseConfig
+# Built-Ins
 import argparse
+import datetime
 
-# pylint: enable=import-error
+# Standard imports
+import logging
+import os
+import warnings
+from pathlib import Path
+from typing import Optional
+
+# Third Party
+# Third party imports
+import fiona
+import geopandas as gpd
+import pandas as pd
+from caf.toolkit import BaseConfig
+from pydantic import dataclasses, field_validator, model_validator
+
 # Local imports
 
 ##### CONSTANTS #####
 LOG = logging.getLogger(__name__)
 CACHE_PATH = "I:/Data/Zone Translations/cache"
 MODES = ("spatial", "weighted", "GUI")
+
+
+@dataclasses.dataclass
+class GeoDataFile:
+    """Parameters for loading a GeoSpatial file."""
+
+    path: Path
+    layer: str | int | None = None
+    columns: list[str] | None = None
+    index_cols: list[str] | str | None = None
+
+    def read(self, **kwargs) -> gpd.GeoDataFrame:
+        """Read data from files using :func:`gpd.read_file`.
+
+        See Also
+        --------
+        :func:`gpd.read_file`
+            all keyword arguments are passed directly.
+        """
+        engine = kwargs.pop("engine", "pyogrio")
+        if "layer" in kwargs:
+            raise ValueError("layer argument passed to read_file from class attribute")
+
+        if self.columns is None:
+            columns = kwargs.pop("columns", None)
+        else:
+            columns = self.columns.copy()
+            if "columns" in kwargs:
+                warnings.warn("columns provided twice, using combination", UserWarning)
+                columns.extend(i for i in kwargs.pop("columns") if i not in columns)
+
+        data = gpd.read_file(
+            self.path, layer=self.layer, engine=engine, columns=columns, **kwargs
+        )
+        if self.index_cols is not None:
+            data = data.set_index(self.index_cols, verify_integrity=True)
+        return data
 
 
 class ZoneSystemInfo(BaseConfig):
@@ -56,17 +95,17 @@ class ZoneSystemInfo(BaseConfig):
     shapefile: Path
     id_col: str
 
-    @model_validator(mode="before")
-    def _id_col_in_file(cls, values):
-        with fiona.collection(values["shapefile"]) as source:
+    @model_validator(mode="after")
+    def _id_col_in_file(self):
+        with fiona.collection(self.shapefile) as source:
             schema = source.schema
-            if values["id_col"] not in schema["properties"].keys():
+            if self.id_col not in schema["properties"].keys():
                 raise ValueError(
-                    f"The id_col provided, {values['id_col']}, does not appear"
+                    f"The id_col provided, {self.id_col}, does not appear"
                     f" in the given shapefile. Please choose from:"
                     f"{schema['properties'].keys()}."
                 )
-        return values
+        return self
 
 
 class TransZoneSystemInfo(ZoneSystemInfo):
@@ -132,13 +171,43 @@ class LowerZoneSystemInfo(ZoneSystemInfo):
             raise FileNotFoundError(f"The weight data path provided for {v} does not exist.")
         return v
 
-    @model_validator(mode="before")
-    def _valid_data_col(cls, values):
-        cols = pd.read_csv(values["weight_data"], nrows=1).columns
-        for v in [values["data_col"], values["weight_id_col"]]:
+    @model_validator(mode="after")
+    def _valid_data_col(self):
+        cols = pd.read_csv(self.weight_data, nrows=1).columns
+        for v in [self.data_col, self.weight_id_col]:
             if v not in cols:
                 raise ValueError(f"The given col, {v}, does not appear in the weight data.")
-        return values
+        return self
+
+
+def _create_parser() -> argparse.ArgumentParser:
+    """Create CLI argument parser for running translation with a config."""
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    parser.add_argument(
+        "--mode",
+        type=str,
+        help="Mode to run translation in; spatial, weighted or GUI.",
+        default="GUI",
+        required=False,
+    )
+    parser.add_argument(
+        "--config",
+        type=Path,
+        help="path to config file containing parameters",
+        default=None,
+        required=False,
+    )
+    parser.add_argument(
+        "--out_path",
+        type=Path,
+        help="Path the translation will be saved in.",
+        default=None,
+        required=False,
+    )
+
+    return parser
 
 
 @dataclasses.dataclass
@@ -152,30 +221,7 @@ class SpaceArguments:
     @classmethod
     def parse(cls) -> SpaceArguments:
         """Parse command line argument."""
-        parser = argparse.ArgumentParser(
-            description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter
-        )
-        parser.add_argument(
-            "--mode",
-            type=str,
-            help="Mode to run translation in; spatial, weighted or GUI.",
-            default="GUI",
-            required=False,
-        )
-        parser.add_argument(
-            "--config",
-            type=Path,
-            help="path to config file containing parameters",
-            default=None,
-            required=False,
-        )
-        parser.add_argument(
-            "--out_path",
-            type=Path,
-            help="Path the translation will be saved in.",
-            default=None,
-            required=False,
-        )
+        parser = _create_parser()
 
         parsed_args = parser.parse_args()
         return SpaceArguments(parsed_args.config, parsed_args.mode, parsed_args.out_path)

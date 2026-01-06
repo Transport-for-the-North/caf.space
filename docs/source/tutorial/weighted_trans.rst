@@ -19,7 +19,7 @@ using a population or employment weighted translation would give a larger propor
 containing the town – and a smaller proportion to the bottom, mainly rural, zone. In most cases this would be
 a more accurate representation of reality. 
 
-.. figure:: images/simple_weighted.png
+.. figure:: ../_static/images/simple_weighted.png
    
    *Figure 1* - Simple weighted translation example
    
@@ -72,12 +72,12 @@ It should be noted that the example translation given here is deliberately compl
 perfectly within each other). In many cases zones will nest better, and especially the lower zones should
 cross higher zone boundaries as rarely as possible for best results.
 
-.. figure:: images/schematic_ex.png
+.. figure:: ../_static/images/schematic_ex.png
 
    *figure 2* - Example diagrams of a zone translation schematically. Here the translation is between Z1 and Z2
    with weighting from the 'lower' zone.
    
-.. figure:: images/table_ex.png
+.. figure:: ../_static/images/table_ex.png
 
    *figure 3* - Example tables to go with the schematic example above. The rightmost two columns in the final
    table are the actual zone translation outputs.
