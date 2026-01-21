@@ -49,7 +49,7 @@ def _weighted_lower(
         weighting = pd.read_csv(
             lower_zoning.weight_data,
             index_col=lower_zoning.weight_id_col,
-        )
+        )[lower_zoning.data_col]
         weighted = lower_zone.join(weighting)
     else:
         weighted = lower_zone
