@@ -5,6 +5,7 @@ Module containing ZoneTranslation class.
 Class for producing zone translations from a set of inputs, provided by the
 ZoneTranslationInputs class in 'inputs'.
 """
+
 # Built-Ins
 import logging
 import warnings
