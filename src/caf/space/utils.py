@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Module for some miscellaneous functions used elsewhere."""
+
 # Built-Ins
 from pathlib import Path
 
