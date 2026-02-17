@@ -7,7 +7,8 @@ Also checks on various things for translations (rounding, slithers).
 # Built-Ins
 import logging
 import warnings
-from typing import Tuple
+from typing import Tuple, Union
+from dataclasses import dataclass
 
 # Third Party
 import geopandas as gpd
@@ -20,11 +21,19 @@ from caf.space import inputs
 LOG = logging.getLogger("SPACE")
 logging.captureWarnings(True)
 
+
 ##### FUNCTIONS #####
+@dataclass
+class ReadOutput:
+    """A read in feature, either line or poly."""
+
+    feature: gpd.GeoDataFrame
+    geo_type: str
 
 
 def read_zone_shapefiles(
-    zone_1: inputs.TransZoneSystemInfo, zone_2: inputs.TransZoneSystemInfo
+    zone_1: Union[inputs.TransZoneSystemInfo, inputs.LineInfo],
+    zone_2: inputs.TransZoneSystemInfo,
 ) -> dict:
     """
     Read in zone system shapefiles.
@@ -46,54 +55,35 @@ def read_zone_shapefiles(
     for translation. zone_1.name and zone_1.name contain 'Zone'
     (GeoDataFrame) and 'ID_col'(str)
     """
-    # create geodataframes from zone shapefiles
-    z_1 = gpd.read_file(zone_1.shapefile)
-    z_2 = gpd.read_file(zone_2.shapefile)
-
-    z_1 = z_1.dropna(axis=1, how="all")
-    z_2 = z_2.dropna(axis=1, how="all")
-
-    LOG.info(
-        "Count of %s zones: %s",
-        zone_2.name,
-        z_2.iloc[:, 0].count(),
-    )
-    LOG.info(
-        "Count of %s zones: %s",
-        zone_1.name,
-        z_1.iloc[:, 0].count(),
-    )
-
-    z_1["area"] = z_1.area
-    z_1 = z_1.dropna(subset=["area"])
-    z_2["area"] = z_2.area
-    z_2 = z_2.dropna(subset=["area"])
-
-    zones = {
-        zone_1.name: {
-            "Zone": z_1.drop("area", axis=1),
-            "ID_col": zone_1.id_col,
-        },
-        zone_2.name: {
-            "Zone": z_2.drop("area", axis=1),
-            "ID_col": zone_2.id_col,
-        },
-    }
-
-    for name, zone in zones.items():
-        zone["Zone"].rename(
-            columns={zone["ID_col"]: f"{name}_id"},
-            inplace=True,
+    out = {}
+    for feature in [zone_1, zone_2]:
+        zone = gpd.read_file(feature.shapefile)
+        if zone.crs is None:
+            warnings.warn(f"Zone {feature.name} has no CRS, setting crs to EPSG:27700.")
+            zone.set_crs = "EPSG:27700"
+        elif zone.crs != "EPSG:27700":
+            warnings.warn(f"Zone {feature.name} has CRS {zone.crs}. Setting to EPSG:27700.")
+            zone.geometry = zone.geometry.to_crs("EPSG:27700")
+        zone = zone.dropna(axis=1, how="all")
+        LOG.info(
+            "Count of %s features: %s",
+            feature.name,
+            zone.iloc[:, 0].count(),
         )
-
-        if not zone["Zone"].crs:
-            warnings.warn(f"Zone {name} has no CRS, setting crs to EPSG:27700.")
-            zone["Zone"].set_crs("EPSG:27700")
-        elif zone["Zone"].crs != "EPSG:27700":
-            zone["Zone"].geometry = zone["Zone"].geometry.to_crs("EPSG:27700")
-
-        zone["Zone"][f"{name}_area"] = zone["Zone"].area
-    return zones
+        # drop any features with invalid geometries
+        zone["geo_check"] = zone.area
+        zone = zone.dropna(subset=["geo_check"]).drop("geo_check", axis=1)
+        if isinstance(feature, inputs.LineInfo):
+            zone.rename(
+                columns={feature.id_cols[0]: "A", feature.id_cols[1]: "B"}, inplace=True
+            )
+            zone[f"{feature.name}_length"] = zone.length
+            out[feature.name] = ReadOutput(feature=zone, geo_type="line")
+        else:
+            zone.rename(columns={feature.id_col: f"{feature.name}_id"}, inplace=True)
+            zone[f"{feature.name}_area"] = zone.area
+            out[feature.name] = ReadOutput(feature=zone, geo_type="zone")
+    return out
 
 
 def spatial_zone_correspondence(
@@ -123,8 +113,8 @@ def spatial_zone_correspondence(
     """
     # create geodataframe for intersection of zones
     zone_overlay = gpd.overlay(
-        zones[zone_1.name]["Zone"],
-        zones[zone_2.name]["Zone"],
+        zones[zone_1.name].feature,
+        zones[zone_2.name].feature,
         how="intersection",
         keep_geom_type=False,
     ).reset_index()
@@ -185,10 +175,13 @@ def find_slithers(
         testing.
     """
     LOG.info("Finding Slithers")
-
-    slither_filter = (
-        spatial_correspondence[f"{zone_names[0]}_to_{zone_names[1]}"] < (1 - tolerance)
-    ) & (spatial_correspondence[f"{zone_names[1]}_to_{zone_names[0]}"] < (1 - tolerance))
+    # Works for line to zone too
+    if "factor" in spatial_correspondence.columns:
+        slither_filter = spatial_correspondence["factor"] < (1 - tolerance)
+    else:
+        slither_filter = (
+            spatial_correspondence[f"{zone_names[0]}_to_{zone_names[1]}"] < (1 - tolerance)
+        ) & (spatial_correspondence[f"{zone_names[1]}_to_{zone_names[0]}"] < (1 - tolerance))
     slithers = spatial_correspondence.loc[slither_filter]
     no_slithers = spatial_correspondence.loc[~slither_filter]
 
@@ -218,23 +211,32 @@ def rounding_correction(
     def calculate_differences(
         frame: pd.DataFrame,
     ) -> Tuple[pd.Series, pd.DataFrame]:
-        totals = frame[[from_col, factor_col]].groupby(from_col).sum()
+        totals = frame[factor_filter].groupby(from_col).sum()
         diffs = (1 - totals).rename(columns={factor_col: "diff"})
         # Convert totals to a Series
-        totals = totals.iloc[:, 0]
+        totals = totals.squeeze()
         return totals, diffs
 
-    from_col = f"{from_zone_name}_id"
-    factor_col = f"{from_zone_name}_to_{to_zone_name}"
-
+    to_col = f"{to_zone_name}_id"
+    if "factor" in zone_corr.columns:
+        zone_corr.reset_index(inplace=True)
+        from_col: Union[list[str], str] = ["A", "B"]
+        factor_col = "factor"
+    else:
+        from_col = f"{from_zone_name}_id"
+        factor_col = f"{from_zone_name}_to_{to_zone_name}"
+    if isinstance(from_col, list):
+        factor_filter = from_col + [factor_col]
+    else:
+        factor_filter = [from_col, factor_col]
     counts = zone_corr.groupby(from_col).size()
-
+    zone_corr.set_index(from_col, inplace=True)
     # Set factor to 1 for one to one lookups
-    zone_corr.loc[zone_corr[from_col].isin(counts[counts == 1].index), factor_col] = 1.0
+    zone_corr.loc[counts[counts == 1].index, factor_col] = 1
 
     # calculate missing adjustments for those that don't have a one to one mapping
-    rest_to_round = zone_corr.loc[zone_corr[from_col].isin(counts[counts > 1].index)]
-    factor_totals, differences = calculate_differences(zone_corr)
+    rest_to_round = zone_corr.loc[counts[counts > 1].index]
+    factor_totals, differences = calculate_differences(zone_corr.reset_index())
 
     LOG.info(
         "Adjusting %s correspondence factors for %s which don't sum to exactly 1\n"
@@ -248,26 +250,20 @@ def rounding_correction(
     )
 
     # Calculate factor to adjust the zone correspondence by
-    differences.loc[:, "correction"] = 1 + (differences["diff"] / factor_totals)
+    differences["correction"] = 1 + (differences["diff"] / factor_totals)
 
     # Multiply zone corresondence by the correction factor
-    rest_to_round = rest_to_round.merge(
-        differences["correction"],
-        how="left",
-        left_on=from_col,
-        right_on=differences.index,
-    ).set_index(rest_to_round.index)
+    rest_to_round = rest_to_round.join(differences["correction"])
 
-    rest_to_round.loc[:, factor_col] = (
-        rest_to_round.loc[:, factor_col] * rest_to_round.loc[:, "correction"]
-    )
+    rest_to_round[factor_col] = rest_to_round[factor_col] * rest_to_round["correction"]
 
-    rest_to_round = rest_to_round.drop(labels="correction", axis=1)
-
-    zone_corr.loc[zone_corr[from_col].isin(rest_to_round[from_col]), :] = rest_to_round
+    rest_to_round = rest_to_round.drop("correction", axis=1)
+    rest_to_round.set_index(to_col, append=True, inplace=True)
+    zone_corr.set_index(to_col, append=True, inplace=True)
+    zone_corr.loc[rest_to_round.index] = rest_to_round
 
     # Recalculate differences after adjustment
-    factor_totals, differences = calculate_differences(zone_corr)
+    factor_totals, differences = calculate_differences(zone_corr.reset_index())
 
     LOG.info(
         "After adjustment of %s, %s correspondence factors don't sum to exactly 1\n"
@@ -321,45 +317,52 @@ def round_zone_correspondence(
         "Rounding Zone Correspondences, spatial gaps in the overlap of zone "
         "2 onto zone 1 will be equally distributed between each of zone 2 zones"
     )
+    if "factor" in zone_corr_no_slithers.columns:
+        zone = [i for i in zone_names if "net" not in i][0]
+        zone_corr_rounded = rounding_correction(
+            zone_corr_no_slithers.copy(), from_zone_name="line", to_zone_name=zone
+        )
+    else:
+        # create rounded zone correspondence
+        zone_corr_rounded = rounding_correction(
+            zone_corr_no_slithers[
+                [
+                    f"{zone_names[0]}_id",
+                    f"{zone_names[1]}_id",
+                    f"{zone_names[0]}_to_{zone_names[1]}",
+                ]
+            ].copy(),
+            *zone_names,
+        )
 
-    # create rounded zone correspondence
-    zone_corr_rounded = rounding_correction(
-        zone_corr_no_slithers[
-            [
-                f"{zone_names[0]}_id",
-                f"{zone_names[1]}_id",
-                f"{zone_names[0]}_to_{zone_names[1]}",
-            ]
-        ].copy(),
-        *zone_names,
+        # Save rounding to final variable to turn to csv
+        zone_corr_rounded_both_ways = zone_corr_rounded
+
+        # create rounded zone correspondence for the other direction
+        zone_corr_rounded = rounding_correction(
+            zone_corr_no_slithers[
+                [
+                    f"{zone_names[0]}_id",
+                    f"{zone_names[1]}_id",
+                    f"{zone_names[1]}_to_{zone_names[0]}",
+                ]
+            ].copy(),
+            zone_names[1],
+            zone_names[0],
+        )
+
+        zone_corr_rounded = zone_corr_rounded_both_ways.join(zone_corr_rounded)
+
+    return zone_corr_rounded
+
+
+def missing_links_check(links: pd.DataFrame, corr: pd.DataFrame, zone_id: str):
+    """Check for missing links in corr dataframe."""
+    checker = links.set_index(["A", "B"])
+    missing = checker.index.difference(
+        checker.loc[corr.reset_index(level=zone_id).index].index
     )
-
-    # Save rounding to final variable to turn to csv
-    zone_corr_rounded_both_ways = zone_corr_rounded
-
-    # create rounded zone correspondence for the other direction
-    zone_corr_rounded = rounding_correction(
-        zone_corr_no_slithers[
-            [
-                f"{zone_names[0]}_id",
-                f"{zone_names[1]}_id",
-                f"{zone_names[1]}_to_{zone_names[0]}",
-            ]
-        ].copy(),
-        zone_names[1],
-        zone_names[0],
-    )
-
-    zone_corr_rounded_both_ways = zone_corr_rounded_both_ways.merge(
-        zone_corr_rounded[f"{zone_names[1]}_to_{zone_names[0]}"],
-        how="left",
-        left_on=zone_corr_rounded_both_ways.index,
-        right_on=zone_corr_rounded.index,
-    )
-
-    zone_corr_rounded_both_ways = zone_corr_rounded_both_ways.drop(labels="key_0", axis=1)
-
-    return zone_corr_rounded_both_ways
+    return missing
 
 
 def missing_zones_check(
@@ -392,25 +395,81 @@ def missing_zones_check(
     """
     LOG.info("Checking for missing zones")
 
-    missing_zone_1 = zones[zone_1.name]["Zone"].loc[
-        ~zones[zone_1.name]["Zone"][f"{zone_1.name}_id"].isin(
-            zone_correspondence[f"{zone_1.name}_id"]
-        ),
-        f"{zone_1.name}_id",
-    ]
-    missing_zone_2 = zones[zone_2.name]["Zone"].loc[
-        ~zones[zone_2.name]["Zone"][f"{zone_2.name}_id"].isin(
-            zone_correspondence[f"{zone_2.name}_id"]
-        ),
-        f"{zone_2.name}_id",
-    ]
-    missing_zone_1_zones = pd.DataFrame(
-        data=missing_zone_1,
-        columns=[f"{zone_1.name}_id"],
-    )
-    missing_zone_2_zones = pd.DataFrame(
-        data=missing_zone_2,
-        columns=[f"{zone_2.name}_id"],
-    )
+    if zones[zone_1.name].geo_type == "line":
+        missing_zone_1 = missing_links_check(
+            zones[zone_1.name].feature, zone_correspondence, f"{zone_2.name}_id"
+        )
+        missing_zone_1_zones = (
+            pd.DataFrame(data=0, index=missing_zone_1, columns=["dummy"])
+            .reset_index()
+            .drop(columns="dummy")
+        )
+    else:
+        missing_zone_1 = zones[zone_1.name].feature.loc[
+            ~zones[zone_1.name]
+            .feature[f"{zone_1.name}_id"]
+            .isin(zone_correspondence.index.get_level_values(f"{zone_1.name}_id")),
+            f"{zone_1.name}_id",
+        ]
+        missing_zone_1_zones = pd.DataFrame(
+            data=missing_zone_1,
+            columns=[f"{zone_1.name}_id"],
+        )
+    if zones[zone_2.name].geo_type == "line":
+        missing_zone_2 = missing_links_check(
+            zones[zone_2.name].feature, zone_correspondence, f"{zone_1.name}_id"
+        )
+        missing_zone_2_zones = (
+            pd.DataFrame(data=0, index=missing_zone_2, columns=["dummy"])
+            .reset_index()
+            .drop(columns="dummy")
+        )
+    else:
+        missing_zone_2 = zones[zone_2.name].feature.loc[
+            ~zones[zone_2.name]
+            .feature[f"{zone_2.name}_id"]
+            .isin(zone_correspondence.index.get_level_values(f"{zone_2.name}_id")),
+            f"{zone_2.name}_id",
+        ]
+        missing_zone_2_zones = pd.DataFrame(
+            data=missing_zone_2,
+            columns=[f"{zone_2.name}_id"],
+        )
 
     return missing_zone_1_zones, missing_zone_2_zones
+
+
+def line_to_zone_trans(
+    line: gpd.GeoDataFrame, zone: gpd.GeoDataFrame, line_ids: list[str], zone_id_col: str
+):
+    """
+    Summary
+    -------
+    Function to translate lines to zones. The function takes a line shapefile
+    and a zone shapefile and returns a dataframe with the line ids and the
+    zone ids that they fall within.
+
+    Parameters
+    ----------
+    line: gpd.GeoDataFrame
+        Line shapefile
+    zone: gpd.GeoDataFrame
+        Zone shapefile
+    line_ids: list[str]
+        List of line ids
+    zone_id_col: str
+        Name of the zone id column
+
+    Returns
+    -------
+    pd.DataFrame
+        Dataframe with line ids and zone ids
+    """
+    # Create a geodataframe of the intersection of the line and zone shapefiles
+    line_to_zone = line.overlay(zone, how="intersection", keep_geom_type=False)
+    index_setter = line_ids + [zone_id_col]
+    line_to_zone.set_index(index_setter, inplace=True)
+    factors = (line_to_zone.length / line.set_index(line_ids).length).to_frame()
+    factors.columns = ["factor"]
+    # Create a dataframe with the line ids and the zone ids that they fall within
+    return factors

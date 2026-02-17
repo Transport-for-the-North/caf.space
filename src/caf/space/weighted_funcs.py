@@ -135,8 +135,8 @@ def _create_tiles(
     -------
     A set of weighted tiles used for weighted translation.
     """
-    zone_1_gdf = zones[zone_1.name]["Zone"][[f"{zone_1.name}_id", "geometry"]]
-    zone_2_gdf = zones[zone_2.name]["Zone"][[f"{zone_2.name}_id", "geometry"]]
+    zone_1_gdf = zones[zone_1.name].feature[[f"{zone_1.name}_id", "geometry"]]
+    zone_2_gdf = zones[zone_2.name].feature[[f"{zone_2.name}_id", "geometry"]]
     weighting = _weighted_lower(lower_zoning)
     if point_handling:
         if zone_1_points is not None:
