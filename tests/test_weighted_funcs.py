@@ -99,11 +99,13 @@ class TestWeightedLower:
     """
     Class for testing the _weighted_lower function in weighted_funcs
     """
-
-    def test_join(self, weighted):
+    @pytest.mark.parametrize("config_fixture", ["weighted_config", "weighted_config_duplicate_cols"])
+    def test_join(self, config_fixture, request):
         """
         Check that weighting is correct after join in the _weighted_lower
         """
+        config = request.getfixturevalue(config_fixture)
+        weighted = weighted_funcs._weighted_lower(config.lower_zoning)
         summed = weighted.weight.sum()
         assert summed == 310
 
@@ -128,6 +130,7 @@ class TestWeightedLower:
             match="1 zones do not match up between the lower zoning and weighting data.",
         ):
             weighted_funcs._weighted_lower(mismatched_config.lower_zoning)
+
 
 
 class TestCreateTiles:
