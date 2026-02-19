@@ -80,6 +80,42 @@ def fixture_lower_zone(main_dir) -> Path:
     return file
 
 
+@pytest.fixture(name="lower_zone_duplicate_cols", scope="session")
+def fixture_lower_zone_duplicate_cols(main_dir) -> Path:
+    """
+    Lower zone system for testing with an extra column with the same name as weighting.
+    Returns:
+        Path: Temp path to gdf, 16 attributes, 1-17, ID_COL = lower_id
+    """
+    lower_df = pd.DataFrame(data={"lower_id": range(1, 17), "duplicate": range(1, 17)})
+    lower = gpd.GeoDataFrame(
+        data=lower_df,
+        geometry=[
+            Polygon([(0, 0), (0, 2), (2, 2), (2, 0)]),
+            Polygon([(0, 2), (0, 4), (2, 4), (2, 2)]),
+            Polygon([(0, 4), (0, 6), (2, 6), (2, 4)]),
+            Polygon([(0, 6), (0, 8), (2, 8), (2, 6)]),
+            Polygon([(2, 0), (2, 2), (4, 2), (4, 0)]),
+            Polygon([(2, 2), (2, 4), (4, 4), (4, 2)]),
+            Polygon([(2, 4), (2, 6), (4, 6), (4, 4)]),
+            Polygon([(2, 6), (2, 8), (4, 8), (4, 6)]),
+            Polygon([(4, 0), (4, 2), (6, 2), (6, 0)]),
+            Polygon([(4, 2), (4, 4), (6, 4), (6, 2)]),
+            Polygon([(4, 4), (4, 6), (6, 6), (6, 4)]),
+            Polygon([(4, 6), (4, 8), (6, 8), (6, 6)]),
+            Polygon([(6, 0), (6, 2), (8, 2), (8, 0)]),
+            Polygon([(6, 2), (6, 4), (8, 4), (8, 2)]),
+            Polygon([(6, 4), (6, 6), (8, 6), (8, 4)]),
+            Polygon([(6, 6), (6, 8), (8, 8), (8, 6)]),
+        ],
+        crs="EPSG:27700",
+    )
+    lower.geometry = lower.geometry.rotate(270, origin=[4, 4])
+    file = main_dir / "lower_zone_duplicate_col.shp"
+    lower.to_file(file)
+    return file
+
+
 @pytest.fixture(name="zone_1_shape", scope="session")
 def fixture_zone_1_shape(main_dir) -> Path:
     """
@@ -217,6 +253,52 @@ def fixture_lower_weighting(main_dir) -> Path:
     return file
 
 
+@pytest.fixture(name="lower_weighting_duplicate_cols", scope="session")
+def fixture_lower_weighting_duplicate_cols(main_dir) -> Path:
+    """
+    Weighting data to be joined to lower zoning system for testing.
+
+    Parameters
+    ----------
+    main_dir
+
+    Returns
+    -------
+    Path: Temp path to weighting data in a column called 'weight', with an
+    index called 'lower_id', matching lower_id in lower shape.
+
+    """
+    values = [
+        10,
+        20,
+        20,
+        30,
+        20,
+        10,
+        10,
+        10,
+        30,
+        20,
+        20,
+        30,
+        30,
+        30,
+        10,
+        10,
+    ]
+    weighting = pd.DataFrame(
+        data={
+            "weight": values,
+            "duplicate": values,
+        },
+        index=range(1, 17),
+    )
+    weighting.index.name = "lower_id"
+    file = main_dir / "weighting_duplicate_cols.csv"
+    weighting.to_csv(main_dir / "weighting_duplicate_cols.csv")
+    return file
+
+
 @pytest.fixture(name="paths", scope="session")
 def fixture_paths(main_dir, tmp_path_factory) -> dict[str, Path]:
     """
@@ -322,6 +404,58 @@ def fixture_weighted_config(
         shapefile=lower_zone,
         id_col="lower_id",
         weight_data=lower_weighting,
+        data_col="weight",
+        weight_id_col="lower_id",
+        weight_data_year=2018,
+    )
+    params = inputs.ZoningTranslationInputs(
+        zone_1=zone_1,
+        zone_2=zone_2,
+        lower_zoning=lower,
+        output_path=paths["output"],
+        cache_path=paths["cache"],
+        method="test",
+        tolerance=0.99,
+        rounding=True,
+    )
+    return params
+
+
+@pytest.fixture(name="weighted_config_duplicate_cols", scope="session")
+def fixture_weighted_config_duplicate_cols(
+    zone_1_shape: Path,
+    zone_2_shape: Path,
+    lower_zone_duplicate_cols: Path,
+    lower_weighting_duplicate_cols: Path,
+    paths: dict,
+) -> inputs.ZoningTranslationInputs:
+    """
+    The config for a test weighted translation. This config is used as
+    a base for other weighted test cases.
+    Parameters
+    ----------
+    Params are all inherited from fixtures.
+    zone_1_shape
+    zone_2_shape
+    lower_zone
+    lower_weighting
+    paths
+
+    Returns
+    -------
+    An input config for running a basic weighted zone translation.
+    """
+    zone_1 = inputs.TransZoneSystemInfo(
+        name="zone_1", shapefile=zone_1_shape, id_col="zone_1_id"
+    )
+    zone_2 = inputs.TransZoneSystemInfo(
+        name="zone_2", shapefile=zone_2_shape, id_col="zone_2_id"
+    )
+    lower = inputs.LowerZoneSystemInfo(
+        name="lower_zone",
+        shapefile=lower_zone_duplicate_cols,
+        id_col="lower_id",
+        weight_data=lower_weighting_duplicate_cols,
         data_col="weight",
         weight_id_col="lower_id",
         weight_data_year=2018,
