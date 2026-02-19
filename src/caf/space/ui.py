@@ -600,9 +600,34 @@ class ParametersFrame(ttk.LabelFrame):
         else:
             self.lower.disable()
 
-    def get(self):
+    def get_spatial(self):
         """
-        Get method for parameters.
+        Get method for spatial parameters.
+
+        Returns
+        -------
+        A dictionary of parameters from the ui in the correct format to be
+        passed to ZoningTranslationInputs.
+        """
+
+        zone_1 = self.zone_1.get()
+        zone_2 = self.zone_2.get()
+        conf = inputs.ZoningTranslationInputs(
+            zone_1=zone_1,
+            zone_2=zone_2,
+            cache_path=Path(self.cache_var.get()),
+            filter_slivers=self.slivers_var.get(),
+            point_handling=self.handling_var.get(),
+            method=self.method_var.get(),
+            sliver_tolerance=self.sliver_tolerance.get() / 100,
+            point_tolerance=self.point_tolerance.get(),
+            rounding=self.rounding_var.get(),
+        )
+
+        return conf, Path(self.output_var.get())
+    def get_weighted(self):
+        """
+        Get method for weighted parameters.
 
         Returns
         -------
@@ -615,7 +640,7 @@ class ParametersFrame(ttk.LabelFrame):
             lower = None
         zone_1 = self.zone_1.get()
         zone_2 = self.zone_2.get()
-        conf = inputs.ZoningTranslationInputs(
+        conf = inputs.WeightedZoningTranslationInputs(
             zone_1=zone_1,
             zone_2=zone_2,
             lower_zoning=lower,
@@ -695,7 +720,7 @@ class UiTab(ttk.Frame):
         them to generate a weighted translation, which is saved to the output
         path.
         """
-        params, output_path = self.main_params.get()
+        params, output_path = self.main_params.get_weighted()
         trans = zone_translation.ZoneTranslation(params)
         trans.weighted_translation().to_csv(
             output_path / f"{params.zone_1.name}_{params.zone_2.name}_{params.method}.csv",
@@ -710,7 +735,7 @@ class UiTab(ttk.Frame):
         them to generate a spatial translation, which is saved to the output
         path.
         """
-        params, output_path = self.main_params.get()
+        params, output_path = self.main_params.get_spatial()
         trans = zone_translation.ZoneTranslation(params)
         trans.spatial_translation().to_csv(
             output_path / f"{params.zone_1.name}_{params.zone_2.name}_spatial.csv",

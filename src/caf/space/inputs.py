@@ -11,6 +11,7 @@ ultimately used as input parameters for the ZoneTranslation class.
 from __future__ import annotations
 
 # Built-Ins
+import abc
 import argparse
 import dataclasses
 import datetime
@@ -20,6 +21,7 @@ import datetime
 import logging
 import os
 from pathlib import Path
+import sys
 from typing import Optional
 
 # Third Party
@@ -27,7 +29,7 @@ import fiona
 import pandas as pd
 
 # Third party imports
-from caf.toolkit import BaseConfig
+import caf.toolkit as ctk
 from pydantic import field_validator, model_validator
 
 # pylint: enable=import-error
@@ -39,7 +41,7 @@ CACHE_PATH = "I:/Data/Zone Translations/cache"
 MODES = ("spatial", "weighted", "GUI")
 
 
-class ZoneSystemInfo(BaseConfig):
+class ZoneSystemInfo(ctk.BaseConfig):
     """Base class for storing information about a shapefile input.
 
     Parameters
@@ -145,67 +147,9 @@ class LowerZoneSystemInfo(ZoneSystemInfo):
         return self
 
 
-def _create_parser() -> argparse.ArgumentParser:
-    """Create CLI argument parser for running translation with a config."""
-    parser = argparse.ArgumentParser(
-        description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter
-    )
-    parser.add_argument(
-        "--mode",
-        type=str,
-        help="Mode to run translation in; spatial, weighted or GUI.",
-        default="GUI",
-        required=False,
-    )
-    parser.add_argument(
-        "--config",
-        type=Path,
-        help="path to config file containing parameters",
-        default=None,
-        required=False,
-    )
-    parser.add_argument(
-        "--out_path",
-        type=Path,
-        help="Path the translation will be saved in.",
-        default=None,
-        required=False,
-    )
-
-    return parser
 
 
-@dataclasses.dataclass
-class SpaceArguments:
-    """Command Line arguments for running space."""
-
-    config_path: Path
-    mode: str
-    out_path: Path
-
-    @classmethod
-    def parse(cls) -> SpaceArguments:
-        """Parse command line argument."""
-        parser = _create_parser()
-
-        parsed_args = parser.parse_args()
-        return SpaceArguments(parsed_args.config, parsed_args.mode, parsed_args.out_path)
-
-    def validate(self):
-        """Raise error for invalid input."""
-        if self.config_path:
-            if not self.config_path.is_file():
-                raise FileNotFoundError(f"config file doesn't exist: {self.config_path}")
-
-        if self.out_path:
-            if not self.out_path.is_dir():
-                raise FileNotFoundError(f"{self.out_path} does not exist.")
-
-        if self.mode not in MODES:
-            raise ValueError(f"{self.mode} is not a valid mode for caf.space to run in.")
-
-
-class ZoningTranslationInputs(BaseConfig):
+class ZoningTranslationInputs(abc.ABC, ctk.BaseConfig):
     """
     Class for storing and reading input parameters for `ZoneTranslation`.
 
@@ -313,3 +257,14 @@ class ZoningTranslationInputs(BaseConfig):
         if not isinstance(out_path, Path):
             out_path = Path(out_path)
         ex.save_yaml(out_path / "example.yml")
+
+    @abc.abstractmethod
+    def run(self,out_path: Path)->None:
+        """Run method for creating zone translations.
+        
+        Parameters
+        ----------
+        out_path: Path
+            Directory to output completed zone translation.
+        """ 
+

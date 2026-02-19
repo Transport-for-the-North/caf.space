@@ -15,13 +15,22 @@ import geopandas as gpd
 import pandas as pd
 
 # Local Imports
-from caf.space import inputs, utils, weighted_funcs, zone_correspondence
+from caf.space import utils, weighted_funcs, zone_correspondence, ZoningTranslationInputs
 
 ##### CONSTANTS #####
 LOG = logging.getLogger("SPACE")
 # logging.basicConfig(format="%(asctime)s [%(name)-20.20s] [%(levelname)-8.8s]  %(message)s")
 logging.captureWarnings(True)
 
+
+class SpatialZoningTranslationInputs(ZoningTranslationInputs):
+    def run(self, out_path:Path)->None:
+        translation = ZoneTranslation(self)
+        translation.spatial_translation().to_csv(out_path/ f"{self.zone_1.name}_{self.zone_2.name}_spatial.csv")
+class WeightedZoningTranslationInputs(ZoningTranslationInputs):
+    def run(self, out_path:Path)->None:
+        translation = ZoneTranslation(self)
+        translation.weighted_translation().to_csv(out_path/ f"{self.zone_1.name}_{self.zone_2.name}_{self.method}.csv")
 
 ##### CLASSES #####
 class ZoneTranslation:
@@ -47,7 +56,7 @@ class ZoneTranslation:
         self.zone_translation
     """
 
-    def __init__(self, params: inputs.ZoningTranslationInputs):
+    def __init__(self, params: ZoningTranslationInputs):
         self.params = params
         self.zone_1 = params.zone_1
         self.zone_2 = params.zone_2
