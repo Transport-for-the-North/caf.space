@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+# pylint: disable=all
 # Built-Ins
 
 # Third Party

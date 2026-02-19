@@ -70,7 +70,13 @@ class ZoneTranslation:
         if params.zone_2 is not None:
             sorted_names = sorted([params.zone_1.name, params.zone_2.name])
         else:
-            sorted_names = [params.zone_1.name, params.lower_zoning.name]
+            if params.lower_zoning is not None:
+                sorted_names = [params.zone_1.name, params.lower_zoning.name]
+            else:
+                raise ValueError(
+                    "Only zone_1 has been provided. Zone_2 ,ust be provided for a zone translation, "
+                    "and lower_zoning for a weighted centroid."
+                )
         self.names = (sorted_names[0], sorted_names[1])
         self.handler = logging.FileHandler(
             self.cache_path / f"{self.names[0]}_{self.names[1]}.log", mode="w"
