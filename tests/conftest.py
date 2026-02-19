@@ -79,6 +79,7 @@ def fixture_lower_zone(main_dir) -> Path:
     lower.to_file(file)
     return file
 
+
 @pytest.fixture(name="lower_zone_duplicate_cols", scope="session")
 def fixture_lower_zone_duplicate_cols(main_dir) -> Path:
     """
@@ -86,7 +87,7 @@ def fixture_lower_zone_duplicate_cols(main_dir) -> Path:
     Returns:
         Path: Temp path to gdf, 16 attributes, 1-17, ID_COL = lower_id
     """
-    lower_df = pd.DataFrame(data={"lower_id": range(1, 17), "duplicate": range(1,17)})
+    lower_df = pd.DataFrame(data={"lower_id": range(1, 17), "duplicate": range(1, 17)})
     lower = gpd.GeoDataFrame(
         data=lower_df,
         geometry=[
@@ -113,6 +114,7 @@ def fixture_lower_zone_duplicate_cols(main_dir) -> Path:
     file = main_dir / "lower_zone_duplicate_col.shp"
     lower.to_file(file)
     return file
+
 
 @pytest.fixture(name="zone_1_shape", scope="session")
 def fixture_zone_1_shape(main_dir) -> Path:
@@ -249,6 +251,7 @@ def fixture_lower_weighting(main_dir) -> Path:
     weighting.to_csv(main_dir / "weighting.csv")
     return file
 
+
 @pytest.fixture(name="lower_weighting_duplicate_cols", scope="session")
 def fixture_lower_weighting_duplicate_cols(main_dir) -> Path:
     """
@@ -293,6 +296,7 @@ def fixture_lower_weighting_duplicate_cols(main_dir) -> Path:
     file = main_dir / "weighting_duplicate_cols.csv"
     weighting.to_csv(main_dir / "weighting_duplicate_cols.csv")
     return file
+
 
 @pytest.fixture(name="paths", scope="session")
 def fixture_paths(main_dir, tmp_path_factory) -> dict[str, Path]:
@@ -414,6 +418,7 @@ def fixture_weighted_config(
         rounding=True,
     )
     return params
+
 
 @pytest.fixture(name="weighted_config_duplicate_cols", scope="session")
 def fixture_weighted_config_duplicate_cols(
