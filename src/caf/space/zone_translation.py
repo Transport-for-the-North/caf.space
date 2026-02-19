@@ -5,6 +5,7 @@ Module containing ZoneTranslation class.
 Class for producing zone translations from a set of inputs, provided by the
 ZoneTranslationInputs class in 'inputs'.
 """
+
 # Built-Ins
 import logging
 import warnings
@@ -81,7 +82,7 @@ class ZoneTranslation:
         self.logger.addHandler(self.handler)
         self.logger.setLevel(logging.INFO)
 
-    def spatial_translation(self, return_gdf: bool = False) -> pd.DataFrame:
+    def spatial_translation(self, return_gdf: bool = False) -> pd.DataFrame | gpd.GeoDataFrame:
         """
         Create spatial zone translation.
 
@@ -211,7 +212,7 @@ class ZoneTranslation:
         self.params.save_yaml(out_path / f"{out_name}.yml")
         return weighted_translation
 
-    def weighted_centroids(self):
+    def weighted_centroids(self) -> pd.DataFrame:
         """
         Create centroids based on weighting data.
 
@@ -230,20 +231,27 @@ class ZoneTranslation:
         )
         lookup = ZoneTranslation(trans_conf).spatial_translation(return_gdf=True)
         lower_weight = pd.read_csv(
-            self.lower_zoning.weight_data, index_col=self.lower_zoning.weight_id_col
+            self.lower_zoning.weight_data,
+            index_col=self.lower_zoning.weight_id_col,
+            usecols=[self.lower_zoning.weight_id_col, self.lower_zoning.data_col],
+        )
+        lower_weight.rename(
+            columns={
+                self.lower_zoning.weight_id_col: "weighting",
+                self.lower_zoning.data_col: "data",
+            },
+            inplace=True,
         )
         lower_weight.index.name = f"{self.lower_zoning.name}_id"
         cent = lookup.join(lower_weight)
-        cent[self.lower_zoning.data_col] *= cent[
-            f"{self.lower_zoning.name}_to_{self.zone_1.name}"
-        ]
-        cent["x_weight"] = cent.centroid.x * cent[self.lower_zoning.data_col]
-        cent["y_weight"] = cent.centroid.y * cent[self.lower_zoning.data_col]
+        cent["data"] *= cent[f"{self.lower_zoning.name}_to_{self.zone_1.name}"]
+        cent["x_weight"] = cent.centroid.x * cent["data"]
+        cent["y_weight"] = cent.centroid.y * cent["data"]
         grouped = cent.groupby(f"{self.zone_1.name}_id")[
-            [self.lower_zoning.data_col, "x_weight", "y_weight"]
+            ["data", "x_weight", "y_weight"]
         ].sum()
-        grouped["x"] = grouped["x_weight"] / grouped[self.lower_zoning.data_col]
-        grouped["y"] = grouped["y_weight"] / grouped[self.lower_zoning.data_col]
+        grouped["x"] = grouped["x_weight"] / grouped["data"]
+        grouped["y"] = grouped["y_weight"] / grouped["data"]
         out_path = self.cache_path / f"{self.names[0]}_{self.names[1]}"
         out_path.mkdir(exist_ok=True, parents=False)
         out_name = f"{self.names[0]}_to_{self.names[1]}_weighted_centroids"
@@ -253,7 +261,7 @@ class ZoneTranslation:
 
     def _slithers_and_rounding(
         self, translation: pd.DataFrame, return_gdf: bool = False
-    ) -> pd.DataFrame:
+    ) -> pd.DataFrame | gpd.GeoDataFrame:
         """
         Process slithers and rounding parameters.
 

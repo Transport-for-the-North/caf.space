@@ -34,4 +34,4 @@ params = cs.ZoningTranslationInputs(
     rounding=True,
 )
 trans_class = cs.ZoneTranslation(params)
-trans_df = trans.weighted_translation()
+trans_df = trans_class.weighted_translation()

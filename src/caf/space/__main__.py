@@ -52,6 +52,8 @@ def main():
                     args.out_path
                     / f"{config.zone_1.name}_{config.lower_zoning.name}_{config.method}.csv",
                 )
+            else:
+                raise ValueError(f"invalid mode: {args.mode}")
 
 
 if __name__ == "__main__":
