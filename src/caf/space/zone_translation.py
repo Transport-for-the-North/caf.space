@@ -224,7 +224,7 @@ class ZoneTranslation:
 
         Returns
         -------
-        pd.DataFrame: A dataframe of centroids, with columns for 'x' and 'y', representing Easting 
+        pd.DataFrame: A dataframe of centroids, with columns for 'x' and 'y', representing Easting
         and Northing on the British National Grid. The zone ids will be in the index.
         """
         trans_conf = inputs.ZoningTranslationInputs(
