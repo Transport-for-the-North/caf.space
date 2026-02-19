@@ -258,7 +258,6 @@ class TestZoneTranslation:
             ("expected_point_to_point", "point_to_point_trans"),
         ],
     )
-
     def test_output(self, trans_str: str, expected_str: str, request):
         """
         Test to see if generated test case zone translations match expected values calculated
@@ -281,7 +280,7 @@ class TestZoneTranslation:
         df_2 = expected.groupby(["zone_1_id", "zone_2_id"]).sum()
         df_2.sort_index(inplace=True)
         pd.testing.assert_frame_equal(df_1, df_2)
-    
+
     def test_centroids(self, weighted_config, expected_centroids):
         centroids = zone_translation.ZoneTranslation(weighted_config).weighted_centroids()
         rounded = centroids.round(2)
