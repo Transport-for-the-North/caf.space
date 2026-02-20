@@ -1,11 +1,5 @@
 from pathlib import Path
 import sys
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-SRC_DIR = ROOT / "src"
-if SRC_DIR.exists():
-    sys.path.insert(0, str(SRC_DIR))
-
 from dash import Dash, html, dcc, Input, Output, State, callback
 from caf.space import zone_translation, inputs
 from layouts.main import create_main_layout
