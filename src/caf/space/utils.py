@@ -185,12 +185,3 @@ def grad_points_gdf(gdf):
     grad_list = gdf.geometry.apply(lambda x: line_gradients(x)).explode().to_list()
     grad_frame = gpd.GeoDataFrame(grad_list, columns=["geometry", "gradient"])
     return grad_frame
-
-
-if __name__ == "__main__":
-    # line_gdf = gpd.read_file(r"E:\shapefiles\RoadLink_STB_TransportfortheNorth.gpkg", engine='pyogrio')
-    points = gpd.read_file(r"E:\shapefiles\itn_points", engine="pyogrio").drop("z", axis=1)
-    gradients = gradients_alt(points)
-    grads = grad_points_gdf(line_gdf)
-    grads.to_file(r"E:\shapefiles\grad_points.gpkg")
-    print("debugging")
