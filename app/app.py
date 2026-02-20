@@ -1,16 +1,12 @@
 from pathlib import Path
 import sys
-
-# Ensure repository root is on sys.path so `caf` package can be imported
-# when this module is executed from inside the `app` folder.
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-# Also add `src/` if package sources are under a top-level `src` dir
 SRC_DIR = ROOT / "src"
 if SRC_DIR.exists():
     sys.path.insert(0, str(SRC_DIR))
 
-from dash import Dash, html, dcc, Input, Output, callback
+from dash import Dash, html, dcc, Input, Output, State, callback
 from caf.space import zone_translation, inputs
 from layouts.main import create_main_layout
 import geopandas as gpd
@@ -54,14 +50,26 @@ def create_app():
     @callback(
         Output("translation_output", "children"),
         Input("run_translation_button", "n_clicks"),
-        Input("z1_zone_name", "value"),
-        Input("z1_shapefile", "value"),
-        Input("z1_col_name", "value"),
-        Input("z2_zone_name", "value"),
-        Input("z2_shapefile", "value"),
-        Input("z2_col_name", "value"),
+        State("z1_zone_name", "value"),
+        State("z1_shapefile", "value"),
+        State("z1_col_name", "value"),
+        State("z2_zone_name", "value"),
+        State("z2_shapefile", "value"),
+        State("z2_col_name", "value"),
+        State("output_folder", "value"),
+        State("cache_path", "value"),
     )
-    def create_yaml(n_clicks, z1_zone_name, z1_shapefile, z1_col_name, z2_zone_name, z2_shapefile, z2_col_name):
+    def create_yaml(
+        n_clicks,
+        z1_zone_name,
+        z1_shapefile,
+        z1_col_name,
+        z2_zone_name,
+        z2_shapefile,
+        z2_col_name,
+        output_folder,
+        cache_path,
+    ):
         """Run translation using `ZoneTranslation` and display output path or errors."""
         if not n_clicks:
             return ""
@@ -70,8 +78,6 @@ def create_app():
             return "Please select all inputs before running translation."
 
         try:
-            # Construct minimal zone system inputs. Use model_construct to avoid
-            # strict validation during UI-driven runs; keep Path types for code that expects them.
             zone1 = inputs.TransZoneSystemInfo.model_construct(
                 name=str(z1_zone_name),
                 shapefile=Path(z1_shapefile),
@@ -85,14 +91,17 @@ def create_app():
                 point_shapefile=None,
             )
 
+           
             cache_dir = Path(".")
-            # If user provided a cache_path input in the UI, prefer that; fall back to default in inputs.
-            try:
-                cache_elem = Path(dcc.callback_context.states.get("cache_path.value", "") or "")
-            except Exception:
-                cache_elem = None
-            if cache_elem and cache_elem.exists():
-                cache_dir = cache_elem
+            for raw in (output_folder, cache_path):
+                if raw and (p := Path(raw).resolve()).exists():
+                    cache_dir = p
+                    break
+                if raw:
+                    cache_dir = Path(raw).resolve()
+                    break
+
+            cache_dir.mkdir(parents=True, exist_ok=True)
 
             params = inputs.ZoningTranslationInputs.model_construct(
                 zone_1=zone1,
@@ -110,8 +119,6 @@ def create_app():
         except Exception as exc:  # pylint: disable=broad-except
             return f"Error running translation: {exc}"
 
-    # Note: spatial run helper removed; implement as a callback when
-    # integration with your translation/config classes is available.
 
     return app
 
