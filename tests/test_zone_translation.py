@@ -289,7 +289,7 @@ class TestZoneTranslation:
         Parameters
         All provided to request to be read from fixtures.
         spatial trans
-        
+
         Returns
         ----------"""
         trans = zone_translation.ZoneTranslation(spatial_config_cols).spatial_translation()

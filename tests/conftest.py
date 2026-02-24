@@ -160,6 +160,7 @@ def fixture_zone_2_shape(main_dir) -> Path:
     zone_2.to_file(file)
     return file
 
+
 @pytest.fixture(name="zone_1_cols", scope="session")
 def fixture_zone_1_cols(main_dir) -> Path:
     """
@@ -205,7 +206,6 @@ def fixture_zone_2_cols(main_dir) -> Path:
     file = main_dir / "zone_2_cols.shp"
     zone_2.to_file(file)
     return file
-
 
 
 @pytest.fixture(name="point_shapefile_1", scope="session")
@@ -398,12 +398,13 @@ def fixture_spatial_config(
     )
     return params
 
+
 @pytest.fixture(name="spatial_config_cols", scope="class")
 def fixture_spatial_config_cols(
     zone_1_cols: Path, zone_2_cols: Path, paths: dict
 ) -> inputs.ZoningTranslationInputs:
     """
-    Config for a test case spatial translation. To test handling of duplicate 
+    Config for a test case spatial translation. To test handling of duplicate
     column names in input shapefiles.
     Parameters
     ----------
@@ -431,7 +432,6 @@ def fixture_spatial_config_cols(
     )
     print(params)
     return params
-
 
 
 @pytest.fixture(name="spatial_trans", scope="class")
