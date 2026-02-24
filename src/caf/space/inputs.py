@@ -60,17 +60,17 @@ class ZoneSystemInfo(BaseConfig):
     shapefile: Path
     id_col: str
 
-    @model_validator(mode="before")
-    def _id_col_in_file(cls, values):
-        with fiona.collection(values["shapefile"]) as source:
+    @model_validator(mode="after")
+    def _id_col_in_file(self):
+        with fiona.collection(self.shapefile) as source:
             schema = source.schema
-            if values["id_col"] not in schema["properties"].keys():
+            if self.id_col not in schema["properties"].keys():
                 raise ValueError(
-                    f"The id_col provided, {values['id_col']}, does not appear"
+                    f"The id_col provided, {self.id_col}, does not appear"
                     f" in the given shapefile. Please choose from:"
                     f"{schema['properties'].keys()}."
                 )
-        return values
+        return self
 
 
 class TransZoneSystemInfo(ZoneSystemInfo):
@@ -99,10 +99,11 @@ class LowerZoneSystemInfo(ZoneSystemInfo):
 
     Parameters
     ----------
-    weight_data: Path
+    weight_data: Path, optional
         File path to the weighting data for the lower zone system. This
         should be saved as a csv, and only needs two columns (an ID
-        column and a column of weighting data)
+        column and a column of weighting data). If there is weighting data already in the shapefile,
+        this is not needed.
     data_col: str
         The name of the column in the weighting data csv containing the
         weight data.
@@ -110,16 +111,16 @@ class LowerZoneSystemInfo(ZoneSystemInfo):
         The name of the columns in the weighting data containing the
         zone ids. This will be used to join the weighting data to the
         lower zoning, so the IDs must match, but the names of the ID
-        columns may be different.
+        columns may be different. Required if weight_data is provided.
     weight_data_year: int
         The year the weighting data comes from. This is used for writing files
         to the cache and is important for logging. If you don't know this you
         should consider whether your weighting data is appropriate.
     """
 
-    weight_data: Path
+    weight_data: Optional[Path] = None
     data_col: str
-    weight_id_col: str
+    weight_id_col: Optional[str] = None
     weight_data_year: int
 
     def _lower_to_higher(self) -> TransZoneSystemInfo:
@@ -136,13 +137,16 @@ class LowerZoneSystemInfo(ZoneSystemInfo):
             raise FileNotFoundError(f"The weight data path provided for {v} does not exist.")
         return v
 
-    @model_validator(mode="before")
-    def _valid_data_col(cls, values):
-        cols = pd.read_csv(values["weight_data"], nrows=1).columns
-        for v in [values["data_col"], values["weight_id_col"]]:
-            if v not in cols:
-                raise ValueError(f"The given col, {v}, does not appear in the weight data.")
-        return values
+    @model_validator(mode="after")
+    def _valid_data_col(self):
+        if (weight := self.weight_data) is not None:
+            cols = pd.read_csv(weight, nrows=1).columns
+            for v in [self.data_col, self.weight_id_col]:
+                if v not in cols:
+                    raise ValueError(
+                        f"The given col, {v}, does not appear in the weight data."
+                    )
+        return self
 
 
 def _create_parser() -> argparse.ArgumentParser:
@@ -213,8 +217,8 @@ class ZoningTranslationInputs(BaseConfig):
     ----------
     zone_1: TransZoneSystemInfo
         Zone system 1 information
-    zone_2: TransZoneSystemInfo
-        Zone system 2 information
+    zone_2 | None: TransZoneSystemInfo = None
+        Zone system 2 information. Unless performing a centroid calculation , this must be provided.
     lower_zoning: LowerZoneSystemInfo
         Information about the lower zone system, used for performing
         weighted translations. This should be as small a zone system as
@@ -257,7 +261,7 @@ class ZoningTranslationInputs(BaseConfig):
     """
 
     zone_1: TransZoneSystemInfo
-    zone_2: TransZoneSystemInfo
+    zone_2: TransZoneSystemInfo | None = None
     lower_zoning: Optional[LowerZoneSystemInfo] = None
     cache_path: Path = Path(CACHE_PATH)
     method: Optional[str] = None

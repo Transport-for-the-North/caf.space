@@ -41,6 +41,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.napoleon",
+    "sphinxarg.ext",
     "sphinx.ext.autosectionlabel",
     "sphinx_gallery.gen_gallery",
     "sphinx.ext.intersphinx",
