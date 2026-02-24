@@ -265,3 +265,22 @@ class TestZoneTranslation:
         df_2 = expected.groupby(["zone_1_id", "zone_2_id"]).sum()
         df_2.sort_index(inplace=True)
         pd.testing.assert_frame_equal(df_1, df_2)
+
+    # @pytest.mark.parameterize("fixture_spatial_trans", "spatial_config_cols")
+    def test_shared_cols_trans(self, spatial_config_cols, expected_spatial, request):
+        """
+        Test to see if translation can handle shared column names in
+        shapefiles
+        Parameters
+        All provided to request to be read from fixtures.
+        spatial trans
+        
+        Returns
+        ----------"""
+        trans = zone_translation.ZoneTranslation(spatial_config_cols).spatial_translation()
+        expected = expected_spatial
+        df_1 = trans.groupby(["zone_1_id", "zone_2_id"]).sum().round(3)
+        df_1.sort_index(inplace=True)
+        df_2 = expected.groupby(["zone_1_id", "zone_2_id"]).sum()
+        df_2.sort_index(inplace=True)
+        pd.testing.assert_frame_equal(df_1, df_2)
