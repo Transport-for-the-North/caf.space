@@ -65,11 +65,11 @@ Here are the core features of the CAF.space tool:
 
 ### Who is it for?
 
-![CAF Analytical Process Diagram](docs/ProcessDiagram.png)
-
 | Target Audience                    | CAF Analytical Stage                      |
 | :--------------------------------: | :---------------------------------------- |
 |  Transport Modellers, Transport Planners, GIS Specialists         | Analysis       |
+
+![CAF Analytical Process Diagram](docs/ProcessDiagram.png)
 
 For more details on CAF Analytical Stages see the [description within TfN's GitHub homepage](https://github.com/Transport-for-the-North)
 
