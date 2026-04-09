@@ -70,7 +70,7 @@ def join_zones_to_bound(
     id_col: str,
     zone_name: str,
 ) -> gpd.GeoDataFrame:
-    """ "Select zones that are either inside or outside of a boundary."""
+    """Select zones that are either inside or outside of a boundary."""
     zones_cent = zones.copy()
     zones_cent.geometry = zones_cent.centroid
     zones_cent = zones_cent.sjoin(boundary, how="left", predicate="within")
@@ -94,8 +94,9 @@ def produce_zoning(
     buff_bound: gpd.GeoDataFrame | None,
 ) -> gpd.GeoDataFrame:
     """
-    Produce a composite zone system from two zone systems, where one zone system
-    is used for zones within a boundary, the other without. An optional buffer
+    Produce a composite zone system from two zone systems.
+     
+    One zone system is used for zones within a boundary, the other without. An optional buffer
     zone system can be used for a buffer zone (zones directly adjacent to the internal boundary).
 
     This process is written with output areas (oa/lsoa/msoa) in mind, and as such it is assumed the
