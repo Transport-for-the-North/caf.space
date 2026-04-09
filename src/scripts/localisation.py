@@ -58,9 +58,7 @@ class _Config(ctk.BaseConfig):
     @functools.cached_property
     def output_folder(self) -> pathlib.Path:
         """Folder to save outputs to."""
-        folder = (
-            self.output_path / f"{self.localisation_area.area_name}_localisation_zones"
-        )
+        folder = self.output_path / f"{self.localisation_area.area_name}_localisation_zones"
         folder.mkdir(exist_ok=True)
         return folder
 
@@ -140,9 +138,7 @@ def produce_zoning(
     output_gdfs = []
 
     if buff_zones is not None:
-        buff_gdf = gpd.read_file(
-            buff_zones.shapefile, columns=[buff_zones.id_col, "geometry"]
-        )
+        buff_gdf = gpd.read_file(buff_zones.shapefile, columns=[buff_zones.id_col, "geometry"])
         buff_zones = join_zones_to_bound(
             buff_gdf, buff_bound, "inside", buff_zones.id_col, buff_zones.name
         )
