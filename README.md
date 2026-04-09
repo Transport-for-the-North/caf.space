@@ -5,7 +5,7 @@
 </a>
 </div>
 
-<h1 align="center">Caf.Space</h1>
+<h1 align="center">CAF.Space</h1>
 
 [comment]: <> (Update "{package-name}" references in below)
 
@@ -65,7 +65,7 @@ Here are the core features of the CAF.space tool:
 
 ### Who is it for?
 
-![CAF Analytical Process Diagram](ProcessDiagram.png)
+![CAF Analytical Process Diagram](docs/ProcessDiagram.png)
 
 | Target Audience                    | CAF Analytical Stage                      |
 | :--------------------------------: | :---------------------------------------- |
