@@ -1,63 +1,190 @@
-![Transport for the North Logo](https://github.com/Transport-for-the-North/caf.toolkit/blob/main/docs/TFN_Landscape_Colour_CMYK.png)
+<div align="center" style="background-color: white;">
+<a href="https://www.transportforthenorth.com/">
+<img src="https://www.transportforthenorth.com/wp-content/themes/tfn-theme/img/logo.svg"
+  alt="Transport for the North logo">
+</a>
+</div>
 
-<h1 align="center">CAF.Space</h1>
+<h1 align="center">Caf.Space</h1>
+
+[comment]: <> (Update "{package-name}" references in below)
 
 <p align="center">
-<a href="https://pypi.org/project/caf.space/"><img alt="Supported Python versions" src="https://img.shields.io/pypi/pyversions/caf.space.svg?style=flat-square"></a>
-<a href="https://pypi.org/project/caf.space/"><img alt="Latest release" src="https://img.shields.io/github/release/transport-for-the-north/caf.space.svg?style=flat-square&maxAge=86400"></a>
-<a href="https://app.codecov.io/gh/Transport-for-the-North/caf.space"><img alt="Coverage" src="https://img.shields.io/codecov/c/github/transport-for-the-north/caf.space.svg?branch=master&style=flat-square&logo=CodeCov"></a>
-<a href="https://github.com/Transport-for-the-North/caf.space/actions?query=event%3Apush"><img alt="Testing Badge" src="https://img.shields.io/github/actions/workflow/status/transport-for-the-north/caf.space/tests.yml?style=flat-square&logo=GitHub&label=Tests"></a>
-<a href='https://cafspace.readthedocs.io/en/stable/?badge=stable'><img alt='Documentation Status' src="https://img.shields.io/readthedocs/cafspace?style=flat-square&logo=readthedocs"></a>
-<a href="https://github.com/psf/black"><img alt="code style: black" src="https://img.shields.io/badge/code%20format-black-000000.svg?style=flat-square"></a>
+  <a href="https://pypi.org/project/caf.space/"><img alt="Latest release" src="https://img.shields.io/github/release/transport-for-the-north/caf.space.svg?style=flat-square&maxAge=86400"></a>
+  <a href="https://pypi.org/project/caf.space/"><img alt="Supported Python versions" src="https://img.shields.io/pypi/pyversions/caf.space.svg?style=flat-square"></a>
+</p>
+<p align="center">
+  <a href="https://app.codecov.io/gh/Transport-for-the-North/caf.space"><img alt="Coverage" src="https://img.shields.io/codecov/c/github/transport-for-the-north/caf.space.svg?branch=master&style=flat-square&logo=CodeCov"></a>
+  <a href="https://github.com/Transport-for-the-North/caf.space/actions?query=event%3Apush"><img alt="Testing Badge" src="https://img.shields.io/github/actions/workflow/status/transport-for-the-north/caf.space/tests.yml?style=flat-square&logo=GitHub&label=Tests"></a>
+  <a href='https://cafspace.readthedocs.io/en/stable/?badge=stable'><img alt='Documentation Status' src="https://img.shields.io/readthedocs/cafspace?style=flat-square&logo=readthedocs"></a>
+  <a href="https://github.com/psf/black"><img alt="code style: black" src="https://img.shields.io/badge/code%20format-black-000000.svg?style=flat-square"></a>
 </p>
 
-Common Analytical Framework (CAF) Space contains geo-processing functionality useful
-for transport planners. Primarily it is a tool for generating standard weighting
-translations in .csv format describing how to convert between different zoning systems.
-The aim is to free tools up from directly having to do their own geo-processing, and    
-instead have a single source of truth to get them from! For more info see https://cafspace.readthedocs.io/en/latest/.
+# CAF.space
+CAF.space contains geo-processing functionality useful for transport planners. Primarily it is a tool for generating standard weighting translations in .csv format describing how to convert between different zoning systems.
 
-<u><h3> Tool info </h3></u>
-The tool has two main options for running a translation, either a purely spatial translation (where overlapping zones are split by area), or a weighted translation where overlapping zones are split by some other type of weighting data like population or employment data. For most purposes a weighted translation will be more accurate, and it is up to the user to decide the most appropriate weighting data to use. For both types of translation the tool runs from a set of parameters within a config class. If you are using the GUI then provide parameters in the first tab. If you are not using the GUI a instance of inputs.ZoningTranslationInputs is required. This can either be loaded from a yaml file, or initialised in the code.
+The aim is to free tools up from directly having to do their own geo-processing, and instead have a single source of truth to get them from! 
 
-<u><h3> Command Line Tool </h3></u>
+## Table of Contents 
+- [Overview](#overview)
+  - [Who is it for?](#who-is-it-for)
+  - [When should I use this tool?](#when-should-i-use-this-tool)
+- [Key Inputs and Outputs](#key-inputs-and-outputs)
+  - [Key Inputs](#key-inputs)
+  - [Key Outputs](#key-outputs)
+- [Getting Started](#getting-started)
+  - [Package Dependencies](#package-dependencies)
+  - [Installation](#installation)
+  - [Running the Tool](#running-the-tool)
+- [Documentation](#documentation)
+- [What is CAF?](#what-is-caf)
+  - [Related CAF Tools](#related-caf-tools)
+  - [Contribution](#contribution)
+- [Contact Us](#contact-us)
+
+## Overview
+### What does it do?
+CAF.space is a tool used for the translation of data between different zones, supporting both spatial and non-spatial, weighted translations.
+
+The tool has two main options for running a translation, either a purely spatial translation (where overlapping zones are split by area), or a weighted translation where overlapping zones are split by some other type of weighting data like population or employment data. For most purposes a weighted translation will be more accurate, and it is up to the user to decide the most appropriate weighting data to use. For both types of translation the tool runs from a set of parameters within a config class. If you are using the GUI then provide parameters in the first tab. If you are not using the GUI a instance of `inputs.ZoningTranslationInputs is required. This can either be loaded from a yaml file, or initialised in the code.
+
+Consumes geospatial files to perform translations:
+- **Spatial Translations**  - Where overlapping zones are split by area.
+- **Weighted Translations** - Where overlapping zones are split by some other type of weighting data like population or employment data.
+
+For most purposes a weighted translation will be more accurate, and it is up to the user to decide the most appropriate weighting data to use. 
+
+For both types of translation the tool runs from a set of parameters within a configuration class. 
+
+Here are the core features of the CAF.space tool:
+
+- Spatial Translations - splitting overlapping zones only through the area without use of any weighting data.
+- Weighted Translations - as above but using an additional weigting factor - e.g. population.
+- Flexible configuration and running options.
+- Cache path - To provide a source of run calculations and avoid duplication of results.
+
+### Who is it for?
+
+![CAF Analytical Process Diagram](ProcessDiagram.png)
+
+| Target Audience                    | CAF Analytical Stage                      |
+| :--------------------------------: | :---------------------------------------- |
+|  Transport Modellers, Transport Planners, GIS Specialists         | Analysis       |
+
+For more details on CAF Analytical Stages see the [description within TfN's GitHub homepage](https://github.com/Transport-for-the-North)
+
+
+### When should I use this tool? 
+This tool should be used in cases where you need to translate data between zoning systems. It considers the following:
+
+- Zones may not align cleanly between two systems (Z1 and Z2), meaning many zones overlap only partially or in irregular ways.
+- Population or employment are unevenly distributed within zones
+- Point-like features (e.g., airports, ports, special generators) need special handling because their demand is not proportional to their geographic area
+
+## Key Inputs and Outputs
+### Key Inputs
+This tool requires the following key inputs:
+
+| Input                   | File Type       | Description                                                          |
+| :----------------------: | :-------------- | :------------------------------------------------------------------: |
+| Zoning System 1 Shapefile                 | .shp        | Shapefile for zoning system 1, including an ID column with zone name |
+| Zoning System 2 Shapefile                 | .shp        | Shapefile for zoning system 2, including an ID column with zone name |
+
+This tool requires the following optional inputs:
+
+| Input                   | File Type       | Description                                                          |
+| :----------------------: | :-------------- | :------------------------------------------------------------------: |
+| Weighting data                 | .csv        | Weightings for zoning system based on ID column |
+
+
+### Key Outputs
+This tool produces the following main outputs:
+
+| Output                   | File Type       | Description                                                          |
+| :----------------------: | :-------------- | :------------------------------------------------------------------: |
+| Translation between zoning system 1 and 2                 | .csv        | Zoning system 1 and 2 translation file either split by area or weighted |
+
+
+## Getting Started
+This section details high-level installation instructions as well as any key additional requirements that you would need to run this tool, including key package dependencies, and hardware requirements.
+
+Further detail on specific options and tool configuration are provided in the code documentation: [https://cafspace.readthedocs.io/en/latest/](https://cafspace.readthedocs.io/en/latest/.)
+
+### Package Dependencies
+This tool has key dependencies on the following packages:
+- caf.toolkit
+- geopandas
+- shapely
+
+See requirements.txt for the full list of package dependencies.
+
+### Installation
+CAF.space is a python tool which can be accessed by two main methods:
+
+Can be installed by running:
+
+```sh
+pip install caf.space
+```
+Or, by downloading the source code from the repository and running:
+
+```sh
+pip install ./
+```
+from inside the cloned repository.
+
+### Running the Tool
+CAF.space is designed to be run locally on the user's machine after being installed following the above steps.
+
+The tool has two main methods of being operated, using either a command line interface via, for example, the windows command prompt - or - running the built-in graphical interface.
+
+### _Command Line_
 The tool can be run from command line, with the command:
+```sh
+python -m caf.space --mode "mode-value" --config "path/to/config.yml" --out_path "path/to/output/folder"
+```
 
-<b> python -m caf.space </b>
+### _Graphical Interface_
 
-This can be run with no arguments, which will launch the GUI, but there are also 3 arguments for running in different modes.:
-* <b> mode: --mode</b> must be either "GUI" (default value), "spatial", or "weighted". "Gui" launches the GUI and the other two produce spatial or weighted zone translations respectively.
-* <b> config_path: --config</b> must be provided if mode is either "spatial" or "weighted". This is a path to the config file containing parameters for that translation.
-* <b> out_path: --out_path</b> must be provided if either "spatial" or "weighted". This is the directory you want your translation saved to. This directory must exist and will not be generated internally.
+The tool will create a pop-up GUI when the `--mode` argument is either omitted, or set to "GUI"
+```sh
+python -m caf.space --mode "GUI"
+```
 
-Running with all three arguments would look like:
+  <a href="https://cafspace.readthedocs.io/">
+    <img src="https://cafspace.readthedocs.io/en/latest/_images/guispace.png" alt="Example GUI">
+  </a>
 
-<b> python -m caf.space --mode "spatial" --config "path/to/config.yml" --out_path "path/to/output/folder" </b>
+Within this window the fields must be filled out in order to run the tool, with descriptions below for how to fill them in. There is also a ‘Console Output’ window, which will display messaged raised by the tool. This can be useful to check if a translation fails for some reason, as it will give information on which setting caused the issue, such as a path provided which does not exist.
 
-<u><h4> Spatial Correspondence </h4></u>
-For a spatial correspondence, the only user inputs needed are shapefiles for the two zone systems you want a translation between. The parameters required for a spatial translation are as follows:
+## Documentation
+The code documentation is hosted at [https://cafspace.readthedocs.io/en/latest/](https://cafspace.readthedocs.io/en/latest/.)
 
-* <b> zone_1:</b><br>
-    <b>name:</b> The name of the first zone system you are providing. This should be as simple as possible, so for an MSOA shapefile, name should simply be MSOA.<br>
-    <b>shapefile:</b> A file path to the shapefile you want a translation for.<br>
-    <b>id_col:</b> The name of the unique ID column in your chosen shapefile. This can be any column as long as it is unique for each zone in the shapefile.<br>
-    <b>point_shapefile (OPTIONAL):</b> A path to a point shapefile if you want to include true point features in a zone system.<br>
-* <b> zone_2:</b> Parameters the same as for zone_1, it doesn't matter which order these are in, a two-way translation will be created.</b><br>
-* <b>cache_path:</b> File path to a cache of existing translations. This defaults to a location on a network drive, and it is best to keep it there if you have access to it.<br>
-* <b>sliver_tolerance:</b> This is a float less than 1, and defaults to 0.98. If filter_slivers (explained below) is chosen, tolerance controls how big or small the slithers need to be to be rounded away. For most users this can be kept as is.<br>
-* <b>rounding:</b> True or False. Select whether or not zone totals will be rounded to 1 after the translation is performed. Recommended to keep as True.<br>
-* <b>filter_slivers:</b> True or False. Select whether very small overlaps between zones will be filtered out. This accounts for zone boundaries not aligning perfectly when they should between shapefiles, and the tolerance for this is controlled by the tolerance parameter. With this parameter set to false translations can be a bit messy.<br>
-<br>
-The translation will be output as a csv to your output path location, in a folder named by the names selected for each zone system. Along with the csv will be a yml file containing the parameters the translation was run with, along with the date of the run.<br>
-<br>
-<u><h4> Weighted Correspondence </h4></u>
-For a weighted translation more parameters must be provided. The tool creates a weighted translation by first joining weighting data to a lower zone system - this is a zone system smaller than the two primary zone systems. Overlaps are then found between the three zone systems to create a set of weighted tiles across the extent of the zones. These tiles are then used to create the translation. There is a more detailed explanation of this process in the documentation. Below are the additional parameters required for a weighted translation rather than a spatial one.<br>
+## What is CAF?
+This tool is part of TfN's [**Common Analytical Framework (CAF)**](https://github.com/Transport-for-the-North). CAF is Transport for the North's structured suite of analytical tools designed to support transport modelling, appraisal, and strategic decision-making.
 
-* <b>lower_zoning:</b> lower_zoning is a subclass of the class used for zones 1 and 2, the first three parameters for this are the same as for zones 1 and 2. The additional parameters required for lower zoning are:<br>
-    <b>weight_data</b>: File path to the weighting data for the lower zone system. This should be saved as a csv, and only needs two columns (an ID column and a column of weighting data)<br>
-    <b>data_col:</b> The name of the column in the weighting data csv containing the weight data.<br>
-    <b>weight_id_col:</b> The name of the columns in the weighting data containing the zone ids. This will be used to join the weighting data to the lower zoning, so the IDs must match, but the names of the ID columns may be different.<br>
-    <b>weight_data_year:</b> Integer. The year the weighting data is for. This is a required parameter, if you don't know when your weight data is from you should consider whether to use it. If you are using it anyway, set this to 1.<br>
-* <b>method:</b> The name of the method used for weighting (e.g. pop or emp). This can be anything, but must be included as the tool checks if this parameter exists to decide whether a weighted translation can be performed.<br>
-* <b>point_handling:</b> True or False. Choose whether point and pseudo point zones will be treated specially. For an explanation of how point zones are handled see the full documentation on readthedocs.<br>
-* <b>point_tolerance:</b> Int. The area below which polygon zones will be treated as point zones in a translation. This is only needed if point_handling is selected.
+CAF provides a consistent, transparent and reusable approach to:
+
+-   Processing transport datasets
+-   Developing modelling inputs
+-   Running analytical workflows
+-   Supporting forecasting and appraisal
+-   Generating outputs for policy and business case development
+
+CAF improves confidence, consistency and efficiency across TfN projects and partner organisations.
+
+### Related CAF Tools
+Details on all the other CAF tools can be found on the [TfN Homepage](https://github.com/Transport-for-the-North)
+
+### Contribution
+We encourage use of, and contributions to, the repositories within this organisation, licenses are provided within our repositories and contribution guidelines are outlined [here](https://github.com/Transport-for-the-North/.github/blob/main/CONTRIBUTING.rst).
+
+------------------------------------------------------------------------
+
+# Contact Us
+
+For further information about using this tool or CAF tools in your projects and work contact Transport for the North - <TfNOffer@transportforthenorth.com>
+
+<hr>
+
+[Go to Top](#table-of-contents)
