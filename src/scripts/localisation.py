@@ -95,7 +95,7 @@ def produce_zoning(
 ) -> gpd.GeoDataFrame:
     """
     Produce a composite zone system from two zone systems.
-     
+
     One zone system is used for zones within a boundary, the other without. An optional buffer
     zone system can be used for a buffer zone (zones directly adjacent to the internal boundary).
 
