@@ -38,8 +38,6 @@
 </a>
 </p>
 
-# CAF.space
-
 CAF.space contains geo-processing functionality useful for transport planners. Primarily it is a tool for generating standard weighting translations describing how to convert between different zoning systems.
 
 The aim is to free tools up from directly having to do their own geo-processing, and instead have a single source of truth to get them from!
@@ -50,7 +48,6 @@ The aim is to free tools up from directly having to do their own geo-processing,
 
 ## Table of Contents
 
-- [Table of Contents](#table-of-contents)
 - [Main Features](#main-features)
   - [Who is it for?](#who-is-it-for)
 - [Where to get it](#where-to-get-it)
