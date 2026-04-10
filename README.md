@@ -90,19 +90,16 @@ The latest released version are available at the [Python
 Package Index (PyPI)](https://pypi.org/project/caf.space) and on [Conda](https://anaconda.org/conda-forge/caf.space).
 
 ```sh
-# conda
 conda install -c conda-forge caf.space
 ```
 
 ```sh
-# or PyPI
 pip install caf.space
 ```
 
-See the [Quick Start Guide](https://cafspace.readthedocs.io/en/stable/start.html#quick-start) for more detailed instructions.
-
-> [!NOTE]
-> See [requirements.txt](requirements.txt) for the full list of package dependencies.
+> [!TIP]
+> - See the [Quick Start Guide](https://cafspace.readthedocs.io/en/stable/start.html#quick-start) for more detailed instructions.
+> - See the [requirements.txt](requirements.txt) for the full list of package dependencies.
 
 ### Installation from GitHub
 
