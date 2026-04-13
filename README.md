@@ -54,6 +54,7 @@ a single source of truth to get them from!
 - [Overview](#overview)
   - [What does it do?](#what-does-it-do)
   - [Main Features](#main-features)
+    - [Work-in-Progress](#work-in-progress)
   - [Who is it for?](#who-is-it-for)
 - [Where to get it](#where-to-get-it)
   - [Installation from GitHub](#installation-from-github)
@@ -81,10 +82,17 @@ between other GIS data types and more general GIS functionality.
   - **Weighted correspondence** - Apply weightings to the spatial correspondence to consider the contents of a zone, e.g. zone population or employment.
     This method generally performs better than the simpler spatial correspondence, so should be used when possible.
   - **Handles point-like features** - Airports, ports and special generators need special handling because their demand is not proportional to their geographic area.
-- **Line to line correspondence** - Two sets of GIS lines datasets e.g. representing transport networks - *work-in-progress*.
-- **Line to polygon correspondence** - Correspondence between lines and zones (GIS polygons) datasets - *work-in-progress*.
 - **General GIS functionality** - Reading and writing GIS files ([caf.space.inputs](https://cafspace.readthedocs.io/en/stable/_autosummary/caf.space.inputs.html#module-caf.space.inputs))
   and handling GIS data within Python.
+
+#### Work-in-Progress
+
+- **Line to line correspondence** - Two sets of GIS lines datasets e.g. representing transport networks.
+- **Line to polygon correspondence** - Correspondence between lines and zones (GIS polygons) datasets.
+
+> [!WARNING]
+> These features are work-in-progress and are not available in a released version of caf.space, to
+> access these features a specific branch of caf.space should be installed, see [Installation from GitHub](#installation-from-github).
 
 ### Who is it for?
 
@@ -115,15 +123,18 @@ pip install caf.space
 
 ### Installation from GitHub
 
+> [!WARNING]
+> Unreleased GitHub versions should **not** be considered stable.
+
 The latest, unreleased, version can be installed directly from GitHub using:
 
 ```sh
 pip install "git+https://github.com/Transport-for-the-North/caf.space"
 ```
 
-> [!WARNING]
-> The latest unreleased GitHub version should only be used if the latest features are required
-> and should be checked more thoroughly, it should **not** be considered stable.
+> [!TIP]
+> `pip install` can install a specific tag, or branch, using `@{tag-name}`
+> after the git URL.
 
 ## Usage
 
