@@ -38,9 +38,11 @@
 </a>
 </p>
 
-CAF.space contains geo-processing functionality useful for transport planners. Primarily it is a tool for generating standard weighting translations describing how to convert between different zoning systems.
+CAF.space contains geo-processing functionality useful for transport planners. Primarily it is a tool
+for generating standard weighting translations describing how to convert between different zoning systems.
 
-The aim is to free tools up from directly having to do their own geo-processing, and instead have a single source of truth to get them from!
+The aim is to free tools up from directly having to do their own geo-processing, and instead have
+a single source of truth to get them from!
 
 > [!TIP]
 > For more detailed information including a user guide, tutorials and API reference see the full
@@ -48,7 +50,10 @@ The aim is to free tools up from directly having to do their own geo-processing,
 
 ## Table of Contents
 
-- [Main Features](#main-features)
+- [Table of Contents](#table-of-contents)
+- [Overview](#overview)
+  - [What does it do?](#what-does-it-do)
+  - [Main Features](#main-features)
   - [Who is it for?](#who-is-it-for)
 - [Where to get it](#where-to-get-it)
   - [Installation from GitHub](#installation-from-github)
@@ -58,18 +63,27 @@ The aim is to free tools up from directly having to do their own geo-processing,
 - [Documentation](#documentation)
 - [What is CAF?](#what-is-caf)
 - [Contribution](#contribution)
+- [Contact Us](#contact-us)
 
-## Main Features
+## Overview
 
-- **Zone correspondence** - produces a correspondence file between two transport zone systems (GIS Polygons) to translate datasets.
-  - **Spatial** correspondence - a basic correspondence using the overlap of the polygons in the two zone systems, handles
+### What does it do?
+
+CAF.space is primarily a tool used for the translation of data between different zoning systems, supporting
+both spatial and weighted translations. The tools also includes functionality for producing correspondences
+between other GIS data types and more general GIS functionality.
+
+### Main Features
+
+- **Zone correspondence** - Produce a correspondence file between two transport zone systems (GIS Polygons) to translate datasets.
+  - **Spatial correspondence** - A basic correspondence using the overlap of the polygons in the two zone systems, handles
     correspondences with many to many relationships by providing translation factors.
-  - **Weighted** correspondence - applying weightings to the spatial correspondence to consider the contents of a zone, e.g. zone population or employment.
+  - **Weighted correspondence** - Apply weightings to the spatial correspondence to consider the contents of a zone, e.g. zone population or employment.
     This method generally performs better than the simpler spatial correspondence, so should be used when possible.
-  - **Point-like features** (e.g., airports, ports, special generators) need special handling because their demand is not proportional to their geographic area.
-- **Line to line** correspondence between two sets of GIS lines datasets e.g. representing transport networks - *work-in-progress*.
-- **Line to polygon** correspondence between a lines and zones (GIS polygons) datasets - *work-in-progress*.
-- General GIS functionality for reading and writing GIS files ([caf.space.inputs](https://cafspace.readthedocs.io/en/stable/_autosummary/caf.space.inputs.html#module-caf.space.inputs))
+  - **Handles point-like features** - Airports, ports and special generators need special handling because their demand is not proportional to their geographic area.
+- **Line to line correspondence** - Two sets of GIS lines datasets e.g. representing transport networks - *work-in-progress*.
+- **Line to polygon correspondence** - Correspondence between lines and zones (GIS polygons) datasets - *work-in-progress*.
+- **General GIS functionality** - Reading and writing GIS files ([caf.space.inputs](https://cafspace.readthedocs.io/en/stable/_autosummary/caf.space.inputs.html#module-caf.space.inputs))
   and handling GIS data within Python.
 
 ### Who is it for?
@@ -95,6 +109,7 @@ pip install caf.space
 ```
 
 > [!TIP]
+>
 > - See the [Quick Start Guide](https://cafspace.readthedocs.io/en/stable/start.html#quick-start) for more detailed instructions.
 > - See the [requirements.txt](requirements.txt) for the full list of package dependencies.
 
@@ -159,7 +174,7 @@ provides details for contributions.
 
 ---
 
-# Contact Us
+## Contact Us
 
 For further information about using this tool or CAF tools in your projects and work contact Transport for the North - <TfNOffer@transportforthenorth.com>
 
