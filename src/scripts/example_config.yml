@@ -1,0 +1,31 @@
+output_path: C:\output
+output_format: gpkg
+
+localisation_area:
+  area_name: Cumbria
+  selected_lad:
+    - Cumberland
+    - Westmorland and Furness
+  selected_colname: LAD23NM
+
+zone_systems:
+
+  boundary_zones:
+    name: LAD
+    shapefile: path/to/gis
+    id_col: LAD23CD
+
+  internal_zones:
+    name: OA
+    shapefile: path/to/gis
+    id_col: OA21CD
+
+  external_zones:
+    name: LAD
+    shapefile: path/to/gis
+    id_col: LAD23CD
+
+  buffer_zones:
+    name: LSOA
+    shapefile: path/to/gis
+    id_col: zone_id
