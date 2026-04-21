@@ -52,6 +52,7 @@ class _Config(ctk.BaseConfig):
     """Config for running localisation zoning script."""
 
     output_path: pydantic.DirectoryPath
+    output_format: str
     localisation_area: Area
     zone_systems: ZoneSystems
 
@@ -89,9 +90,9 @@ def join_zones_to_bound(
 def produce_zoning(
     ext_zones: ZoneSystemInfo,
     int_zones: ZoneSystemInfo,
-    buff_zones: ZoneSystemInfo | None,
     int_bound: gpd.GeoDataFrame,
-    buff_bound: gpd.GeoDataFrame | None,
+    buff_zones: ZoneSystemInfo | None = None,
+    buff_bound: gpd.GeoDataFrame | None = None,
 ) -> gpd.GeoDataFrame:
     """
     Produce a composite zone system from two zone systems.
@@ -112,18 +113,18 @@ def produce_zoning(
     int_zones: ZoneSystemInfo
         The zone system to use inside the boundary. Generally this would be the
         less aggregate zone system, e.g. lsoa.
-    buff_zones: ZoneSystemInfo | None
+    int_bound: GeoDataFrame
+        The boundary defining where to use each zone system. This should be a
+        polygon layer, ideally a single polygon feature, but it can be many.
+        Internal is the extent of this layer, and external is outside this layer.
+    buff_zones: ZoneSystemInfo | None = None
         The zone system to use inside the buffer area. Generally this would be
         a zone system of an aggregation in between the external and internal
         zone systems, e.g. msoa.
         If this is given, a buffer zone will be created of all external zones
         directly adjacent to the internal boundary. If no buffer zone system is
         given, there will be only internal and external zones without a buffer zone.
-    int_bound: GeoDataFrame
-        The boundary defining where to use each zone system. This should be a
-        polygon layer, ideally a single polygon feature, but it can be many.
-        Internal is the extent of this layer, and external is outside this layer.
-    buff_bound: GeoDataFrame | None
+    buff_bound: GeoDataFrame | None = None
         The boundary defining the buffer zone. This should be a polygon layer of zones
         adjacent to the internal boundary.
 
@@ -201,18 +202,32 @@ def main() -> None:
         new_zones = produce_zoning(
             parameters.zone_systems.external_zones,
             parameters.zone_systems.internal_zones,
-            parameters.zone_systems.buffer_zones,
             bound,
+            parameters.zone_systems.buffer_zones,
             buffer_bound,
         )
+
+        if parameters.output_format in ["gpkg", "geopackage", "GPKG"]:
+            extension = "gpkg"
+            driver = "GPKG"
+        elif parameters.output_format in ["shp", "shapefile", "SHP"]:
+            extension = "shp"
+            driver = "ESRI Shapefile"
+        else:
+            LOG.warning(
+                "Output format %s not recognised, defaulting to geopackage.",
+                parameters.output_format,
+            )
+            extension = "gpkg"
+            driver = "GPKG"
 
         new_zones.to_file(
             parameters.output_folder
             / (
                 f"zoning_localisation_{parameters.localisation_area.area_name}_"
-                f"{parameters.zone_systems.internal_zones.name}.shp"
+                f"{parameters.zone_systems.internal_zones.name}.{extension}"
             ),
-            driver="ESRI Shapefile",
+            driver=driver,
         )
 
         LOG.info(
