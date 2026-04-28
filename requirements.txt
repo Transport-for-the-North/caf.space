@@ -2,7 +2,7 @@
 
 # Example
 caf.toolkit>=0.2.1
-geopandas>=1
+geopandas>=1.0.1
 fiona>=1.8
 shapely>=1.8
 numpy>=1.21
