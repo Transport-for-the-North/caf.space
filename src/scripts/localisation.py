@@ -24,7 +24,8 @@ from caf.space import ZoneTranslation, ZoningTranslationInputs
 _NAME = pathlib.Path(__file__).stem
 LOG = logging.getLogger(_NAME)
 _CONFIG_FILE = pathlib.Path(__file__).with_suffix(".yml")
-
+_SHAPEFILE_FORMATS = {"shp", "shapefile", "esri shapefile"}
+_GPKG_FORMATS = {"gpkg", "geopackage"}
 
 ##### CLASSES & FUNCTIONS #####
 
@@ -45,7 +46,7 @@ class ZoneSystems:
     boundary_zones: ZoneSystemInfo
     internal_zones: ZoneSystemInfo
     external_zones: ZoneSystemInfo
-    buffer_zones: ZoneSystemInfo | None = None
+    buffer_zones: ZoneSystemInfo
 
 
 class _Config(ctk.BaseConfig):
@@ -116,14 +117,97 @@ def select_zones_in_boundary(boundary: TransZoneSystemInfo, zone_system: TransZo
     # Join the translation factors to the zone geometries
     zone_gdf = gpd.read_file(zone_system.shapefile, columns=[zone_system.id_col, "geometry"])
     zones = zone_gdf.merge(selection, left_on=zone_system.id_col, right_on=id_col).drop(columns=[drop_col])
+    zones = zones.rename(columns = {zone_system.id_col: "zone_id"})
 
     return zones
+
+def get_output_driver_and_extension(output_format: str) -> tuple[str, str]:
+    """Return driver and file extension for the configured output format."""
+    normalized = output_format.casefold()
+
+    if normalized in _SHAPEFILE_FORMATS:
+        return "ESRI Shapefile", "shp"
+
+    if normalized in _GPKG_FORMATS:
+        return "GPKG", "gpkg"
+
+    LOG.warning("Output format %s not recognised, defaulting to geopackage.", output_format)
+    return "GPKG", "gpkg"
+
+def to_trans_zone_system(
+    zone_info: ZoneSystemInfo,
+    override_name: str | None = None,
+    override_shapefile: pathlib.Path | None = None,
+) -> TransZoneSystemInfo:
+    """Convert a ZoneSystemInfo to a TransZoneSystemInfo, with optional overrides."""
+    data = zone_info.model_dump()
+
+    if override_name is not None:
+        data["name"] = override_name
+
+    if override_shapefile is not None:
+        data["shapefile"] = override_shapefile
+
+    return TransZoneSystemInfo(**data)
+
+def write_boundary_files(
+    output_folder: pathlib.Path,
+    internal_bound: gpd.GeoDataFrame,
+    buffer_bound: gpd.GeoDataFrame,
+    driver: str,
+    extension: str,
+) -> tuple[pathlib.Path, pathlib.Path]:
+    """Write internal and combined internal+buffer boundary files."""
+    internal_path = output_folder / f"internal_boundaries.{extension}"
+    combined_path = output_folder / f"internal_and_buffer_boundary.{extension}"
+
+
+    internal_bound.to_file(internal_path, driver=driver)
+
+    combined_boundaries = pd.concat(
+        [internal_bound.assign(boundary="internal"), buffer_bound.assign(boundary="buffer")],
+        ignore_index=True,
+    )
+    combined_boundaries.to_file(combined_path, driver=driver)
+
+    return internal_path, combined_path
+
+def build_localisation_zones(
+    internal_zones: gpd.GeoDataFrame,
+    buffer_zones: gpd.GeoDataFrame,
+    external_zone_system: ZoneSystemInfo,
+    boundary_filter_zones: gpd.GeoDataFrame,
+    output_folder: pathlib.Path,
+    driver: str,
+    extension: str,
+    debug: bool = False  # to be removed
+) -> gpd.GeoDataFrame:
+    """Create final localisation zones by removing overlaps from internal and buffer zones."""
+    external_zones = gpd.read_file(
+        external_zone_system.shapefile,
+        columns=[external_zone_system.id_col, "geometry"],
+    )
+
+    external_zones = gpd.overlay(external_zones, buffer_zones, how="difference")
+    buffer_zones = gpd.overlay(buffer_zones, internal_zones, how="difference")
+
+    # remove boundary zones from external zones, some bits can remain if the buffer zones don't fully cover the same area
+    external_zones = external_zones[~external_zones[external_zone_system.id_col].isin(boundary_filter_zones[external_zone_system.id_col])]
+    external_zones = external_zones.rename(columns = {external_zone_system.id_col: "zone_id"})
+
+    if debug:
+        external_zones.to_file(output_folder / f"external_zones_cut.{extension}", driver)
+        buffer_zones.to_file(output_folder / f"buffer_zones_cut.{extension}", driver)
+
+    return pd.concat([external_zones, buffer_zones, internal_zones], ignore_index=True)
+
 
 def main() -> None:
     """Produce new zone system for normits localisation."""
     parameters = _Config.load_yaml(_CONFIG_FILE)
     details = ctk.ToolDetails(_NAME, "0.1.0")
     log_file = pathlib.Path(parameters.output_folder / f"{_NAME}.log")
+    driver, extension = get_output_driver_and_extension(parameters.output_format)
 
     with ctk.LogHelper(_NAME, details, log_file=log_file):
         LOG.debug("Config\n%s", parameters.to_yaml())
@@ -135,70 +219,54 @@ def main() -> None:
             parameters.zone_systems.external_zones.name,
         )
 
-        extension: str = "gpkg"
-        driver: str = "GPKG"
-
-        if parameters.output_format.lower() in ["shp", "shapefile", "esri shapefile"]:
-            extension = "shp"
-            driver = "ESRI Shapefile"
-        elif parameters.output_format.lower() not in ["gpkg", "geopackage"]:
-            LOG.warning(
-                "Output format %s not recognised, defaulting to geopackage.",
-                parameters.output_format,
-            )
-
         # Create boundaries for selecting internal and buffer zones
-        # AM: Could write boundaries to files directly inside the function?
+        # and write to files for use in selecting zones
         int_bound, buf_bound = select_boundaries(
             parameters.zone_systems.boundary_zones,
             parameters.localisation_area
             )
-        int_bound_filename = f"internal_boundaries.{extension}"
-        int_buf_bound_filename = f"internal_and_buffer_boundary.{extension}"
-        int_bound.to_file(parameters.output_folder 
-                            / int_bound_filename,
-                            driver=driver
-                            )
-        # Combine internal and buffer boundaries for selecting buffer zones, added column indicating which is which
-        int_bound["boundary"] = "internal"
-        buf_bound["boundary"] = "buffer"
-        pd.concat([int_bound, buf_bound]).to_file(parameters.output_folder
-                            / int_buf_bound_filename,
-                            driver=driver
-                            )
+        internal_bound_path, internal_and_buffer_path = write_boundary_files(
+            parameters.output_folder,
+            int_bound,
+            buf_bound,
+            driver,
+            extension,
+        )
 
         # select buffer zones
-        trans_buffer_zones = TransZoneSystemInfo(**parameters.zone_systems.buffer_zones.model_dump())
-        trans_bound_zones = TransZoneSystemInfo(
-            name=parameters.zone_systems.boundary_zones.name,
-            shapefile=parameters.output_folder / int_buf_bound_filename,
-            id_col=parameters.zone_systems.boundary_zones.id_col
+        buffer_zones = select_zones_in_boundary(
+            to_trans_zone_system(
+                parameters.zone_systems.boundary_zones,
+                override_shapefile=internal_and_buffer_path
+            ),
+            to_trans_zone_system(parameters.zone_systems.buffer_zones)
         )
-        buffer_zones = select_zones_in_boundary(trans_bound_zones, trans_buffer_zones)
+        internal_zones = select_zones_in_boundary(
+            to_trans_zone_system(
+                parameters.zone_systems.boundary_zones,
+                override_shapefile=internal_bound_path,
+            ),
+            to_trans_zone_system(parameters.zone_systems.internal_zones),
+        )
+
+
         # TEMP: write for checking
         buffer_zones.to_file(parameters.output_folder / f"buffer_zones_with_factors.{extension}", driver=driver)
-
-        # select internal zones
-        trans_int_zones = TransZoneSystemInfo(**parameters.zone_systems.internal_zones.model_dump())
-        trans_int_bound_zones = TransZoneSystemInfo(
-            name=parameters.zone_systems.boundary_zones.name,
-            shapefile=parameters.output_folder / int_bound_filename,
-            id_col=parameters.zone_systems.boundary_zones.id_col
-        )
-        internal_zones = select_zones_in_boundary(trans_int_bound_zones, trans_int_zones)
         # TEMP: write for checking
         internal_zones.to_file(parameters.output_folder / f"internal_zones_with_factors.{extension}", driver=driver)
 
         # Cut internal zones out of buffer zones and cut buffer zones out of external zones, combine all three for new zone system
-        # AM: this in a separate function?
-        external_zones = gpd.read_file(parameters.zone_systems.external_zones.shapefile, columns=[parameters.zone_systems.external_zones.id_col, "geometry"])
-        external_zones = gpd.overlay(external_zones, buffer_zones, how="difference")
-        buffer_zones = gpd.overlay(buffer_zones, internal_zones, how="difference")
-        # TEMP: write for checking
-        external_zones.to_file(parameters.output_folder / f"external_zones_cut.{extension}", driver=driver)        
-        buffer_zones.to_file(parameters.output_folder / f"buffer_zones_cut.{extension}", driver=driver)
+        new_zones = build_localisation_zones(
+            internal_zones,
+            buffer_zones,
+            parameters.zone_systems.external_zones,
+            pd.concat([int_bound, buf_bound], ignore_index=True),
+            parameters.output_folder,
+            driver,
+            extension,
+            debug=True  # to be removed
+        )
 
-        new_zones = pd.concat([external_zones, buffer_zones, internal_zones])
         new_zones.to_file(
             parameters.output_folder
             / (
