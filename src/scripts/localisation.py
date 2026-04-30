@@ -10,14 +10,14 @@ An optional buffer zone system can be used for zones directly adjacent to the bo
 import functools
 import logging
 import pathlib
-from typing import Literal
 import pydantic
 from pydantic import dataclasses
 import pandas as pd
 import geopandas as gpd
 
 import caf.toolkit as ctk
-from caf.space.inputs import ZoneSystemInfo
+from caf.space.inputs import ZoneSystemInfo, TransZoneSystemInfo
+from caf.space import ZoneTranslation, ZoningTranslationInputs
 
 ##### CONSTANTS #####
 
@@ -34,7 +34,7 @@ class Area:
     """Data for selected localisation area."""
 
     area_name: str
-    selected_lad: list[str]
+    selected_zones: list[str]
     selected_colname: str
 
 
@@ -64,105 +64,60 @@ class _Config(ctk.BaseConfig):
         return folder
 
 
-def join_zones_to_bound(
-    zones: gpd.GeoDataFrame,
-    boundary: gpd.GeoDataFrame,
-    how: Literal["inside", "outside"],
-    id_col: str,
-    zone_name: str,
-) -> gpd.GeoDataFrame:
-    """Select zones that are either inside or outside of a boundary."""
-    zones_cent = zones.copy()
-    zones_cent.geometry = zones_cent.centroid
-    zones_cent = zones_cent.sjoin(boundary, how="left", predicate="within")
+def select_boundaries(boundary_zones: ZoneSystemInfo, selected_area: Area) -> tuple[gpd.GeoDataFrame, gpd.GeoDataFrame | None]:
+    """
+    Returns 2 GeoDataFrames for internal and buffer boundary zones for the selected area.
+    
+    The internal boundary zones consist of the selected area, and the buffer boundary zones are those that are directly adjacent to the internal boundary zones.
+    The final internal and buffer boundaries may consist of multiple zones with a unique zone id. 
+    """
+    bound_zones = gpd.read_file(
+        boundary_zones.shapefile,
+        columns=[
+            boundary_zones.id_col,
+            selected_area.selected_colname,
+        ],
+    )
+    bound = bound_zones[
+        bound_zones[selected_area.selected_colname].isin(
+            selected_area.selected_zones
+        )
+    ]
+    buffer_bound = bound_zones[bound_zones.geometry.touches(bound.union_all())]
 
-    if how == "inside":
-        zones = zones.loc[zones_cent["index_right"].notna()]
-    elif how == "outside":
-        zones = zones.loc[zones_cent["index_right"].isna()]
+    return bound, buffer_bound
 
-    zones = zones.rename(columns={id_col: "id"})
-    zones["zoning"] = zone_name
+
+def select_zones_in_boundary(boundary: TransZoneSystemInfo, zone_system: TransZoneSystemInfo, overlap_threshold: float = 0.5) -> gpd.GeoDataFrame:
+    """
+    Select zones from a zone system that fall within a boundary. 
+
+    The boundary may consist of multiple zones with a unique zone id. In some cases a zone from the zone system may fall in between two or more zones of the boundary. 
+    In this case, the zone gets assigned to the boundary zone that it has the largest overlap with.
+
+    When a zone falls only partially within the boundary, it only gets selected if the overlap with the boundary exceeds the overlap threshold. 
+    """
+    config = ZoningTranslationInputs(
+        zone_1=zone_system, zone_2=boundary, rounding=False
+    )
+    trans = ZoneTranslation(config).spatial_translation()
+
+    factor_col = f"{zone_system.name}_to_{boundary.name}"
+    id_col = f"{zone_system.name}_id"
+    drop_col = f"{boundary.name}_to_{zone_system.name}"
+
+    # Assign zones to boundary zone with which they have the largest overlap
+    selection_idx = trans.groupby(id_col)[factor_col].idxmax()
+    selection = trans.loc[selection_idx].reset_index(drop=True)
+
+    # Keep only zones which exceed the overlap threshold
+    selection = selection[selection[factor_col] > overlap_threshold]
+    
+    # Join the translation factors to the zone geometries
+    zone_gdf = gpd.read_file(zone_system.shapefile, columns=[zone_system.id_col, "geometry"])
+    zones = zone_gdf.merge(selection, left_on=zone_system.id_col, right_on=id_col).drop(columns=[drop_col])
 
     return zones
-
-
-def produce_zoning(
-    ext_zones: ZoneSystemInfo,
-    int_zones: ZoneSystemInfo,
-    int_bound: gpd.GeoDataFrame,
-    buff_zones: ZoneSystemInfo | None = None,
-    buff_bound: gpd.GeoDataFrame | None = None,
-) -> gpd.GeoDataFrame:
-    """
-    Produce a composite zone system from two zone systems.
-
-    One zone system is used for zones within a boundary, the other without. An optional buffer
-    zone system can be used for a buffer zone (zones directly adjacent to the internal boundary).
-
-    This process is written with output areas (oa/lsoa/msoa) in mind, and as such it is assumed the
-    two zone systems nest within each other. The zones should also nest within
-    the boundary, but failing that, the centroids of each zone system decides
-    whether they are within or without the boundary.
-
-    Parameters
-    ----------
-    ext_zones: ZoneSystemInfo
-        The zone system to use outside the boundary. Generally this would be
-        the more aggregate zone system. e.g. lad.
-    int_zones: ZoneSystemInfo
-        The zone system to use inside the boundary. Generally this would be the
-        less aggregate zone system, e.g. lsoa.
-    int_bound: GeoDataFrame
-        The boundary defining where to use each zone system. This should be a
-        polygon layer, ideally a single polygon feature, but it can be many.
-        Internal is the extent of this layer, and external is outside this layer.
-    buff_zones: ZoneSystemInfo | None = None
-        The zone system to use inside the buffer area. Generally this would be
-        a zone system of an aggregation in between the external and internal
-        zone systems, e.g. msoa.
-        If this is given, a buffer zone will be created of all external zones
-        directly adjacent to the internal boundary. If no buffer zone system is
-        given, there will be only internal and external zones without a buffer zone.
-    buff_bound: GeoDataFrame | None = None
-        The boundary defining the buffer zone. This should be a polygon layer of zones
-        adjacent to the internal boundary.
-
-    Returns
-    -------
-    gpd.GeoDataFrame: A geodataframe of the combined zone system. This will
-        contain three columns, an id, a zone system name, and geometry. The zone system name
-        is used to indicate which zone system the zone is from.
-    """
-    ext_gdf = gpd.read_file(ext_zones.shapefile, columns=[ext_zones.id_col, "geometry"])
-    int_gdf = gpd.read_file(int_zones.shapefile, columns=[int_zones.id_col, "geometry"])
-
-    output_gdfs = []
-
-    if buff_zones is not None:
-        buff_gdf = gpd.read_file(buff_zones.shapefile, columns=[buff_zones.id_col, "geometry"])
-        buff_zones = join_zones_to_bound(
-            buff_gdf, buff_bound, "inside", buff_zones.id_col, buff_zones.name
-        )
-        output_gdfs.append(buff_zones)
-        buff_int_bound = gpd.GeoDataFrame(
-            pd.concat([int_bound, buff_bound]), geometry="geometry"
-        )
-    else:
-        buff_int_bound = int_bound
-
-    ext_zones = join_zones_to_bound(
-        ext_gdf, buff_int_bound, "outside", ext_zones.id_col, ext_zones.name
-    )
-    output_gdfs.append(ext_zones)
-
-    int_zones = join_zones_to_bound(
-        int_gdf, int_bound, "inside", int_zones.id_col, int_zones.name
-    )
-    output_gdfs.append(int_zones)
-
-    return gpd.GeoDataFrame(pd.concat(output_gdfs), geometry="geometry")
-
 
 def main() -> None:
     """Produce new zone system for normits localisation."""
@@ -173,54 +128,77 @@ def main() -> None:
     with ctk.LogHelper(_NAME, details, log_file=log_file):
         LOG.debug("Config\n%s", parameters.to_yaml())
         LOG.info(
-            "Creating localisation zones for %s, with %s as the interal zoning system and %s as the external zoning system.",
+            "Creating localisation zones for %s, with %s as the interal zoning system, %s as the buffer zoning system, and %s as the external zoning system.",
             parameters.localisation_area.area_name,
             parameters.zone_systems.internal_zones.name,
+            parameters.zone_systems.buffer_zones.name,
             parameters.zone_systems.external_zones.name,
         )
 
-        bound_zones = gpd.read_file(
-            parameters.zone_systems.boundary_zones.shapefile,
-            columns=[
-                parameters.zone_systems.boundary_zones.id_col,
-                parameters.localisation_area.selected_colname,
-            ],
-        )
-        bound = bound_zones[
-            bound_zones[parameters.localisation_area.selected_colname].isin(
-                parameters.localisation_area.selected_lad
-            )
-        ]
-        if parameters.zone_systems.buffer_zones is not None:
-            LOG.info(
-                "Buffer zone system provided, will create buffer zones for boundary zones directly adjacent to internal boundary."
-            )
-            buffer_bound = bound_zones[bound_zones.geometry.touches(bound.union_all())]
-        else:
-            buffer_bound = None
+        extension: str = "gpkg"
+        driver: str = "GPKG"
 
-        new_zones = produce_zoning(
-            parameters.zone_systems.external_zones,
-            parameters.zone_systems.internal_zones,
-            bound,
-            parameters.zone_systems.buffer_zones,
-            buffer_bound,
-        )
-
-        if parameters.output_format in ["gpkg", "geopackage", "GPKG"]:
-            extension = "gpkg"
-            driver = "GPKG"
-        elif parameters.output_format in ["shp", "shapefile", "SHP"]:
+        if parameters.output_format.lower() in ["shp", "shapefile", "esri shapefile"]:
             extension = "shp"
             driver = "ESRI Shapefile"
-        else:
+        elif parameters.output_format.lower() not in ["gpkg", "geopackage"]:
             LOG.warning(
                 "Output format %s not recognised, defaulting to geopackage.",
                 parameters.output_format,
             )
-            extension = "gpkg"
-            driver = "GPKG"
 
+        # Create boundaries for selecting internal and buffer zones
+        # AM: Could write boundaries to files directly inside the function?
+        int_bound, buf_bound = select_boundaries(
+            parameters.zone_systems.boundary_zones,
+            parameters.localisation_area
+            )
+        int_bound_filename = f"internal_boundaries.{extension}"
+        int_buf_bound_filename = f"internal_and_buffer_boundary.{extension}"
+        int_bound.to_file(parameters.output_folder 
+                            / int_bound_filename,
+                            driver=driver
+                            )
+        # Combine internal and buffer boundaries for selecting buffer zones, added column indicating which is which
+        int_bound["boundary"] = "internal"
+        buf_bound["boundary"] = "buffer"
+        pd.concat([int_bound, buf_bound]).to_file(parameters.output_folder
+                            / int_buf_bound_filename,
+                            driver=driver
+                            )
+
+        # select buffer zones
+        trans_buffer_zones = TransZoneSystemInfo(**parameters.zone_systems.buffer_zones.model_dump())
+        trans_bound_zones = TransZoneSystemInfo(
+            name=parameters.zone_systems.boundary_zones.name,
+            shapefile=parameters.output_folder / int_buf_bound_filename,
+            id_col=parameters.zone_systems.boundary_zones.id_col
+        )
+        buffer_zones = select_zones_in_boundary(trans_bound_zones, trans_buffer_zones)
+        # TEMP: write for checking
+        buffer_zones.to_file(parameters.output_folder / f"buffer_zones_with_factors.{extension}", driver=driver)
+
+        # select internal zones
+        trans_int_zones = TransZoneSystemInfo(**parameters.zone_systems.internal_zones.model_dump())
+        trans_int_bound_zones = TransZoneSystemInfo(
+            name=parameters.zone_systems.boundary_zones.name,
+            shapefile=parameters.output_folder / int_bound_filename,
+            id_col=parameters.zone_systems.boundary_zones.id_col
+        )
+        internal_zones = select_zones_in_boundary(trans_int_bound_zones, trans_int_zones)
+        # TEMP: write for checking
+        internal_zones.to_file(parameters.output_folder / f"internal_zones_with_factors.{extension}", driver=driver)
+
+        # Cut internal zones out of buffer zones and cut buffer zones out of external zones, combine all three for new zone system
+        # AM: this in a separate function?
+        external_zones = gpd.read_file(parameters.zone_systems.external_zones.shapefile, columns=[parameters.zone_systems.external_zones.id_col, "geometry"])
+        external_zones = gpd.overlay(external_zones, buffer_zones, how="difference")
+        buffer_zones = gpd.overlay(buffer_zones, internal_zones, how="difference")
+        # TEMP: write for checking
+        external_zones.to_file(parameters.output_folder / f"external_zones_cut.{extension}", driver=driver)        
+        buffer_zones.to_file(parameters.output_folder / f"buffer_zones_cut.{extension}", driver=driver)
+
+        new_zones = pd.concat([external_zones, buffer_zones, internal_zones])
         new_zones.to_file(
             parameters.output_folder
             / (
