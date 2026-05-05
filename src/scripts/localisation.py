@@ -118,6 +118,8 @@ def select_zones_in_boundary(boundary: TransZoneSystemInfo, zone_system: TransZo
     zone_gdf = gpd.read_file(zone_system.shapefile, columns=[zone_system.id_col, "geometry"])
     zones = zone_gdf.merge(selection, left_on=zone_system.id_col, right_on=id_col).drop(columns=[drop_col])
     zones = zones.rename(columns = {zone_system.id_col: "zone_id"})
+    zones["zone_name"] = zone_system.name
+    zones = zones[["zone_id", "zone_name", zones.geometry.name]]
 
     return zones
 
@@ -194,6 +196,8 @@ def build_localisation_zones(
     # remove boundary zones from external zones, some bits can remain if the buffer zones don't fully cover the same area
     external_zones = external_zones[~external_zones[external_zone_system.id_col].isin(boundary_filter_zones[external_zone_system.id_col])]
     external_zones = external_zones.rename(columns = {external_zone_system.id_col: "zone_id"})
+    external_zones["zone_name"] = external_zone_system.name
+    external_zones = external_zones[["zone_id", "zone_name", external_zones.geometry.name]]
 
     if debug:
         external_zones.to_file(output_folder / f"external_zones_cut.{extension}", driver)
