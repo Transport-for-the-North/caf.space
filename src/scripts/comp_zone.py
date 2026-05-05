@@ -24,13 +24,20 @@ from caf.space import ZoneTranslation, ZoningTranslationInputs
 
 
 # # # FUNCTIONS # # #
-def check_nesting(target_zoning: TransZoneSystemInfo, ref_zoning: list[TransZoneSystemInfo], sliver_tolerance: float = 0.95):
+def check_nesting(
+    target_zoning: TransZoneSystemInfo,
+    ref_zoning: list[TransZoneSystemInfo],
+    sliver_tolerance: float = 0.95,
+):
     local_cache = pathlib.Path("local_cache")
     local_cache.mkdir(exist_ok=True, parents=False)
     out = {}
     for zones in ref_zoning:
         config = ZoningTranslationInputs(
-            zone_1=target_zoning, zone_2=zones, sliver_tolerance=sliver_tolerance, cache_path=local_cache
+            zone_1=target_zoning,
+            zone_2=zones,
+            sliver_tolerance=sliver_tolerance,
+            cache_path=local_cache,
         )
         trans = ZoneTranslation(config).spatial_translation()
         factor_col = f"{target_zoning.name}_to_{zones.name}"
