@@ -1,9 +1,11 @@
 output_path: C:\output
 output_format: gpkg
+# or shp
 
+# This needs to be based on the zone system for boundary_zones (below)
 localisation_area:
   area_name: Cumbria
-  selected_lad:
+  selected_zones:
     - Cumberland
     - Westmorland and Furness
   selected_colname: LAD23NM
