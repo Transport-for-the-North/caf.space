@@ -69,7 +69,7 @@ def select_boundaries(
     boundary_zones: ZoneSystemInfo, selected_area: Area
 ) -> tuple[gpd.GeoDataFrame, gpd.GeoDataFrame | None]:
     """
-    Returns 2 GeoDataFrames for internal and buffer boundary zones for the selected area.
+    Return 2 GeoDataFrames for internal and buffer boundary zones for the selected area.
 
     The internal boundary zones consist of the selected area, and the buffer boundary zones are those that are directly adjacent to the internal boundary zones.
     The final internal and buffer boundaries may consist of multiple zones with a unique zone id.
