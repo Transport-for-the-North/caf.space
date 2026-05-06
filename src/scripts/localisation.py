@@ -47,6 +47,7 @@ class ZoneSystems:
     internal_zones: ZoneSystemInfo
     external_zones: ZoneSystemInfo
     buffer_zones: ZoneSystemInfo
+    target_zones: ZoneSystemInfo
 
 
 class _Config(ctk.BaseConfig):
@@ -100,27 +101,35 @@ def select_zones_in_boundary(
     The boundary may consist of multiple zones with a unique zone id. In some cases a zone from the zone system may fall in between two or more zones of the boundary.
     In this case, the zone gets assigned to the boundary zone that it has the largest overlap with.
 
-    When a zone falls only partially within the boundary, it only gets selected if the overlap with the boundary exceeds the overlap threshold.
+    When a zone falls only partially within the boundary, it is removed if the overlap with the boundary is lower than the overlap threshold.
     """
     config = ZoningTranslationInputs(zone_1=zone_system, zone_2=boundary, rounding=False)
     trans = ZoneTranslation(config).spatial_translation()
 
     factor_col = f"{zone_system.name}_to_{boundary.name}"
     id_col = f"{zone_system.name}_id"
-    drop_col = f"{boundary.name}_to_{zone_system.name}"
 
     # Assign zones to boundary zone with which they have the largest overlap
     selection_idx = trans.groupby(id_col)[factor_col].idxmax()
     selection = trans.loc[selection_idx].reset_index(drop=True)
 
-    # Keep only zones which exceed the overlap threshold
-    selection = selection[selection[factor_col] > overlap_threshold]
+    # Drop zones with overlap lower than the overlap threshold
+    dropped_zones = selection[selection[factor_col] < overlap_threshold]
+    selection = selection[selection[factor_col] >= overlap_threshold]
+
+    if len(dropped_zones) > 0:
+        LOG.warning(
+            "%s zone(s) were dropped because their overlap with the boundary was lower than the overlap threshold (%s). "
+            "Their IDs are: %s and the maximum overlap is %s",
+            len(dropped_zones),
+            overlap_threshold,
+            (", ".join(str(zoneid) for zoneid in dropped_zones[id_col].values)),
+            round(dropped_zones[factor_col].max(), 3),
+        )
 
     # Join the translation factors to the zone geometries
     zone_gdf = gpd.read_file(zone_system.shapefile, columns=[zone_system.id_col, "geometry"])
-    zones = zone_gdf.merge(selection, left_on=zone_system.id_col, right_on=id_col).drop(
-        columns=[drop_col]
-    )
+    zones = zone_gdf.merge(selection, left_on=zone_system.id_col, right_on=id_col)
     zones = zones.rename(columns={zone_system.id_col: "zone_id"})
     zones["zone_name"] = zone_system.name
     zones = zones[["zone_id", "zone_name", zones.geometry.name]]
@@ -196,7 +205,7 @@ def build_localisation_zones(
     external_zones = gpd.overlay(external_zones, buffer_zones, how="difference")
     buffer_zones = gpd.overlay(buffer_zones, internal_zones, how="difference")
 
-    # remove boundary zones from external zones, some bits can remain if the buffer zones don't fully cover the same area
+    # Remove boundary zones from external zones, otherwise some slivers might remain within the buffer area
     external_zones = external_zones[
         ~external_zones[external_zone_system.id_col].isin(
             boundary_filter_zones[external_zone_system.id_col]
@@ -207,6 +216,20 @@ def build_localisation_zones(
     external_zones = external_zones[["zone_id", "zone_name", external_zones.geometry.name]]
 
     return pd.concat([external_zones, buffer_zones, internal_zones], ignore_index=True)
+
+
+def write_translation_lookup(
+    new_zone_system: ZoneSystemInfo,
+    target_zone_system: ZoneSystemInfo,
+    output_path: pathlib.Path,
+) -> None:
+    """Create and write spatial translation lookup new zone system to target zone system."""
+
+    new_zs = to_trans_zone_system(new_zone_system)
+    target_zs = to_trans_zone_system(target_zone_system)
+    config = ZoningTranslationInputs(zone_1=new_zs, zone_2=target_zs)
+    lookup = ZoneTranslation(config).spatial_translation()
+    lookup.to_csv(output_path)
 
 
 def main() -> None:
@@ -239,7 +262,7 @@ def main() -> None:
             extension,
         )
 
-        # select buffer zones
+        # Select buffer and internal zones
         buffer_zones = select_zones_in_boundary(
             to_trans_zone_system(
                 parameters.zone_systems.boundary_zones,
@@ -263,13 +286,29 @@ def main() -> None:
             pd.concat([int_bound, buf_bound], ignore_index=True),
         )
 
+        new_zones_path = parameters.output_folder / (
+            f"zoning_localisation_{parameters.localisation_area.area_name}_"
+            f"{parameters.zone_systems.internal_zones.name}.{extension}"
+        )
         new_zones.to_file(
-            parameters.output_folder
-            / (
-                f"zoning_localisation_{parameters.localisation_area.area_name}_"
-                f"{parameters.zone_systems.internal_zones.name}.{extension}"
-            ),
+            new_zones_path,
             driver=driver,
+        )
+
+        # Create final lookup from new zone system to target zone system
+        new_zs = ZoneSystemInfo(
+            name="localisation", shapefile=new_zones_path, id_col="zone_id"
+        )
+        write_translation_lookup(
+            new_zs,
+            parameters.zone_systems.target_zones,
+            (
+                parameters.output_folder
+                / (
+                    f"lookup_localisation_{parameters.localisation_area.area_name}_"
+                    f"{parameters.zone_systems.target_zones.name}.csv"
+                )
+            ),
         )
 
         LOG.info(
