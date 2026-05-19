@@ -16,7 +16,7 @@ import pandas as pd
 import geopandas as gpd
 
 import caf.toolkit as ctk
-from caf.space.inputs import ZoneSystemInfo, TransZoneSystemInfo
+from caf.space.inputs import ZoneSystemInfo, TransZoneSystemInfo, LowerZoneSystemInfo
 from caf.space import ZoneTranslation, ZoningTranslationInputs
 
 ##### CONSTANTS #####
@@ -47,8 +47,34 @@ class ZoneSystems:
     internal_zones: ZoneSystemInfo
     external_zones: ZoneSystemInfo
     buffer_zones: ZoneSystemInfo
-    target_zones: ZoneSystemInfo
+    target_zones: ZoneSystemInfo | None
+    weight_zones_emp: LowerZoneSystemInfo | None
+    weight_zones_pop: LowerZoneSystemInfo | None
 
+@dataclasses.dataclass
+class LookupAdditionals:
+    """Data to be added to the final zone lookup."""
+
+    name: str
+    csv: pydantic.FilePath
+    id_col: str
+
+    def read_data(self) -> pd.DataFrame:
+        data = pd.read_csv(self.csv)
+
+        return data
+
+@dataclasses.dataclass
+class ZoneLookup:
+    """Lookup table to go from zone_name to zone_id."""
+    
+    name: str
+    csv: pydantic.FilePath
+
+    def read_data(self) -> pd.DataFrame:
+        data = pd.read_csv(self.csv)
+
+        return data
 
 class _Config(ctk.BaseConfig):
     """Config for running localisation zoning script."""
@@ -57,6 +83,8 @@ class _Config(ctk.BaseConfig):
     output_format: str
     localisation_area: Area
     zone_systems: ZoneSystems
+    lookup_additionals: LookupAdditionals | None = None
+    zone_lookup: ZoneLookup | None = None 
 
     @functools.cached_property
     def output_folder(self) -> pathlib.Path:
@@ -130,9 +158,9 @@ def select_zones_in_boundary(
     # Join the translation factors to the zone geometries
     zone_gdf = gpd.read_file(zone_system.shapefile, columns=[zone_system.id_col, "geometry"])
     zones = zone_gdf.merge(selection, left_on=zone_system.id_col, right_on=id_col)
-    zones = zones.rename(columns={zone_system.id_col: "zone_id"})
-    zones["zone_name"] = zone_system.name
-    zones = zones[["zone_id", "zone_name", zones.geometry.name]]
+    zones = zones.rename(columns={zone_system.id_col: "zone_name"})
+    zones["zone_system"] = zone_system.name
+    zones = zones[["zone_name", "zone_system", zones.geometry.name]]
 
     return zones
 
@@ -211,25 +239,91 @@ def build_localisation_zones(
             boundary_filter_zones[external_zone_system.id_col]
         )
     ]
-    external_zones = external_zones.rename(columns={external_zone_system.id_col: "zone_id"})
-    external_zones["zone_name"] = external_zone_system.name
-    external_zones = external_zones[["zone_id", "zone_name", external_zones.geometry.name]]
+    external_zones = external_zones.rename(columns={external_zone_system.id_col: "zone_name"})
+    external_zones["zone_system"] = external_zone_system.name
+    external_zones = external_zones[["zone_name", "zone_system", external_zones.geometry.name]]
 
     return pd.concat([external_zones, buffer_zones, internal_zones], ignore_index=True)
 
+#def write_core_zoning_lookup(
+#        output_path: pathlib.Path,
+#        new_zone_system: ZoneSystemInfo
+#) -> None:
+#    """Write lookup zone name to zone id for core zoning."""
 
-def write_translation_lookup(
+def create_translation_lookup(
     new_zone_system: ZoneSystemInfo,
     target_zone_system: ZoneSystemInfo,
-    output_path: pathlib.Path,
-) -> None:
-    """Create and write spatial translation lookup new zone system to target zone system."""
+    lower_zone_system: LowerZoneSystemInfo | None = None,
+    method: str | None = None,
+    output_path: pathlib.Path | None = None,
+) -> pd.DataFrame:
+    """Return and, if path is given, write spatial or weighted translation lookup new zone system to target zone system."""
 
     new_zs = to_trans_zone_system(new_zone_system)
     target_zs = to_trans_zone_system(target_zone_system)
-    config = ZoningTranslationInputs(zone_1=new_zs, zone_2=target_zs)
-    lookup = ZoneTranslation(config).spatial_translation()
-    lookup.to_csv(output_path)
+
+    if lower_zone_system is None:
+        config = ZoningTranslationInputs(zone_1=new_zs, zone_2=target_zs)
+        lookup = ZoneTranslation(config).spatial_translation()
+    elif lower_zone_system is not None:
+        config = ZoningTranslationInputs(zone_1=new_zs, zone_2=target_zs, lower_zoning=lower_zone_system, method=method)
+        lookup = ZoneTranslation(config).weighted_translation()
+
+    if output_path is not None:
+        lookup.to_csv(output_path)
+   
+    return lookup
+
+def create_combined_lookup(
+    new_zone_system: ZoneSystemInfo,
+    target_zone_system: ZoneSystemInfo,
+    emp_zone_system: LowerZoneSystemInfo | None = None,
+    pop_zone_system: LowerZoneSystemInfo | None = None,
+    lookup_additionals: LookupAdditionals | None = None,
+    zone_lookup: ZoneLookup | None = None,
+    output_path: pathlib.Path | None = None
+) -> pd.DataFrame:
+    """Create and write combined lookup of spatial translation and population and/or employment weighted translations. Optional additional columns."""
+
+    lookup_spatial = create_translation_lookup(new_zone_system, target_zone_system)
+    lookup = lookup_spatial.rename(columns={col: f"{col}_spatial" for col in lookup_spatial.columns[-2:]})
+
+    if emp_zone_system is not None:
+        lookup_emp = create_translation_lookup(new_zone_system, target_zone_system, emp_zone_system, method="emp")
+        lookup_emp = lookup_emp.rename(columns={col: f"{col}_emp" for col in lookup_emp.columns[-2:]})
+        lookup = lookup.merge(lookup_emp, how="outer", on=[f"{new_zone_system.name}_id", f"{target_zone_system.name}_id"])
+        # Check differences / non-matches:
+        non_matched_emp = lookup[lookup.iloc[:, -4:].isna().any(axis=1)]
+        LOG.warning(
+            "Following zone(s) do not have a match between the spatial and employment weighted translation: %s",
+            ", ".join(non_matched_emp[f"{target_zone_system.name}_name"].unique())
+        )
+
+    if pop_zone_system is not None:
+        lookup_pop = create_translation_lookup(new_zone_system, target_zone_system, pop_zone_system, method="pop")
+        lookup_pop = lookup_pop.rename(columns={col: f"{col}_pop" for col in lookup_pop.columns[-2:]})
+        lookup = lookup.merge(lookup_pop, how="outer", on=[f"{new_zone_system.name}_name", f"{target_zone_system.name}_name"], suffixes=(None, "_pop"))
+        # Check differences / non-matches:
+        non_matched_pop = lookup[lookup.iloc[:, -4:].isna().any(axis=1)]
+        LOG.warning(
+            "Following zone(s) do not have a match between the spatial and population weighted translation: %s",
+            ", ".join(non_matched_pop[f"{target_zone_system.name}_name"].unique())
+        )
+
+    if lookup_additionals is not None:
+        if zone_lookup is None:
+            LOG.warning("No zone lookup provided, unable to join additional columns to lookup.")
+        else:
+            adds = lookup_additionals.read_data()
+            zone_id_to_name = zone_lookup.read_data()
+            adds = adds.merge(zone_id_to_name, left_on=lookup_additionals.id_col, right_on="zone_name")
+            lookup = lookup.merge(adds, left_on= f"{target_zone_system.name}_name", right_on="zone_name")
+
+    if output_path is not None:
+        lookup.to_csv(output_path)
+
+    return lookup
 
 
 def main() -> None:
@@ -287,7 +381,7 @@ def main() -> None:
         )
 
         new_zones_path = parameters.output_folder / (
-            f"zoning_localisation_{parameters.localisation_area.area_name}_"
+            f"zoning_{parameters.localisation_area.area_name}_local_"
             f"{parameters.zone_systems.internal_zones.name}.{extension}"
         )
         new_zones.to_file(
@@ -295,21 +389,37 @@ def main() -> None:
             driver=driver,
         )
 
-        # Create final lookup from new zone system to target zone system
-        new_zs = ZoneSystemInfo(
-            name="localisation", shapefile=new_zones_path, id_col="zone_id"
-        )
-        write_translation_lookup(
-            new_zs,
-            parameters.zone_systems.target_zones,
-            (
-                parameters.output_folder
-                / (
-                    f"lookup_localisation_{parameters.localisation_area.area_name}_"
-                    f"{parameters.zone_systems.target_zones.name}.csv"
+        if parameters.zone_systems.target_zones is not None:
+            # Create final lookup from new zone system to target zone system
+            new_zs = ZoneSystemInfo(
+                name=f"{parameters.localisation_area.area_name}_local", shapefile=new_zones_path, id_col="zone_name"
+            )
+            # Check if a combined lookup is necessary:
+            if all(i is None for i in [
+                parameters.zone_systems.weight_zones_emp,
+                parameters.zone_systems.weight_zones_pop,
+                parameters.lookup_additionals
+            ]):
+                lookup = create_translation_lookup(new_zs, parameters.zone_systems.target_zones)
+            else:
+                lookup = create_combined_lookup(
+                    new_zs,
+                    parameters.zone_systems.target_zones,
+                    parameters.zone_systems.weight_zones_emp,
+                    parameters.zone_systems.weight_zones_pop,
+                    parameters.lookup_additionals,
+                    parameters.zone_lookup
                 )
-            ),
-        )
+            # TODO: add the conversion to zone_id integers instead of zone_name
+            lookup.to_csv(
+                (
+                    parameters.output_folder
+                    / (
+                        f"lookup_{parameters.localisation_area.area_name}_local_"
+                        f"{parameters.zone_systems.target_zones.name}.csv"
+                    )
+                )
+            )
 
         LOG.info(
             "Finished creating localisation zones for %s. There are %s zones in the new zone system.",
