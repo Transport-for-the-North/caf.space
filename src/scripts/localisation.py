@@ -85,6 +85,7 @@ class ZoneSystems:
     weight_zones_emp: LowerZoneSystemInfo | None
     weight_zones_pop: LowerZoneSystemInfo | None
 
+
 @dataclasses.dataclass
 class LookupAdditionals:
     """Data to be added to the final zone lookup."""
@@ -159,6 +160,15 @@ def select_boundaries(
     bound = bound_zones[
         bound_zones[selected_area.selected_colname].isin(selected_area.selected_zones)
     ]
+
+    if bound.empty:
+        raise ValueError(
+            "No boundary zones were selected for localisation. "
+            f"Check selected zones {selected_area.selected_zones} for "
+            f"column name {selected_area.selected_colname} in {boundary_zones.name} "
+            f" with shapefile at {boundary_zones.shapefile}."
+        )
+
     buffer_bound = bound_zones[bound_zones.geometry.touches(bound.union_all())]
 
     return bound, buffer_bound
@@ -250,26 +260,63 @@ def write_boundary_files(
 
 
 def build_localisation_zones(
-    internal_zones: gpd.GeoDataFrame,
-    buffer_zones: gpd.GeoDataFrame,
+    boundary_zones: ZoneSystemInfo,
+    internal_zone_system: ZoneSystemInfo,
+    buffer_zone_system: ZoneSystemInfo,
     external_zone_system: ZoneSystemInfo,
-    boundary_filter_zones: gpd.GeoDataFrame,
+    internal_and_buffer_bound_path: pathlib.Path,
+    internal_bound_path: pathlib.Path,
 ) -> gpd.GeoDataFrame:
-    """Create final localisation zones by removing overlaps from internal and buffer zones."""
+    """Create final localisation zones.
+
+    First select zones within boundaries, then use the boundaries to cut out internal zones from buffer zones and
+    cut out buffer and internal zones from external zones, to ensure no slivers remain when the different zone systems do not nest perfectly.
+    Finally, combine all three for new zone system."""
+    buffer_zones_in_buffer = select_zones_in_boundary(
+        to_trans_zone_system(
+            boundary_zones,
+            override_shapefile=internal_and_buffer_bound_path,
+        ),
+        to_trans_zone_system(buffer_zone_system),
+    )
+    buffer_zones_in_internal = select_zones_in_boundary(
+        to_trans_zone_system(
+            boundary_zones,
+            override_shapefile=internal_bound_path,
+        ),
+        to_trans_zone_system(buffer_zone_system),
+    )
+    external_zones_in_boundary = select_zones_in_boundary(
+        to_trans_zone_system(
+            boundary_zones,
+            override_name="boundary",
+            override_shapefile=internal_and_buffer_bound_path,
+        ),
+        to_trans_zone_system(external_zone_system),
+    )
+    internal_zones = select_zones_in_boundary(
+        to_trans_zone_system(
+            boundary_zones,
+            override_shapefile=internal_bound_path,
+        ),
+        to_trans_zone_system(internal_zone_system),
+    )
+
+    # Remove internal boundary from buffer zones
+    buffer_zones = buffer_zones_in_buffer[
+        ~buffer_zones_in_buffer["zone_name"].isin(buffer_zones_in_internal["zone_name"])
+    ]
+    # Remove buffer+internal boundary from external zones
     external_zones = gpd.read_file(
         external_zone_system.shapefile,
         columns=[external_zone_system.id_col, "geometry"],
     )
-
-    external_zones = gpd.overlay(external_zones, buffer_zones, how="difference")
-    buffer_zones = gpd.overlay(buffer_zones, internal_zones, how="difference")
-
-    # Remove boundary zones from external zones, otherwise some slivers might remain within the buffer area
     external_zones = external_zones[
         ~external_zones[external_zone_system.id_col].isin(
-            boundary_filter_zones[external_zone_system.id_col]
+            external_zones_in_boundary["zone_name"]
         )
     ]
+
     external_zones = external_zones.rename(columns={external_zone_system.id_col: "zone_name"})
     external_zones["zone_system"] = external_zone_system.name
     external_zones = external_zones[["zone_name", "zone_system", external_zones.geometry.name]]
@@ -459,32 +506,31 @@ def main() -> None:
             parameters.output_folder,
             int_bound,
             buf_bound,
-            driver,
-            extension,
+            file=parameters.output_format,
         )
 
-        # Select buffer and internal zones
-        buffer_zones = select_zones_in_boundary(
-            to_trans_zone_system(
-                parameters.zone_systems.boundary_zones,
-                override_shapefile=internal_and_buffer_path,
-            ),
-            to_trans_zone_system(parameters.zone_systems.buffer_zones),
-        )
-        internal_zones = select_zones_in_boundary(
-            to_trans_zone_system(
-                parameters.zone_systems.boundary_zones,
-                override_shapefile=internal_bound_path,
-            ),
-            to_trans_zone_system(parameters.zone_systems.internal_zones),
-        )
-
-        # Cut internal zones out of buffer zones and cut buffer zones out of external zones, combine all three for new zone system
+        # Select zones within boundaries and cut out internal from buffer and internal+buffer from external,
+        # Combine all three for new zone system
         new_zones = build_localisation_zones(
-            internal_zones,
-            buffer_zones,
+            parameters.zone_systems.boundary_zones,
+            parameters.zone_systems.internal_zones,
+            parameters.zone_systems.buffer_zones,
             parameters.zone_systems.external_zones,
-            pd.concat([int_bound, buf_bound], ignore_index=True),
+            internal_and_buffer_bound_path,
+            internal_bound_path,
+        )
+
+        # Create integer zone_id for new zoning and write core zoning lookup.
+        prefix_map = {
+            parameters.zone_systems.internal_zones.name: 10,
+            parameters.zone_systems.buffer_zones.name: 20,
+            parameters.zone_systems.external_zones.name: 30,
+        }
+        new_zones = write_core_zoning_lookup(
+            parameters.core_folder,
+            new_zones,
+            parameters.zone_systems.internal_zones.name,
+            prefix_map,
         )
 
         new_zones_path = parameters.output_folder / (
