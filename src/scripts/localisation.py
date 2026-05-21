@@ -7,6 +7,7 @@ An optional buffer zone system can be used for zones directly adjacent to the bo
 
 ##### IMPORTS #####
 
+import enum
 import functools
 import logging
 import pathlib
@@ -28,6 +29,39 @@ _SHAPEFILE_FORMATS = {"shp", "shapefile", "esri shapefile"}
 _GPKG_FORMATS = {"gpkg", "geopackage"}
 
 ##### CLASSES & FUNCTIONS #####
+
+
+class FileFormat(enum.StrEnum):
+    """GIS file formats."""
+
+    GEOPACKAGE = enum.auto()
+    SHAPEFILE = enum.auto()
+
+    @classmethod
+    def _missing_(cls, value) -> "FileFormat":
+        """Case insensitive and more flexible strings accepted."""
+        value = str(value).strip().lower()
+        for i in cls:
+            if value == i.value:
+                return i
+
+        if value in _SHAPEFILE_FORMATS:
+            return cls.SHAPEFILE
+        if value in _GPKG_FORMATS:
+            return cls.GEOPACKAGE
+        return None
+
+    @property
+    def driver(self) -> str:
+        """File format IO driver."""
+        lookup = {FileFormat.GEOPACKAGE: "GPKG", FileFormat.SHAPEFILE: "ESRI Shapefile"}
+        return lookup[self]
+
+    @property
+    def suffix(self) -> str:
+        """Path suffix (extension) for this format."""
+        lookup = {FileFormat.GEOPACKAGE: "gpkg", FileFormat.SHAPEFILE: "shp"}
+        return lookup[self]
 
 
 @dataclasses.dataclass
@@ -80,7 +114,7 @@ class _Config(ctk.BaseConfig):
     """Config for running localisation zoning script."""
 
     output_path: pydantic.DirectoryPath
-    output_format: str
+    output_format: FileFormat
     localisation_area: Area
     zone_systems: ZoneSystems
     lookup_additionals: LookupAdditionals | None = None
@@ -165,20 +199,6 @@ def select_zones_in_boundary(
     return zones
 
 
-def get_output_driver_and_extension(output_format: str) -> tuple[str, str]:
-    """Return driver and file extension for the configured output format."""
-    normalized = output_format.casefold()
-
-    if normalized in _SHAPEFILE_FORMATS:
-        return "ESRI Shapefile", "shp"
-
-    if normalized in _GPKG_FORMATS:
-        return "GPKG", "gpkg"
-
-    LOG.warning("Output format %s not recognised, defaulting to geopackage.", output_format)
-    return "GPKG", "gpkg"
-
-
 def to_trans_zone_system(
     zone_info: ZoneSystemInfo,
     override_name: str | None = None,
@@ -200,20 +220,19 @@ def write_boundary_files(
     output_folder: pathlib.Path,
     internal_bound: gpd.GeoDataFrame,
     buffer_bound: gpd.GeoDataFrame,
-    driver: str,
-    extension: str,
+    file: FileFormat,
 ) -> tuple[pathlib.Path, pathlib.Path]:
     """Write internal and combined internal+buffer boundary files."""
-    internal_path = output_folder / f"internal_boundaries.{extension}"
-    combined_path = output_folder / f"internal_and_buffer_boundary.{extension}"
+    internal_path = output_folder / f"internal_boundaries.{file.suffix}"
+    combined_path = output_folder / f"internal_and_buffer_boundary.{file.suffix}"
 
-    internal_bound.to_file(internal_path, driver=driver)
+    internal_bound.to_file(internal_path, driver=file.driver)
 
     combined_boundaries = pd.concat(
         [internal_bound.assign(boundary="internal"), buffer_bound.assign(boundary="buffer")],
         ignore_index=True,
     )
-    combined_boundaries.to_file(combined_path, driver=driver)
+    combined_boundaries.to_file(combined_path, driver=file.driver)
 
     return internal_path, combined_path
 
@@ -348,7 +367,7 @@ def main() -> None:
         int_bound, buf_bound = select_boundaries(
             parameters.zone_systems.boundary_zones, parameters.localisation_area
         )
-        internal_bound_path, internal_and_buffer_path = write_boundary_files(
+        internal_bound_path, internal_and_buffer_bound_path = write_boundary_files(
             parameters.output_folder,
             int_bound,
             buf_bound,
