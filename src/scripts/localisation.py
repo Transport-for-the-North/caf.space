@@ -17,10 +17,10 @@ import pandas as pd
 import geopandas as gpd
 
 import caf.toolkit as ctk
-from caf.space.inputs import ZoneSystemInfo, TransZoneSystemInfo, LowerZoneSystemInfo
-from caf.space import ZoneTranslation, ZoningTranslationInputs
+from caf.space.inputs import ZoneSystemInfo, TransZoneSystemInfo, LowerZoneSystemInfo, ZoningTranslationInputs
+from caf.space import ZoneTranslation
 
-##### CONSTANTS #####
+##### CONSTANTS #####s
 
 _NAME = pathlib.Path(__file__).stem
 LOG = logging.getLogger(_NAME)
@@ -39,7 +39,7 @@ class FileFormat(enum.StrEnum):
 
     @classmethod
     def _missing_(cls, value) -> "FileFormat":
-        """Case insensitive and more flexible strings accepted."""
+        """Case insensitive and more flexible strings accepted. Default to geopackage if no match."""
         value = str(value).strip().lower()
         for i in cls:
             if value == i.value:
@@ -49,7 +49,7 @@ class FileFormat(enum.StrEnum):
             return cls.SHAPEFILE
         if value in _GPKG_FORMATS:
             return cls.GEOPACKAGE
-        return None
+        return cls.GEOPACKAGE
 
     @property
     def driver(self) -> str:
@@ -203,8 +203,11 @@ def select_zones_in_boundary(
 
     if len(dropped_zones) > 0:
         LOG.warning(
+            "Selected zones from %s that fall within %s boundary. "
             "%s zone(s) were dropped because their overlap with the boundary was lower than the overlap threshold (%s). "
             "Their IDs are: %s and the maximum overlap is %s",
+            zone_system.name,
+            boundary.name,
             len(dropped_zones),
             overlap_threshold,
             (", ".join(str(zoneid) for zoneid in dropped_zones[id_col].values)),
@@ -476,7 +479,10 @@ def create_combined_lookup(
             )
 
     if output_path is not None:
-        lookup.to_csv(output_path)
+        lookup.to_csv(output_path / f"lookup_{new_zone_system.name}_to_{target_zone_system.name}.csv", index=False)
+        LOG.info(
+            "Combined lookup with spatial and weighted translations and additional columns written to %s", output_path
+        )
 
     return lookup
 
