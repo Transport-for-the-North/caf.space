@@ -518,6 +518,9 @@ def main() -> None:
 
         # Select zones within boundaries and cut out internal from buffer and internal+buffer from external,
         # Combine all three for new zone system
+        LOG.info(
+            "Selecting zones that fall within the boundaries and building new zone system, this might take a while.",
+        )
         new_zones = build_localisation_zones(
             parameters.zone_systems.boundary_zones,
             parameters.zone_systems.internal_zones,
@@ -550,6 +553,7 @@ def main() -> None:
         )
 
         if parameters.zone_systems.target_zones is not None:
+            LOG.info("Creating lookup for new zone system to target zone system, this might take a while.")
             # Create final lookup from new zone system to target zone system
             new_zs = ZoneSystemInfo(
                 name=f"{parameters.localisation_area.area_name}_local",
