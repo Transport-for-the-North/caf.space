@@ -17,8 +17,13 @@ import pandas as pd
 import geopandas as gpd
 
 import caf.toolkit as ctk
-import caf.space.zone_correspondence as zone_correspondence
-from caf.space.inputs import ZoneSystemInfo, TransZoneSystemInfo, LowerZoneSystemInfo, ZoningTranslationInputs
+from caf.space import zone_correspondence
+from caf.space.inputs import (
+    ZoneSystemInfo,
+    TransZoneSystemInfo,
+    LowerZoneSystemInfo,
+    ZoningTranslationInputs,
+)
 from caf.space import ZoneTranslation
 
 ##### CONSTANTS #####s
@@ -96,6 +101,7 @@ class LookupAdditionals:
     id_col: str
 
     def read_data(self) -> pd.DataFrame:
+        """Read data from csv."""
         data = pd.read_csv(self.csv)
 
         return data
@@ -109,6 +115,7 @@ class ZoneLookup:
     csv: pydantic.FilePath
 
     def read_data(self) -> pd.DataFrame:
+        """Read data from csv."""
         data = pd.read_csv(self.csv)
 
         return data
@@ -171,7 +178,10 @@ def select_boundaries(
         )
 
     # buffer_bound_touches = bound_zones[bound_zones.geometry.touches(bound.union_all())]
-    buffer_bound = bound_zones[bound_zones.geometry.intersects(bound.union_all().buffer(5)) & ~bound_zones.geometry.within(bound.union_all())]
+    buffer_bound = bound_zones[
+        bound_zones.geometry.intersects(bound.union_all().buffer(5))
+        & ~bound_zones.geometry.within(bound.union_all())
+    ]
 
     return bound, buffer_bound
 
@@ -256,7 +266,10 @@ def write_boundary_files(
     internal_bound.to_file(internal_path, driver=file.driver)
 
     combined_boundaries = pd.concat(
-        [internal_bound.assign(boundary="internal"), buffer_bound.assign(boundary="buffer")],
+        [
+            internal_bound.assign(boundary="internal"),
+            buffer_bound.assign(boundary="buffer"),
+        ],
         ignore_index=True,
     )
     combined_boundaries.to_file(combined_path, driver=file.driver)
@@ -269,6 +282,7 @@ def build_localisation_zones(
     internal_zone_system: ZoneSystemInfo,
     buffer_zone_system: ZoneSystemInfo,
     external_zone_system: ZoneSystemInfo,
+    *,
     internal_and_buffer_bound_path: pathlib.Path,
     internal_bound_path: pathlib.Path,
 ) -> gpd.GeoDataFrame:
@@ -276,7 +290,8 @@ def build_localisation_zones(
 
     First select zones within boundaries, then use the boundaries to cut out internal zones from buffer zones and
     cut out buffer and internal zones from external zones, to ensure no slivers remain when the different zone systems do not nest perfectly.
-    Finally, combine all three for new zone system."""
+    Finally, combine all three for new zone system.
+    """
     buffer_zones_in_buffer = select_zones_in_boundary(
         to_trans_zone_system(
             boundary_zones,
@@ -393,9 +408,12 @@ def create_translation_lookup(
     if lower_zone_system is None:
         config = ZoningTranslationInputs(zone_1=new_zs, zone_2=target_zs)
         lookup = ZoneTranslation(config).spatial_translation()
-    elif lower_zone_system is not None:
+    else:
         config = ZoningTranslationInputs(
-            zone_1=new_zs, zone_2=target_zs, lower_zoning=lower_zone_system, method=method
+            zone_1=new_zs,
+            zone_2=target_zs,
+            lower_zoning=lower_zone_system,
+            method=method,
         )
         lookup = ZoneTranslation(config).weighted_translation()
 
@@ -408,6 +426,7 @@ def create_translation_lookup(
 def create_combined_lookup(
     new_zone_system: ZoneSystemInfo,
     target_zone_system: ZoneSystemInfo,
+    *,
     emp_zone_system: LowerZoneSystemInfo | None = None,
     pop_zone_system: LowerZoneSystemInfo | None = None,
     lookup_additionals: LookupAdditionals | None = None,
@@ -426,10 +445,10 @@ def create_combined_lookup(
     ]
     id_cols = [f"{new_zone_system.name}_id", f"{target_zone_system.name}_id"]
 
-    lookup_spatial = create_translation_lookup(new_zone_system, target_zone_system)
-    lookup = lookup_spatial.rename(columns={col: f"{col}_spatial" for col in factor_cols})
+    lookup = create_translation_lookup(new_zone_system, target_zone_system)
+    lookup_og = {"spatial": lookup}
+    lookup = lookup.rename(columns={col: f"{col}_spatial" for col in factor_cols})
 
-    lookup_og = {"spatial": lookup_spatial}
     if emp_zone_system is not None:
         lookup_emp = create_translation_lookup(
             new_zone_system, target_zone_system, emp_zone_system, method="emp"
@@ -448,42 +467,13 @@ def create_combined_lookup(
 
     # Check differences / non-matches:
     non_matched = lookup[lookup.isna().any(axis=1)]
-    LOG.warning(
-        "Certain zones were not matched in each of the lookups and will be dropped from all."
-    )
-
     if not non_matched.empty:
-
-        non_matched_pairs = set(
-            non_matched[id_cols].apply(tuple, axis=1)
+        LOG.warning(
+            "Certain zones were not matched in each of the lookups and will be dropped from all."
         )
-
-        # Process rows that were not fully matched by rounding each available translation type.
-        rounded_non_matched_parts = []
-        for translation_type, lookup_data in lookup_og.items():
-            remaining = lookup_data.loc[
-                ~lookup_data[id_cols].apply(tuple, axis=1).isin(non_matched_pairs)
-            ]
-
-            rounded = zone_correspondence.round_zone_correspondence(
-                remaining,
-                zone_names=[new_zone_system.name, target_zone_system.name],
-            )
-            rounded = rounded.rename(
-                columns={
-                    f"{new_zone_system.name}_to_{target_zone_system.name}":
-                        f"{new_zone_system.name}_to_{target_zone_system.name}_{translation_type}",
-                    f"{target_zone_system.name}_to_{new_zone_system.name}":
-                        f"{target_zone_system.name}_to_{new_zone_system.name}_{translation_type}",
-                }
-            )
-            rounded_non_matched_parts.append(rounded)
-
-        lookup_rounded = functools.reduce(
-                lambda left, right: left.merge(right, on=id_cols, how="outer"),
-                rounded_non_matched_parts,
-            )
-        lookup = lookup_rounded
+        lookup = normalise_lookup(
+            lookup_og, non_matched, new_zone_system.name, target_zone_system.name
+        )
 
     if lookup_additionals is not None:
         if zone_lookup is None:
@@ -491,23 +481,82 @@ def create_combined_lookup(
                 "No zone lookup provided, unable to join additional columns to lookup."
             )
         else:
-            adds = lookup_additionals.read_data()
-            adds = adds.drop_duplicates()
-            zone_id_to_name = zone_lookup.read_data()[["zone_id", "zone_name"]]
-            adds = adds.merge(
-                zone_id_to_name, how="inner", left_on=lookup_additionals.id_col, right_on="zone_id"
-            )
-            lookup = lookup.merge(
-                adds, how="left", left_on=f"{target_zone_system.name}_id", right_on="zone_name"
+            lookup = add_lookup_cols(
+                lookup, lookup_additionals, zone_lookup, target_zone_system.name
             )
 
     if output_path is not None:
-        lookup.to_csv(output_path / f"lookup_{new_zone_system.name}_to_{target_zone_system.name}.csv", index=False)
+        lookup.to_csv(
+            output_path / f"lookup_{new_zone_system.name}_to_{target_zone_system.name}.csv",
+            index=False,
+        )
         LOG.info(
-            "Combined lookup with spatial and weighted translations and additional columns written to %s", output_path
+            "Combined lookup with spatial and weighted translations and additional columns written to %s",
+            output_path,
         )
 
     return lookup
+
+
+def normalise_lookup(
+    lookup_dict: dict[str, pd.DataFrame],
+    non_matched: pd.DataFrame,
+    from_name: str,
+    to_name: str,
+) -> pd.DataFrame:
+    """Normalise a lookup with multiple translation types to make sure all factors round to 1 after removing nan values."""
+    id_cols = [f"{from_name}_id", f"{to_name}_id"]
+    non_matched_pairs = set(non_matched[id_cols].apply(tuple, axis=1))
+
+    # Process rows that were not fully matched by rounding each available translation type.
+    rounded_non_matched_parts = []
+    for translation_type, lookup_data in lookup_dict.items():
+        remaining = lookup_data.loc[
+            ~lookup_data[id_cols].apply(tuple, axis=1).isin(non_matched_pairs)
+        ]
+
+        rounded = zone_correspondence.round_zone_correspondence(
+            remaining,
+            zone_names=(from_name, to_name),
+        )
+        rounded = rounded.rename(
+            columns={
+                f"{from_name}_to_{to_name}": f"{from_name}_to_{to_name}_{translation_type}",
+                f"{to_name}_to_{from_name}": f"{to_name}_to_{from_name}_{translation_type}",
+            }
+        )
+        rounded_non_matched_parts.append(rounded)
+
+    lookup_rounded = functools.reduce(
+        lambda left, right: left.merge(right, on=id_cols, how="outer"),
+        rounded_non_matched_parts,
+    )
+    return lookup_rounded
+
+
+def add_lookup_cols(
+    lookup: pd.DataFrame,
+    additionals: LookupAdditionals,
+    zone_lookup: ZoneLookup,
+    join_name: str,
+) -> pd.DataFrame:
+    """Add additional columns to lookup by joining through zone name."""
+    adds = additionals.read_data()
+    adds = adds.drop_duplicates()
+    zone_id_to_name = zone_lookup.read_data()[["zone_id", "zone_name"]]
+    adds = adds.merge(
+        zone_id_to_name,
+        how="inner",
+        left_on=additionals.id_col,
+        right_on="zone_id",
+    )
+    new_lookup = lookup.merge(
+        adds,
+        how="left",
+        left_on=f"{join_name}_id",
+        right_on="zone_name",
+    )
+    return new_lookup
 
 
 def main() -> None:
@@ -548,8 +597,8 @@ def main() -> None:
             parameters.zone_systems.internal_zones,
             parameters.zone_systems.buffer_zones,
             parameters.zone_systems.external_zones,
-            internal_and_buffer_bound_path,
-            internal_bound_path,
+            internal_and_buffer_bound_path=internal_and_buffer_bound_path,
+            internal_bound_path=internal_bound_path,
         )
 
         # Create integer zone_id for new zoning and write core zoning lookup.
@@ -575,7 +624,9 @@ def main() -> None:
         )
 
         if parameters.zone_systems.target_zones is not None:
-            LOG.info("Creating lookup for new zone system to target zone system, this might take a while.")
+            LOG.info(
+                "Creating lookup for new zone system to target zone system, this might take a while."
+            )
             # Create final lookup from new zone system to target zone system
             new_zs = ZoneSystemInfo(
                 name=f"{parameters.localisation_area.area_name}_local",
@@ -598,17 +649,17 @@ def main() -> None:
                 lookup = create_combined_lookup(
                     new_zs,
                     parameters.zone_systems.target_zones,
-                    parameters.zone_systems.weight_zones_emp,
-                    parameters.zone_systems.weight_zones_pop,
-                    parameters.lookup_additionals,
-                    parameters.zone_lookup,
+                    emp_zone_system=parameters.zone_systems.weight_zones_emp,
+                    pop_zone_system=parameters.zone_systems.weight_zones_pop,
+                    lookup_additionals=parameters.lookup_additionals,
+                    zone_lookup=parameters.zone_lookup,
                 )
             lookup.to_csv(
                 (
                     parameters.output_folder
                     / (
                         f"lookup_{parameters.localisation_area.area_name}_local_"
-                        f"{parameters.zone_systems.target_zones.name}_extra.csv"
+                        f"{parameters.zone_systems.target_zones.name}.csv"
                     )
                 )
             )
