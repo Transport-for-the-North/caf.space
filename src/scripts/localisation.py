@@ -17,6 +17,7 @@ import pandas as pd
 import geopandas as gpd
 
 import caf.toolkit as ctk
+import caf.space.zone_correspondence as zone_correspondence
 from caf.space.inputs import ZoneSystemInfo, TransZoneSystemInfo, LowerZoneSystemInfo, ZoningTranslationInputs
 from caf.space import ZoneTranslation
 
@@ -428,41 +429,61 @@ def create_combined_lookup(
     lookup_spatial = create_translation_lookup(new_zone_system, target_zone_system)
     lookup = lookup_spatial.rename(columns={col: f"{col}_spatial" for col in factor_cols})
 
+    lookup_og = {"spatial": lookup_spatial}
     if emp_zone_system is not None:
         lookup_emp = create_translation_lookup(
             new_zone_system, target_zone_system, emp_zone_system, method="emp"
         )
+        lookup_og["emp"] = lookup_emp
         lookup_emp = lookup_emp.rename(columns={col: f"{col}_emp" for col in factor_cols})
         lookup = lookup.merge(lookup_emp, how="outer", on=id_cols)
-        # Check differences / non-matches:
-        non_matched_emp = lookup[lookup.isna().any(axis=1)]
-        ## REMOVE ##
-        non_matched_emp.to_csv(output_path / "non_matched_emp.csv", index=False)
-        LOG.warning(
-            "Following zone pairs were not matched in both the spatial and employment weighted translation: %s",
-            non_matched_emp[id_cols]
-            .apply(tuple, axis=1)
-            .to_string(index=False)
-            .replace("\n", ", "),
-        )
 
     if pop_zone_system is not None:
         lookup_pop = create_translation_lookup(
             new_zone_system, target_zone_system, pop_zone_system, method="pop"
         )
+        lookup_og["pop"] = lookup_pop
         lookup_pop = lookup_pop.rename(columns={col: f"{col}_pop" for col in factor_cols})
         lookup = lookup.merge(lookup_pop, how="outer", on=id_cols)
-        # Check differences / non-matches:
-        non_matched_pop = lookup[lookup.isna().any(axis=1)]
-        ## REMOVE ##
-        non_matched_pop.to_csv(output_path / "non_matched_pop.csv", index=False)
-        LOG.warning(
-            "Following zone pairs were not matched in both the spatial and population weighted translation: %s",
-            non_matched_pop[id_cols]
-            .apply(tuple, axis=1)
-            .to_string(index=False)
-            .replace("\n", ", "),
+
+    # Check differences / non-matches:
+    non_matched = lookup[lookup.isna().any(axis=1)]
+    LOG.warning(
+        "Certain zones were not matched in each of the lookups and will be dropped from all."
+    )
+
+    if not non_matched.empty:
+
+        non_matched_pairs = set(
+            non_matched[id_cols].apply(tuple, axis=1)
         )
+
+        # Process rows that were not fully matched by rounding each available translation type.
+        rounded_non_matched_parts = []
+        for translation_type, lookup_data in lookup_og.items():
+            remaining = lookup_data.loc[
+                ~lookup_data[id_cols].apply(tuple, axis=1).isin(non_matched_pairs)
+            ]
+
+            rounded = zone_correspondence.round_zone_correspondence(
+                remaining,
+                zone_names=[new_zone_system.name, target_zone_system.name],
+            )
+            rounded = rounded.rename(
+                columns={
+                    f"{new_zone_system.name}_to_{target_zone_system.name}":
+                        f"{new_zone_system.name}_to_{target_zone_system.name}_{translation_type}",
+                    f"{target_zone_system.name}_to_{new_zone_system.name}":
+                        f"{target_zone_system.name}_to_{new_zone_system.name}_{translation_type}",
+                }
+            )
+            rounded_non_matched_parts.append(rounded)
+
+        lookup_rounded = functools.reduce(
+                lambda left, right: left.merge(right, on=id_cols, how="outer"),
+                rounded_non_matched_parts,
+            )
+        lookup = lookup_rounded
 
     if lookup_additionals is not None:
         if zone_lookup is None:
@@ -471,12 +492,13 @@ def create_combined_lookup(
             )
         else:
             adds = lookup_additionals.read_data()
+            adds = adds.drop_duplicates()
             zone_id_to_name = zone_lookup.read_data()[["zone_id", "zone_name"]]
             adds = adds.merge(
-                zone_id_to_name, left_on=lookup_additionals.id_col, right_on="zone_id"
+                zone_id_to_name, how="inner", left_on=lookup_additionals.id_col, right_on="zone_id"
             )
             lookup = lookup.merge(
-                adds, left_on=f"{target_zone_system.name}_id", right_on="zone_name"
+                adds, how="left", left_on=f"{target_zone_system.name}_id", right_on="zone_name"
             )
 
     if output_path is not None:
@@ -580,14 +602,13 @@ def main() -> None:
                     parameters.zone_systems.weight_zones_pop,
                     parameters.lookup_additionals,
                     parameters.zone_lookup,
-                    parameters.output_folder,
                 )
             lookup.to_csv(
                 (
                     parameters.output_folder
                     / (
                         f"lookup_{parameters.localisation_area.area_name}_local_"
-                        f"{parameters.zone_systems.target_zones.name}.csv"
+                        f"{parameters.zone_systems.target_zones.name}_extra.csv"
                     )
                 )
             )
