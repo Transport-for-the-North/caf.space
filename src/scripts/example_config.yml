@@ -1,3 +1,4 @@
+core_zoning_path: I:\Data\Zoning Systems\core_zoning
 output_path: C:\output
 output_format: gpkg
 # or shp
