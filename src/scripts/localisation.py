@@ -177,7 +177,6 @@ def select_boundaries(
             f" with shapefile at {boundary_zones.shapefile}."
         )
 
-    # buffer_bound_touches = bound_zones[bound_zones.geometry.touches(bound.union_all())]
     buffer_bound = bound_zones[
         bound_zones.geometry.intersects(bound.union_all().buffer(5))
         & ~bound_zones.geometry.within(bound.union_all())
