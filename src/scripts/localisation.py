@@ -390,6 +390,8 @@ def write_core_zoning_lookup(
     zoning = zoning[["zone_id", "zone_name", "internal", "external"]]
     zoning.to_csv(output_path / "zoning.csv", index=False)
 
+    #TODO: write zoning_meta.yml with name, shapefile path, shapefile id col
+
     return zones
 
 
