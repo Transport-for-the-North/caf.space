@@ -143,7 +143,7 @@ class _Config(ctk.BaseConfig):
     def core_folder(self) -> pathlib.Path:
         """Folder to save core zoning outputs to."""
         folder = (
-            self.core_zoning_path / f"{self.localisation_area.area_name}_localisation_zones"
+            self.core_zoning_path / f"{self.localisation_area.area_name}_local"
         )
         folder.mkdir(exist_ok=True)
         return folder
