@@ -148,7 +148,7 @@ class _Config(ctk.BaseConfig):
 
 
 class CoreZoningConfig(ctk.BaseConfig):
-    """ "Config used to write zoning_meta.yml for core zoning output, with name, shapefile path and shapefile id column."""
+    """Config used to write zoning_meta.yml for core zoning output, with name, shapefile path and shapefile id column."""
 
     name: str
     shapefile_path: pathlib.Path
