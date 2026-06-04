@@ -476,14 +476,16 @@ def create_combined_lookup(
             lookup_og, non_matched, new_zone_system.name, target_zone_system.name
         )
 
+
     if lookup_additionals is not None:
         if zone_lookup is None:
             LOG.warning(
                 "No zone lookup provided, unable to join additional columns to lookup."
             )
         else:
+            lookup.rename(columns={f"{target_zone_system.name}_id": f"{target_zone_system.name}_id_string"}, inplace=True)
             lookup = add_lookup_cols(
-                lookup, lookup_additionals, zone_lookup, target_zone_system.name
+                lookup, lookup_additionals, zone_lookup, f"{target_zone_system.name}_id_string"
             )
 
     if output_path is not None:
@@ -554,10 +556,10 @@ def add_lookup_cols(
     new_lookup = lookup.merge(
         adds,
         how="left",
-        left_on=f"{join_name}_id",
+        left_on=join_name,
         right_on="zone_name",
     )
-    return new_lookup
+    return new_lookup.drop(["zone_id", "zone_name"], axis=1)
 
 
 def main() -> None:
