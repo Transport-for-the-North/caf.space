@@ -537,12 +537,11 @@ def normalise_lookup(
                 f"{to_name}_to_{from_name}": f"{to_name}_to_{from_name}_{translation_type}",
             }
         )
+        rounded.set_index(id_cols, inplace=True)
         rounded_non_matched_parts.append(rounded)
 
-    lookup_rounded = functools.reduce(
-        lambda left, right: left.merge(right, on=id_cols, how="outer"),
-        rounded_non_matched_parts,
-    )
+    lookup_rounded = pd.concat(rounded_non_matched_parts, axis=1).reset_index()
+
     return lookup_rounded
 
 
