@@ -149,6 +149,14 @@ class _Config(ctk.BaseConfig):
         return folder
 
 
+class CoreZoningConfig(ctk.BaseConfig):
+    """"Config used to write zoning_meta.yml for core zoning output, with name, shapefile path and shapefile id column."""
+
+    name: str
+    shapefile_path: pathlib.Path
+    shapefile_id_col: str
+
+
 def select_boundaries(
     boundary_zones: ZoneSystemInfo, selected_area: Area
 ) -> tuple[gpd.GeoDataFrame, gpd.GeoDataFrame | None]:
@@ -348,8 +356,9 @@ def write_core_zoning_lookup(
     zones: gpd.GeoDataFrame,
     internal_zone_system_name: str,
     prefix_map: dict[str, int],
+    config: CoreZoningConfig,
 ) -> gpd.GeoDataFrame:
-    """Write lookup zone name to zone id for core zoning and return the updated zones GeoDataFrame.
+    """Write lookup zone name to zone id for core zoning, write zoning_meta.yml, and return the updated zones GeoDataFrame.
 
     The zone id is an integer created by combining a prefix based on the zone system (internal, buffer, external) and a sequential number within each zone system.
     The sequential number will be filled to 5 digits, allowing for a maximum of 999,999 zones in each zone system.
@@ -387,9 +396,9 @@ def write_core_zoning_lookup(
     zoning["internal"] = zoning["zone_system"] == internal_zone_system_name
     zoning["external"] = zoning["zone_system"] != internal_zone_system_name
     zoning = zoning[["zone_id", "zone_name", "internal", "external"]]
-    zoning.to_csv(output_path / "zoning.csv", index=False)
 
-    #TODO: write zoning_meta.yml with name, shapefile path, shapefile id col
+    zoning.to_csv(output_path / "zoning.csv", index=False)
+    config.save_yaml(output_path / "zoning_meta.yml")
 
     return zones
 
@@ -604,7 +613,16 @@ def main() -> None:
             internal_bound_path=internal_bound_path,
         )
 
-        # Create integer zone_id for new zoning and write core zoning lookup.
+        # Create integer zone_id for new zoning and write core zoning lookup + zoning_meta.
+        new_zones_path = parameters.output_folder / (
+            f"zoning_{parameters.localisation_area.area_name}_local_"
+            f"{parameters.zone_systems.internal_zones.name}.{parameters.output_format.suffix}"
+        )
+        zoning_meta = CoreZoningConfig(
+            name=f"{parameters.localisation_area.area_name}_local",
+            shapefile_path=new_zones_path,
+            shapefile_id_col="zone_id",
+        )
         prefix_map = {
             parameters.zone_systems.internal_zones.name: 10,
             parameters.zone_systems.buffer_zones.name: 20,
@@ -615,17 +633,14 @@ def main() -> None:
             new_zones,
             parameters.zone_systems.internal_zones.name,
             prefix_map,
-        )
-
-        new_zones_path = parameters.output_folder / (
-            f"zoning_{parameters.localisation_area.area_name}_local_"
-            f"{parameters.zone_systems.internal_zones.name}.{parameters.output_format.suffix}"
+            zoning_meta
         )
         new_zones.to_file(
             new_zones_path,
             driver=parameters.output_format.driver,
         )
 
+        # create lookup if target zone system is provided
         if parameters.zone_systems.target_zones is not None:
             LOG.info(
                 "Creating lookup for new zone system to target zone system, this might take a while."
