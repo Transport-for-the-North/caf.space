@@ -142,15 +142,13 @@ class _Config(ctk.BaseConfig):
     @functools.cached_property
     def core_folder(self) -> pathlib.Path:
         """Folder to save core zoning outputs to."""
-        folder = (
-            self.core_zoning_path / f"{self.localisation_area.area_name}_local"
-        )
+        folder = self.core_zoning_path / f"{self.localisation_area.area_name}_local"
         folder.mkdir(exist_ok=True)
         return folder
 
 
 class CoreZoningConfig(ctk.BaseConfig):
-    """"Config used to write zoning_meta.yml for core zoning output, with name, shapefile path and shapefile id column."""
+    """ "Config used to write zoning_meta.yml for core zoning output, with name, shapefile path and shapefile id column."""
 
     name: str
     shapefile_path: pathlib.Path
@@ -485,14 +483,18 @@ def create_combined_lookup(
             lookup_og, non_matched, new_zone_system.name, target_zone_system.name
         )
 
-
     if lookup_additionals is not None:
         if zone_lookup is None:
             LOG.warning(
                 "No zone lookup provided, unable to join additional columns to lookup."
             )
         else:
-            lookup.rename(columns={f"{target_zone_system.name}_id": f"{target_zone_system.name}_id_string"}, inplace=True)
+            lookup.rename(
+                columns={
+                    f"{target_zone_system.name}_id": f"{target_zone_system.name}_id_string"
+                },
+                inplace=True,
+            )
             lookup = add_lookup_cols(
                 lookup, lookup_additionals, zone_lookup, f"{target_zone_system.name}_id_string"
             )
@@ -632,7 +634,7 @@ def main() -> None:
             new_zones,
             parameters.zone_systems.internal_zones.name,
             prefix_map,
-            zoning_meta
+            zoning_meta,
         )
         new_zones.to_file(
             new_zones_path,
