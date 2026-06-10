@@ -24,18 +24,25 @@ from caf.space import ZoneTranslation, ZoningTranslationInputs
 
 
 # # # FUNCTIONS # # #
-def check_nesting(target_zoning: TransZoneSystemInfo, ref_zoning: list[TransZoneSystemInfo]):
+def check_nesting(
+    target_zoning: TransZoneSystemInfo,
+    ref_zoning: list[TransZoneSystemInfo],
+    sliver_tolerance: float = 0.95,
+):
     local_cache = pathlib.Path("local_cache")
     local_cache.mkdir(exist_ok=True, parents=False)
     out = {}
     for zones in ref_zoning:
         config = ZoningTranslationInputs(
-            zone_1=target_zoning, zone_2=zones, sliver_tolerance=0.95, cache_path=local_cache
+            zone_1=target_zoning,
+            zone_2=zones,
+            sliver_tolerance=sliver_tolerance,
+            cache_path=local_cache,
         )
         trans = ZoneTranslation(config).spatial_translation()
         factor_col = f"{target_zoning.name}_to_{zones.name}"
         non_nested = trans[trans[factor_col] < 1]
-        if len(non_nested > 0):
+        if len(non_nested) > 0:
             warnings.warn(
                 f"Non-nested zones between {zones.name} and {target_zoning.name}."
                 f"{non_nested}"

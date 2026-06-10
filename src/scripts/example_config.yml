@@ -1,0 +1,67 @@
+core_zoning_path: I:\Data\Zoning Systems\core_zoning
+output_path: C:\output
+output_format: gpkg
+# or shp
+
+# This needs to be based on the zone system for boundary_zones (below)
+localisation_area:
+  area_name: Cumbria
+  selected_zones:
+    - Cumberland
+    - Westmorland and Furness
+  selected_colname: LAD23NM
+
+zone_systems:
+
+  boundary_zones:
+    name: LAD
+    shapefile: path/to/gis
+    id_col: LAD23CD
+
+  internal_zones:
+    name: OA
+    shapefile: path/to/gis
+    id_col: OA21CD
+
+  external_zones:
+    name: LAD
+    shapefile: path/to/gis
+    id_col: LAD23CD
+
+  buffer_zones:
+    name: LSOA
+    shapefile: path/to/gis
+    id_col: zone_id
+
+  ## Optional ##
+  # Target zone system (normits landuse) for creating final lookup
+  target_zones:
+    name: LSOA
+    shapefile: path/to/gis
+    id_col: zone_id
+
+  # Weight zone system for weighted translation for final lookup (optional)
+  weight_zones_emp:
+    name: OA
+    shapefile: path/to/gis
+    id_col: OA21CD
+    data_col: Emp
+    weight_data_year: 2021
+
+  weight_zones_pop:
+    name: OA
+    shapefile: path/to/gis
+    id_col: OA21CD
+    data_col: Pop
+    weight_data_year: 2021
+
+# Zoning id to name lookup (optional), has cols zone_id and zone_name
+zone_lookup:
+  name: LSOA
+  csv: path/to/lookup.csv
+
+# Additional columns to add to lookup (optional, requires the zone_lookup file above)
+lookup_additionals: 
+  name: LSOA
+  csv: path/to/additionals.csv
+  id_col: lsoa_2021_id
