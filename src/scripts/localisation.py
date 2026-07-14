@@ -345,6 +345,8 @@ def build_localisation_zones(
     external_zones = external_zones.rename(columns={external_zone_system.id_col: "zone_name"})
     external_zones["zone_system"] = external_zone_system.name
     external_zones = external_zones[["zone_name", "zone_system", external_zones.geometry.name]]
+    # remove northern ireland from external zones
+    external_zones = external_zones[~external_zones["zone_name"].str.startswith("N")]
 
     return pd.concat([external_zones, buffer_zones, internal_zones], ignore_index=True)
 

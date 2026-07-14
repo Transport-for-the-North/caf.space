@@ -9,14 +9,14 @@ localisation_area:
   selected_zones:
     - Cumberland
     - Westmorland and Furness
-  selected_colname: LAD23NM
+  selected_colname: LAD24NM
 
 zone_systems:
 
   boundary_zones:
     name: LAD
     shapefile: path/to/gis
-    id_col: LAD23CD
+    id_col: LAD24CD
 
   internal_zones:
     name: OA
@@ -26,7 +26,7 @@ zone_systems:
   external_zones:
     name: LAD
     shapefile: path/to/gis
-    id_col: LAD23CD
+    id_col: LAD24CD
 
   buffer_zones:
     name: LSOA
