@@ -161,6 +161,53 @@ def fixture_zone_2_shape(main_dir) -> Path:
     return file
 
 
+@pytest.fixture(name="zone_1_cols", scope="session")
+def fixture_zone_1_cols(main_dir) -> Path:
+    """
+    zone system 1 for testing. Can be manipulated for different permutations
+    Returns:
+        Path: Temp path to gdf,  3 attributes, A, B and C. ID_COL = zone_1_id
+    """
+    data = [["A", "A"], ["B", "B"], ["C", "C"]]
+    zone_1_df = pd.DataFrame(data=data, columns=["zone_1_id", "dummy"])
+    zone_1 = gpd.GeoDataFrame(
+        data=zone_1_df,
+        geometry=[
+            Polygon([(0, 3), (4, 3), (4, 8), (0, 8)]),
+            Polygon([(4, 3), (4, 8), (8, 8), (8, 3)]),
+            Polygon([(0, 0), (0, 3), (8, 3), (8, 0)]),
+        ],
+        crs="EPSG:27700",
+    )
+    file = main_dir / "zone_1_cols.shp"
+    zone_1.to_file(file)
+    return file
+
+
+@pytest.fixture(name="zone_2_cols", scope="session")
+def fixture_zone_2_cols(main_dir) -> Path:
+    """
+    Zone system 2 for testing, can me manipulated for different permutations.
+    Returns:
+        Path: Temp path to gdf, 4 Attributes, W, X, Y, Z. ID_COL = zone_2_id
+    """
+    data = [["W", "W"], ["X", "X"], ["Y", "Y"], ["Z", "Z"]]
+    zone_2_df = pd.DataFrame(data=data, columns=["zone_2_id", "dummy"])
+    zone_2 = gpd.GeoDataFrame(
+        data=zone_2_df,
+        geometry=[
+            Polygon([(0, 8), (0, 4), (3, 4), (3, 8)]),
+            Polygon([(3, 4), (3, 8), (8, 8), (8, 4)]),
+            Polygon([(0, 0), (0, 4), (3, 4), (3, 0)]),
+            Polygon([(3, 0), (3, 4), (8, 4), (8, 0)]),
+        ],
+        crs="EPSG:27700",
+    )
+    file = main_dir / "zone_2_cols.shp"
+    zone_2.to_file(file)
+    return file
+
+
 @pytest.fixture(name="point_shapefile_1", scope="session")
 def fixture_point_shapefile(main_dir) -> Path:
     """
@@ -349,6 +396,41 @@ def fixture_spatial_config(
         tolerance=0.99,
         rounding=True,
     )
+    return params
+
+
+@pytest.fixture(name="spatial_config_cols", scope="class")
+def fixture_spatial_config_cols(
+    zone_1_cols: Path, zone_2_cols: Path, paths: dict
+) -> inputs.ZoningTranslationInputs:
+    """
+    Config for a test case spatial translation. To test handling of duplicate
+    column names in input shapefiles.
+    Parameters
+    ----------
+    All params are inherited from fixtures
+    zone_1_cols
+    zone_2_cols
+    paths
+    Returns
+    -------
+    A spatial translation config.
+    """
+    zone_1 = inputs.TransZoneSystemInfo(
+        name="zone_1", shapefile=zone_1_cols, id_col="zone_1_id"
+    )
+    zone_2 = inputs.TransZoneSystemInfo(
+        name="zone_2", shapefile=zone_2_cols, id_col="zone_2_id"
+    )
+    params = inputs.ZoningTranslationInputs(
+        zone_1=zone_1,
+        zone_2=zone_2,
+        output_path=paths["output"],
+        cache_path=paths["cache"],
+        tolerance=0.99,
+        rounding=True,
+    )
+    print(params)
     return params
 
 
