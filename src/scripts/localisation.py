@@ -361,7 +361,7 @@ def write_core_zoning_lookup(
     """Write lookup zone name to zone id for core zoning, write zoning_meta.yml, and return the updated zones GeoDataFrame.
 
     The zone id is an integer created by combining a prefix based on the zone system (internal, buffer, external) and a sequential number within each zone system.
-    The sequential number will be filled to 5 digits, allowing for a maximum of 999,999 zones in each zone system.
+    The sequential number will be filled to 5 digits, allowing for a maximum of 99,999 zones in each zone system.
     """
     ids = zones[["zone_name", "zone_system"]].copy()
 
@@ -676,13 +676,11 @@ def main() -> None:
                     zone_lookup=parameters.zone_lookup,
                 )
             lookup.to_csv(
-                (
                     parameters.output_folder
                     / (
                         f"lookup_{parameters.localisation_area.area_name}_local_"
                         f"{parameters.zone_systems.target_zones.name}.csv"
                     )
-                )
             )
 
         LOG.info(
