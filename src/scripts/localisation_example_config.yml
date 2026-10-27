@@ -34,13 +34,14 @@ zone_systems:
     id_col: zone_id
 
   ## Optional ##
-  # Target zone system (normits landuse) for creating final lookup
+  # Target zone system (normits landuse zones) for creating final lookup
   target_zones:
     name: LSOA
     shapefile: path/to/gis
     id_col: zone_id
 
   # Weight zone system for weighted translation for final lookup (optional)
+  # I:\Transfer\IS\gb_oa2021ew_oa2011sg_pop=emp_scot.shp
   weight_zones_emp:
     name: OA
     shapefile: path/to/gis
@@ -55,13 +56,29 @@ zone_systems:
     data_col: Pop
     weight_data_year: 2021
 
+  # Another optional target zone system (normits) for creating TLD lookup
+  # Also requires the tld_lookup below
+  tld_zones:
+    name: normits
+    shapefile: D:\normits\data\lookups\input\NorMITs_zoning_v3.3.shp
+    id_col: normits_id
+
 # Zoning id to name lookup (optional), has cols zone_id and zone_name
 zone_lookup:
   name: LSOA
   csv: path/to/lookup.csv
+  # I:\Data\Zoning Systems\core_zoning\lsoa_2021\zoning.csv
 
 # Additional columns to add to lookup (optional, requires the zone_lookup file above)
 lookup_additionals: 
   name: LSOA
   csv: path/to/additionals.csv
   id_col: lsoa_2021_id
+
+# Optional TLD lookup for the original (normits) zoning system
+# used to create a lookup from local zoning to TLD, used for distribution
+tld_lookup:
+  name: normits_tld
+  csv: path/to/tld_lookup.csv
+  # I:\NorMITs Distribution\voa_gb_2023_uni\NorMITs_zone.csv
+  id_col: ;normits_v3.3_id
