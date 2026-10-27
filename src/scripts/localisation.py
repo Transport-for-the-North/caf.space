@@ -15,6 +15,7 @@ import pydantic
 from pydantic import dataclasses
 import pandas as pd
 import geopandas as gpd
+from typing import Literal
 
 import caf.toolkit as ctk
 from caf.space import zone_correspondence
@@ -90,11 +91,12 @@ class ZoneSystems:
     target_zones: ZoneSystemInfo | None
     weight_zones_emp: LowerZoneSystemInfo | None
     weight_zones_pop: LowerZoneSystemInfo | None
+    tld_zones: ZoneSystemInfo | None
 
 
 @dataclasses.dataclass
-class LookupAdditionals:
-    """Data to be added to the final zone lookup."""
+class Lookup:
+    """Generic class for lookup data."""
 
     name: str
     csv: pydantic.FilePath
@@ -120,7 +122,6 @@ class ZoneLookup:
 
         return data
 
-
 class _Config(ctk.BaseConfig):
     """Config for running localisation zoning script."""
 
@@ -129,14 +130,15 @@ class _Config(ctk.BaseConfig):
     output_format: FileFormat
     localisation_area: Area
     zone_systems: ZoneSystems
-    lookup_additionals: LookupAdditionals | None = None
+    lookup_additionals: Lookup | None = None
     zone_lookup: ZoneLookup | None = None
+    tld_lookup: Lookup | None = None
 
     @functools.cached_property
     def output_folder(self) -> pathlib.Path:
         """Folder to save outputs to."""
-        folder = self.output_path / f"{self.localisation_area.area_name}_localisation_zones"
-        folder.mkdir(exist_ok=True)
+        folder = self.output_path / "zones" / f"{self.localisation_area.area_name}_localisation_zones"
+        folder.mkdir(parents=True,exist_ok=True)
         return folder
 
     @functools.cached_property
@@ -144,6 +146,13 @@ class _Config(ctk.BaseConfig):
         """Folder to save core zoning outputs to."""
         folder = self.core_zoning_path / f"{self.localisation_area.area_name}_local"
         folder.mkdir(exist_ok=True)
+        return folder
+
+    @functools.cached_property
+    def lookup_folder(self) -> pathlib.Path:
+        """Folder to save lookup outputs to."""
+        folder = self.output_folder / "lookups" / f"{self.localisation_area.area_name}_localisation_lookups"
+        folder.mkdir(parents=True, exist_ok=True)
         return folder
 
 
@@ -551,7 +560,7 @@ def normalise_lookup(
 
 def add_lookup_cols(
     lookup: pd.DataFrame,
-    additionals: LookupAdditionals,
+    additionals: Lookup,
     zone_lookup: ZoneLookup,
     join_name: str,
 ) -> pd.DataFrame:
@@ -572,6 +581,53 @@ def add_lookup_cols(
         right_on="zone_name",
     )
     return new_lookup.drop(["zone_id", "zone_name"], axis=1)
+
+
+def create_tld_lookup(local_zs: ZoneSystemInfo,
+                      tld_zs: ZoneSystemInfo,
+                      tld_normits: pd.DataFrame,
+                      output_path: pathlib.Path,
+                      method: Literal["first", "largest_overlap"] = "first"):
+    """Create a lookup to know which TLD to use for each zone in local zoning system, based on NorMITs.
+
+    Needs a lookup between local zoning system and original zoning system, and a tld lookup for the original zoning system.
+
+    Parameters
+    ----------
+    local_zs : ZoneSystemInfo
+        Local zone system information.
+    tld_zs : ZoneSystemInfo
+        TLD zone system information.
+    tld_normits : pd.DataFrame
+        TLD lookup for the original zoning system.
+    output_path : pathlib.Path
+        Path to save the resulting TLD lookup for the local zoning system.
+    """
+    local_to_normits_lookup = create_translation_lookup(
+                    local_zs, tld_zs
+                )
+
+    # match to the tld lookup
+    tld_local = pd.merge(local_to_normits_lookup, tld_normits, how="left", left_on="normits_id", right_on=";normits_v3.3_id")
+
+    if method == "first":
+    # just keep the first instance
+        tld_local = tld_local.drop_duplicates(subset=[f"{local_zs.name}_id"], keep="first")
+        tld_local.to_csv(output_path, index=False)
+    elif method == "largest_overlap":
+        # Assign each localisation zone to a NorMITs zone, based on largest overlap
+        # the result should have 1 single id for each cumbria_loca zone, linked to a normits id, so we can choose the correct tld
+        selection_idx = local_to_normits_lookup.groupby(f"{local_zs.name}_id")[f"{local_zs.name}_to_msoa"].idxmax()
+        selection = local_to_normits_lookup.loc[selection_idx].reset_index(drop=True)
+
+        if len(selection) != len(local_zs.zones):
+            print("There are ids in the zone system that were not matched to a NorMITs zone.")
+            missing_ids = set(local_zs.zones["zone_id"].astype(str)) - set(local_to_normits_lookup[f"{local_zs.name}_id"].astype(str))
+            missing_ids = sorted(missing_ids)
+            print(missing_ids)
+
+        tld_local = pd.merge(selection, tld_normits, how="left", left_on="normits_id", right_on=";normits_v3.3_id")
+        tld_local.to_csv(output_path, index=False)
 
 
 def main() -> None:
@@ -676,11 +732,31 @@ def main() -> None:
                     zone_lookup=parameters.zone_lookup,
                 )
             lookup.to_csv(
-                    parameters.output_folder
+                    parameters.lookup_folder
                     / (
                         f"lookup_{parameters.localisation_area.area_name}_local_"
                         f"{parameters.zone_systems.target_zones.name}.csv"
                     )
+            )
+
+        if parameters.zone_systems.tld_zones is not None:
+            LOG.info(
+                "Creating TLD lookup for new zone system to TLD zone system." \
+                "Write to %s",
+                parameters.lookup_folder
+            )
+            if parameters.tld_lookup is None:
+                raise ValueError("TLD lookup is required but not provided.")
+            
+            tld_normits = pd.read_csv(parameters.tld_lookup.csv)
+            create_tld_lookup(
+                new_zs,
+                parameters.zone_systems.tld_zones,
+                tld_normits,
+                parameters.lookup_folder / (
+                    f"lookup_{parameters.localisation_area.area_name}_local_"
+                    f"{parameters.zone_systems.tld_zones.name}.csv"
+                ),
             )
 
         LOG.info(
