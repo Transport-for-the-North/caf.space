@@ -82,7 +82,10 @@ class Area:
 
 @dataclasses.dataclass
 class ZoneSystems:
-    """Data for the zone systems to be used."""
+    """Data for the zone systems to be used.
+    
+    Required for creating zone system: boundary, internal, external, buffer.
+    Others are optional, for creating lookups."""
 
     boundary_zones: ZoneSystemInfo
     internal_zones: ZoneSystemInfo
@@ -92,6 +95,8 @@ class ZoneSystems:
     weight_zones_emp: LowerZoneSystemInfo | None
     weight_zones_pop: LowerZoneSystemInfo | None
     tld_zones: ZoneSystemInfo | None
+    weighted_centroid_zones: LowerZoneSystemInfo | None
+    oa_internal_pop_centroids: ZoneSystemInfo | None
 
 
 @dataclasses.dataclass
@@ -629,6 +634,53 @@ def create_tld_lookup(local_zs: ZoneSystemInfo,
         tld_local = pd.merge(selection, tld_normits, how="left", left_on="normits_id", right_on=";normits_v3.3_id")
         tld_local.to_csv(output_path, index=False)
 
+def create_weighted_centroids(local_zs: ZoneSystemInfo,
+                              weighted_centroid_zs: LowerZoneSystemInfo,
+                              oa_internal_pop_centroids: ZoneSystemInfo | None,
+                              output_path: pathlib.Path
+                              ):
+    """
+    Create weighted centroids for the given zone system.
+
+    Parameters
+    ----------
+    local_zs : ZoneSystemInfo
+        Local zone system information.
+    weighted_centroid_zs : LowerZoneSystemInfo
+        Zone system information for which to create weighted centroids.
+    oa_internal_pop_centroids : ZoneSystemInfo | None
+        Zone system information for the internal population-weighted centroids, if available.
+    output_path : pathlib.Path
+        Path to save the resulting weighted centroids.
+    """
+    data = local_zs.model_dump()
+    trans_local_zs = TransZoneSystemInfo(**data)
+
+    config = ZoningTranslationInputs(
+        zone_1=trans_local_zs,
+        lower_zoning=weighted_centroid_zs,
+        method="pop"
+    )
+    centroids = ZoneTranslation(config).weighted_centroids()
+    centroids_gdf = gpd.GeoDataFrame(
+            centroids.reset_index(),
+            geometry=gpd.points_from_xy(centroids["x"], centroids["y"]),
+            crs="EPSG:27700",
+        )
+    if oa_internal_pop_centroids is not None:
+        oa_centroids = gpd.read_file(oa_internal_pop_centroids.shapefile)
+        local_zones = gpd.read_file(local_zs.shapefile)
+        internal_ids = local_zones[local_zones["zone_syste"] == "OA"]
+        oa_pop_centroids_local = oa_centroids.merge(
+            internal_ids.drop(columns="geometry"),
+            left_on=oa_internal_pop_centroids.id_col,
+            right_on="zone_name",
+            how="inner"
+        )
+        oa_pop_centroids_local = oa_pop_centroids_local[["zone_id", "geometry"]].set_index("zone_id")
+        centroids_gdf.update(oa_pop_centroids_local).reset_index(inplace=True)
+
+    centroids_gdf.to_file(output_path / "centroids" / f"{local_zs.name}_pop_weighted_centroids_v2.shp")
 
 def main() -> None:
     """Produce new zone system for normits localisation."""
@@ -747,7 +799,7 @@ def main() -> None:
             )
             if parameters.tld_lookup is None:
                 raise ValueError("TLD lookup is required but not provided.")
-            
+
             tld_normits = pd.read_csv(parameters.tld_lookup.csv)
             create_tld_lookup(
                 new_zs,
@@ -757,6 +809,15 @@ def main() -> None:
                     f"lookup_{parameters.localisation_area.area_name}_local_"
                     f"{parameters.zone_systems.tld_zones.name}.csv"
                 ),
+            )
+
+        if parameters.zone_systems.weighted_centroid_zones is not None:
+            LOG.info("Creating weighted centroids for new zone system.")
+            create_weighted_centroids(
+                new_zs,
+                parameters.zone_systems.weighted_centroid_zones,
+                parameters.zone_systems.oa_internal_pop_centroids,
+                parameters.output_folder
             )
 
         LOG.info(
