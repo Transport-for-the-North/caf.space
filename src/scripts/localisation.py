@@ -156,7 +156,7 @@ class _Config(ctk.BaseConfig):
     @functools.cached_property
     def lookup_folder(self) -> pathlib.Path:
         """Folder to save lookup outputs to."""
-        folder = self.output_folder / "lookups" / f"{self.localisation_area.area_name}_localisation_lookups"
+        folder = self.output_path / "lookups" / f"{self.localisation_area.area_name}_localisation_lookups"
         folder.mkdir(parents=True, exist_ok=True)
         return folder
 
@@ -591,7 +591,7 @@ def add_lookup_cols(
 def create_tld_lookup(local_zs: ZoneSystemInfo,
                       tld_zs: ZoneSystemInfo,
                       tld_normits: pd.DataFrame,
-                      output_path: pathlib.Path,
+                      output_folder: pathlib.Path,
                       method: Literal["first", "largest_overlap"] = "first"):
     """Create a lookup to know which TLD to use for each zone in local zoning system, based on NorMITs.
 
@@ -605,12 +605,16 @@ def create_tld_lookup(local_zs: ZoneSystemInfo,
         TLD zone system information.
     tld_normits : pd.DataFrame
         TLD lookup for the original zoning system.
-    output_path : pathlib.Path
-        Path to save the resulting TLD lookup for the local zoning system.
+    output_folder : pathlib.Path
+        Folder to save the resulting lookups.
     """
     local_to_normits_lookup = create_translation_lookup(
                     local_zs, tld_zs
                 )
+    local_to_normits_lookup.to_csv(output_folder / (
+                    f"lookup_{local_zs.name}_"
+                    f"{tld_zs.name}.csv"
+                ), index=False)
 
     # match to the tld lookup
     tld_local = pd.merge(local_to_normits_lookup, tld_normits, how="left", left_on="normits_id", right_on=";normits_v3.3_id")
@@ -618,7 +622,6 @@ def create_tld_lookup(local_zs: ZoneSystemInfo,
     if method == "first":
     # just keep the first instance
         tld_local = tld_local.drop_duplicates(subset=[f"{local_zs.name}_id"], keep="first")
-        tld_local.to_csv(output_path, index=False)
     elif method == "largest_overlap":
         # Assign each localisation zone to a NorMITs zone, based on largest overlap
         # the result should have 1 single id for each cumbria_loca zone, linked to a normits id, so we can choose the correct tld
@@ -632,7 +635,11 @@ def create_tld_lookup(local_zs: ZoneSystemInfo,
             print(missing_ids)
 
         tld_local = pd.merge(selection, tld_normits, how="left", left_on="normits_id", right_on=";normits_v3.3_id")
-        tld_local.to_csv(output_path, index=False)
+
+    tld_local.to_csv(output_folder / (
+                    f"lookup_{local_zs.name}_"
+                    f"{tld_zs.name}_tld.csv"
+                ), index=False)
 
 def create_weighted_centroids(local_zs: ZoneSystemInfo,
                               weighted_centroid_zs: LowerZoneSystemInfo,
@@ -678,9 +685,11 @@ def create_weighted_centroids(local_zs: ZoneSystemInfo,
             how="inner"
         )
         oa_pop_centroids_local = oa_pop_centroids_local[["zone_id", "geometry"]].set_index("zone_id")
-        centroids_gdf.update(oa_pop_centroids_local).reset_index(inplace=True)
+        centroids_gdf.update(oa_pop_centroids_local)
 
-    centroids_gdf.to_file(output_path / "centroids" / f"{local_zs.name}_pop_weighted_centroids_v2.shp")
+    if not (output_path / "centroids").exists():
+        (output_path / "centroids").mkdir(parents=True)
+    centroids_gdf.to_file(output_path / "centroids" / f"{local_zs.name}_pop_weighted_centroids.shp")
 
 def main() -> None:
     """Produce new zone system for normits localisation."""
@@ -793,26 +802,35 @@ def main() -> None:
 
         if parameters.zone_systems.tld_zones is not None:
             LOG.info(
-                "Creating TLD lookup for new zone system to TLD zone system." \
+                "Creating TLD lookup for new zone system to TLD zone system. " \
                 "Write to %s",
                 parameters.lookup_folder
             )
             if parameters.tld_lookup is None:
                 raise ValueError("TLD lookup is required but not provided.")
 
+            new_zs = ZoneSystemInfo(
+                name=f"{parameters.localisation_area.area_name}_local",
+                shapefile=new_zones_path,
+                id_col="zone_id",
+            )
+
             tld_normits = pd.read_csv(parameters.tld_lookup.csv)
             create_tld_lookup(
                 new_zs,
                 parameters.zone_systems.tld_zones,
                 tld_normits,
-                parameters.lookup_folder / (
-                    f"lookup_{parameters.localisation_area.area_name}_local_"
-                    f"{parameters.zone_systems.tld_zones.name}.csv"
-                ),
+                parameters.lookup_folder,
             )
 
         if parameters.zone_systems.weighted_centroid_zones is not None:
             LOG.info("Creating weighted centroids for new zone system.")
+
+            new_zs = ZoneSystemInfo(
+                name=f"{parameters.localisation_area.area_name}_local",
+                shapefile=new_zones_path,
+                id_col="zone_id",
+            )
             create_weighted_centroids(
                 new_zs,
                 parameters.zone_systems.weighted_centroid_zones,
