@@ -56,12 +56,32 @@ zone_systems:
     data_col: Pop
     weight_data_year: 2021
 
-  # Another optional target zone system (normits) for creating TLD lookup
+  ## Optional TLD lookup ## 
+  # Target zone system (normits) for creating TLD lookup
   # Also requires the tld_lookup below
   tld_zones:
     name: normits
     shapefile: D:\normits\data\lookups\input\NorMITs_zoning_v3.3.shp
     id_col: normits_id
+
+  ## Optional CENTROIDS ##
+  # Target zone system for creating weighted centroids
+  weighted_centroid_zones:
+    name: OA
+    shapefile: path/to/gis
+    id_col: OA21CD
+    weight_data: path/to/csv
+    data_col: "Pop"
+    weight_id_col: "OA21CD"
+    weight_data_year: 2021
+
+  # if the internal zoning is the same level as the weighted centroid zones,
+  # the zones can't be used for weighting the centroids, and the internal area 
+  # should be filled in with external population weighted centroids at OA level:
+  oa_internal_pop_centroids:
+    name: OA_centroids
+    shapefile: path/to/gis
+    id_col: OA21CD
 
 # Zoning id to name lookup (optional), has cols zone_id and zone_name
 zone_lookup:
