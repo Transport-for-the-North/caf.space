@@ -11,21 +11,22 @@ import enum
 import functools
 import logging
 import pathlib
-import pydantic
-from pydantic import dataclasses
-import pandas as pd
-import geopandas as gpd
 from typing import Literal
 
+import geopandas as gpd
+import pandas as pd
+import pydantic
+from pydantic import dataclasses
+
 import caf.toolkit as ctk
-from caf.space import zone_correspondence
+
+from caf.space import ZoneTranslation, zone_correspondence
 from caf.space.inputs import (
-    ZoneSystemInfo,
-    TransZoneSystemInfo,
     LowerZoneSystemInfo,
+    TransZoneSystemInfo,
+    ZoneSystemInfo,
     ZoningTranslationInputs,
 )
-from caf.space import ZoneTranslation
 
 ##### CONSTANTS #####s
 
@@ -83,7 +84,7 @@ class Area:
 @dataclasses.dataclass
 class ZoneSystems:
     """Data for the zone systems to be used.
-    
+
     Required for creating zone system: boundary, internal, external, buffer.
     Others are optional, for creating lookups."""
 
@@ -127,6 +128,7 @@ class ZoneLookup:
 
         return data
 
+
 class _Config(ctk.BaseConfig):
     """Config for running localisation zoning script."""
 
@@ -142,8 +144,12 @@ class _Config(ctk.BaseConfig):
     @functools.cached_property
     def output_folder(self) -> pathlib.Path:
         """Folder to save outputs to."""
-        folder = self.output_path / "zones" / f"{self.localisation_area.area_name}_localisation_zones"
-        folder.mkdir(parents=True,exist_ok=True)
+        folder = (
+            self.output_path
+            / "zones"
+            / f"{self.localisation_area.area_name}_localisation_zones"
+        )
+        folder.mkdir(parents=True, exist_ok=True)
         return folder
 
     @functools.cached_property
@@ -156,7 +162,11 @@ class _Config(ctk.BaseConfig):
     @functools.cached_property
     def lookup_folder(self) -> pathlib.Path:
         """Folder to save lookup outputs to."""
-        folder = self.output_path / "lookups" / f"{self.localisation_area.area_name}_localisation_lookups"
+        folder = (
+            self.output_path
+            / "lookups"
+            / f"{self.localisation_area.area_name}_localisation_lookups"
+        )
         folder.mkdir(parents=True, exist_ok=True)
         return folder
 
@@ -453,7 +463,7 @@ def create_combined_lookup(
     *,
     emp_zone_system: LowerZoneSystemInfo | None = None,
     pop_zone_system: LowerZoneSystemInfo | None = None,
-    lookup_additionals: LookupAdditionals | None = None,
+    lookup_additionals: Lookup | None = None,
     zone_lookup: ZoneLookup | None = None,
     output_path: pathlib.Path | None = None,
 ) -> pd.DataFrame:
@@ -512,7 +522,10 @@ def create_combined_lookup(
                 inplace=True,
             )
             lookup = add_lookup_cols(
-                lookup, lookup_additionals, zone_lookup, f"{target_zone_system.name}_id_string"
+                lookup,
+                lookup_additionals,
+                zone_lookup,
+                f"{target_zone_system.name}_id_string",
             )
 
     if output_path is not None:
@@ -588,11 +601,13 @@ def add_lookup_cols(
     return new_lookup.drop(["zone_id", "zone_name"], axis=1)
 
 
-def create_tld_lookup(local_zs: ZoneSystemInfo,
-                      tld_zs: ZoneSystemInfo,
-                      tld_normits: pd.DataFrame,
-                      output_folder: pathlib.Path,
-                      method: Literal["first", "largest_overlap"] = "first"):
+def create_tld_lookup(
+    local_zs: ZoneSystemInfo,
+    tld_zs: ZoneSystemInfo,
+    tld_normits: pd.DataFrame,
+    output_folder: pathlib.Path,
+    method: Literal["first", "largest_overlap"] = "first",
+):
     """Create a lookup to know which TLD to use for each zone in local zoning system, based on NorMITs.
 
     Needs a lookup between local zoning system and original zoning system, and a tld lookup for the original zoning system.
@@ -608,44 +623,58 @@ def create_tld_lookup(local_zs: ZoneSystemInfo,
     output_folder : pathlib.Path
         Folder to save the resulting lookups.
     """
-    local_to_normits_lookup = create_translation_lookup(
-                    local_zs, tld_zs
-                )
-    local_to_normits_lookup.to_csv(output_folder / (
-                    f"lookup_{local_zs.name}_"
-                    f"{tld_zs.name}.csv"
-                ), index=False)
+    local_to_normits_lookup = create_translation_lookup(local_zs, tld_zs)
+    local_to_normits_lookup.to_csv(
+        output_folder / (f"lookup_{local_zs.name}_{tld_zs.name}.csv"), index=False
+    )
 
     # match to the tld lookup
-    tld_local = pd.merge(local_to_normits_lookup, tld_normits, how="left", left_on="normits_id", right_on=";normits_v3.3_id")
+    tld_local = pd.merge(
+        local_to_normits_lookup,
+        tld_normits,
+        how="left",
+        left_on="normits_id",
+        right_on=";normits_v3.3_id",
+    )
 
     if method == "first":
-    # just keep the first instance
+        # just keep the first instance
         tld_local = tld_local.drop_duplicates(subset=[f"{local_zs.name}_id"], keep="first")
     elif method == "largest_overlap":
         # Assign each localisation zone to a NorMITs zone, based on largest overlap
         # the result should have 1 single id for each cumbria_loca zone, linked to a normits id, so we can choose the correct tld
-        selection_idx = local_to_normits_lookup.groupby(f"{local_zs.name}_id")[f"{local_zs.name}_to_msoa"].idxmax()
+        selection_idx = local_to_normits_lookup.groupby(f"{local_zs.name}_id")[
+            f"{local_zs.name}_to_msoa"
+        ].idxmax()
         selection = local_to_normits_lookup.loc[selection_idx].reset_index(drop=True)
 
         if len(selection) != len(local_zs.zones):
             print("There are ids in the zone system that were not matched to a NorMITs zone.")
-            missing_ids = set(local_zs.zones["zone_id"].astype(str)) - set(local_to_normits_lookup[f"{local_zs.name}_id"].astype(str))
+            missing_ids = set(local_zs.zones["zone_id"].astype(str)) - set(
+                local_to_normits_lookup[f"{local_zs.name}_id"].astype(str)
+            )
             missing_ids = sorted(missing_ids)
             print(missing_ids)
 
-        tld_local = pd.merge(selection, tld_normits, how="left", left_on="normits_id", right_on=";normits_v3.3_id")
+        tld_local = pd.merge(
+            selection,
+            tld_normits,
+            how="left",
+            left_on="normits_id",
+            right_on=";normits_v3.3_id",
+        )
 
-    tld_local.to_csv(output_folder / (
-                    f"lookup_{local_zs.name}_"
-                    f"{tld_zs.name}_tld.csv"
-                ), index=False)
+    tld_local.to_csv(
+        output_folder / (f"lookup_{local_zs.name}_{tld_zs.name}_tld.csv"), index=False
+    )
 
-def create_weighted_centroids(local_zs: ZoneSystemInfo,
-                              weighted_centroid_zs: LowerZoneSystemInfo,
-                              oa_internal_pop_centroids: ZoneSystemInfo | None,
-                              output_path: pathlib.Path
-                              ):
+
+def create_weighted_centroids(
+    local_zs: ZoneSystemInfo,
+    weighted_centroid_zs: LowerZoneSystemInfo,
+    oa_internal_pop_centroids: ZoneSystemInfo | None,
+    output_path: pathlib.Path,
+):
     """
     Create weighted centroids for the given zone system.
 
@@ -664,16 +693,14 @@ def create_weighted_centroids(local_zs: ZoneSystemInfo,
     trans_local_zs = TransZoneSystemInfo(**data)
 
     config = ZoningTranslationInputs(
-        zone_1=trans_local_zs,
-        lower_zoning=weighted_centroid_zs,
-        method="pop"
+        zone_1=trans_local_zs, lower_zoning=weighted_centroid_zs, method="pop"
     )
     centroids = ZoneTranslation(config).weighted_centroids()
     centroids_gdf = gpd.GeoDataFrame(
-            centroids.reset_index(),
-            geometry=gpd.points_from_xy(centroids["x"], centroids["y"]),
-            crs="EPSG:27700",
-        )
+        centroids.reset_index(),
+        geometry=gpd.points_from_xy(centroids["x"], centroids["y"]),
+        crs="EPSG:27700",
+    )
     if oa_internal_pop_centroids is not None:
         oa_centroids = gpd.read_file(oa_internal_pop_centroids.shapefile)
         local_zones = gpd.read_file(local_zs.shapefile)
@@ -682,14 +709,19 @@ def create_weighted_centroids(local_zs: ZoneSystemInfo,
             internal_ids.drop(columns="geometry"),
             left_on=oa_internal_pop_centroids.id_col,
             right_on="zone_name",
-            how="inner"
+            how="inner",
         )
-        oa_pop_centroids_local = oa_pop_centroids_local[["zone_id", "geometry"]].set_index("zone_id")
+        oa_pop_centroids_local = oa_pop_centroids_local[["zone_id", "geometry"]].set_index(
+            "zone_id"
+        )
         centroids_gdf.update(oa_pop_centroids_local)
 
     if not (output_path / "centroids").exists():
         (output_path / "centroids").mkdir(parents=True)
-    centroids_gdf.to_file(output_path / "centroids" / f"{local_zs.name}_pop_weighted_centroids.shp")
+    centroids_gdf.to_file(
+        output_path / "centroids" / f"{local_zs.name}_pop_weighted_centroids.shp"
+    )
+
 
 def main() -> None:
     """Produce new zone system for normits localisation."""
@@ -793,18 +825,17 @@ def main() -> None:
                     zone_lookup=parameters.zone_lookup,
                 )
             lookup.to_csv(
-                    parameters.lookup_folder
-                    / (
-                        f"lookup_{parameters.localisation_area.area_name}_local_"
-                        f"{parameters.zone_systems.target_zones.name}.csv"
-                    )
+                parameters.lookup_folder
+                / (
+                    f"lookup_{parameters.localisation_area.area_name}_local_"
+                    f"{parameters.zone_systems.target_zones.name}.csv"
+                )
             )
 
         if parameters.zone_systems.tld_zones is not None:
             LOG.info(
-                "Creating TLD lookup for new zone system to TLD zone system. " \
-                "Write to %s",
-                parameters.lookup_folder
+                "Creating TLD lookup for new zone system to TLD zone system. Write to %s",
+                parameters.lookup_folder,
             )
             if parameters.tld_lookup is None:
                 raise ValueError("TLD lookup is required but not provided.")
@@ -835,7 +866,7 @@ def main() -> None:
                 new_zs,
                 parameters.zone_systems.weighted_centroid_zones,
                 parameters.zone_systems.oa_internal_pop_centroids,
-                parameters.output_folder
+                parameters.output_folder,
             )
 
         LOG.info(
