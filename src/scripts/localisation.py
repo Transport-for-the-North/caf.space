@@ -86,7 +86,8 @@ class ZoneSystems:
     """Data for the zone systems to be used.
 
     Required for creating zone system: boundary, internal, external, buffer.
-    Others are optional, for creating lookups."""
+    Others are optional, for creating lookups.
+    """
 
     boundary_zones: ZoneSystemInfo
     internal_zones: ZoneSystemInfo
