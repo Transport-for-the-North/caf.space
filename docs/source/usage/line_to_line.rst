@@ -11,7 +11,12 @@ Configuration
 -------------
 
 Use a YAML config file with one reference network and one or more target networks.
-An example config is available at ``examples/line_to_line.yml``.
+The config is parsed by :class:`caf.space.line_to_line.Line2LineConf`.
+
+Example config:
+
+.. include:: ../../../examples/line_to_line.yml
+   :literal:
 
 Output QA warnings
 ------------------
