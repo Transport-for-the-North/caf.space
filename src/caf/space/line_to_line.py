@@ -435,6 +435,7 @@ def main(conf: Line2LineConf):
             angle_threshold=conf.angle_threshold,
         )
         results = _filter_results(results)
+        _warn_on_quality_issues(results, target.name)
 
         out_path = conf.output_folder / f"{target.name}-{conf.reference.name}.csv"
         results.to_csv(out_path)
@@ -566,6 +567,50 @@ def _filter_results(results: pd.DataFrame) -> pd.DataFrame:
     return results.drop(index=drop_indices)
 
 
+def _warn_on_quality_issues(results: pd.DataFrame, target_name: str) -> None:
+    """Warn about quality issues that should be checked in correspondence outputs."""
+    lengths = results.groupby(level="id_targ").agg(
+        {"length_targ": "first", "overlap_length": lambda values: values.sum(min_count=1)}
+    )
+    if len(lengths) == 0:
+        warnings.warn(
+            f"No correspondence rows produced for target {target_name}. Check outputs manually.",
+            RuntimeWarning,
+            stacklevel=3,
+        )
+        return
+
+    overlap_exceeds = lengths["overlap_length"] > lengths["length_targ"]
+    if overlap_exceeds.any():
+        count = overlap_exceeds.sum()
+        warnings.warn(
+            f"{count:,} links in {target_name} have overlap length greater than target length. "
+            "Check correspondence outputs for duplicate or poor matches.",
+            RuntimeWarning,
+            stacklevel=3,
+        )
+
+    overlap_zero = lengths["overlap_length"] == 0
+    if overlap_zero.any():
+        count = overlap_zero.sum()
+        warnings.warn(
+            f"{count:,} links in {target_name} have zero overlap length. "
+            "Check correspondence outputs for missed matches.",
+            RuntimeWarning,
+            stacklevel=3,
+        )
+
+    overlap_invalid = lengths["overlap_length"].isna() | (lengths["overlap_length"] < 0)
+    if overlap_invalid.any():
+        count = overlap_invalid.sum()
+        warnings.warn(
+            f"{count:,} links in {target_name} have invalid overlap length values "
+            "(negative or NaN). Check correspondence outputs and input geometries.",
+            RuntimeWarning,
+            stacklevel=3,
+        )
+
+
 def _length_stats(
     results: pd.DataFrame,
     target_id: str,
@@ -575,8 +620,11 @@ def _length_stats(
 ) -> str:
     """Summary of comparison between reference overlap and target link length."""
     lengths = results.groupby(level=target_id).agg(
-        {target_length_col: "first", overlap_col: "sum"}
+        {target_length_col: "first", overlap_col: lambda values: values.sum(min_count=1)}
     )
+    if len(lengths) == 0:
+        return "No correspondence results to summarise."
+
     stats: dict[str, int] = {
         "Overlap > Target": (lengths[overlap_col] > lengths[target_length_col]).sum(),
         "Overlap < Target": (lengths[overlap_col] < lengths[target_length_col]).sum(),
