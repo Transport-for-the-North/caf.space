@@ -6,6 +6,7 @@ The below details the basic usage and arguments for running from the command lin
 
 .. seealso::
     :ref:`graphical user interface` for information on parameters.
+    :doc:`line_to_line` for the line correspondence CLI workflow.
 
 .. argparse::
     :module: caf.space.inputs
