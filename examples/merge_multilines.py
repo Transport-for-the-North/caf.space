@@ -10,10 +10,12 @@ separate features.
 # %%
 # Imports
 
+# Third Party
 import caf.toolkit as ctk
 import geopandas as gpd
 import numpy as np
 
+# Local Imports
 import caf.space as cspace
 
 # %%

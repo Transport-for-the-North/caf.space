@@ -6,21 +6,21 @@ import functools
 import logging
 import pathlib
 import warnings
-from typing import Annotated, Sequence, Union
+from typing import Annotated, Sequence
 
 # Third Party
+import caf.toolkit as ctk
 import geopandas as gpd
 import numpy as np
 import pandas as pd
 import pydantic
 import shapely
+from caf.toolkit.config_base import BaseConfig
 from pydantic.dataclasses import dataclass
 
 # Local Imports
 import caf.space as cspace
-import caf.toolkit as ctk
 from caf.space import inputs
-from caf.toolkit.config_base import BaseConfig
 
 # # # CONSTANTS # # #
 
@@ -50,7 +50,7 @@ class ConvergenceValues:
 class LinkInfo:
     """Metadata and lazy-loaded geospatial data for one network link dataset."""
 
-    identifier: Union[str, list[str]]
+    identifier: str | list[str]
     file: inputs.GeoDataFile
     name: str
 
