@@ -653,7 +653,7 @@ def _length_stats(
     )
 
 
-def _run() -> None:
+def _create_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         _NAME,
         description=__doc__,
@@ -665,6 +665,11 @@ def _run() -> None:
         default=_CONFIG,
         help="path to line to line YAML config file",
     )
+    return parser
+
+
+def _run() -> None:
+    parser = _create_parser()
 
     args = parser.parse_args()
     config_path: pathlib.Path = args.config

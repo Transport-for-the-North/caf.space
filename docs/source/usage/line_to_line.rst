@@ -3,9 +3,12 @@ Line-to-Line Correspondence
 
 CAF.space also provides a separate CLI entry point for line correspondence:
 
-.. code-block:: bash
+Usage
+-----
 
-    caf.space.line_to_line path/to/line_to_line.yml
+.. argparse::
+    :module: caf.space.line_to_line
+    :func: _create_parser
 
 Configuration
 -------------

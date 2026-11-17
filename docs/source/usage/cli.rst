@@ -10,9 +10,9 @@ The below details the basic usage and arguments for running from the command lin
     - :doc:`line_to_line` for the line correspondence CLI workflow.
 
 .. argparse::
-    :module: caf.space.inputs
+    :module: caf.space.line_to_line
     :func: _create_parser
-    :prog: caf.space
+    :prog: caf.space.line_to_line
 
 Config
 ------
