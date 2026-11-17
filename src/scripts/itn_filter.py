@@ -1,9 +1,12 @@
 # pylint: disable=all
 
-import geopandas as gpd
-import pandas as pd
-import networkx as nx
+# Built-Ins
 from typing import Union
+
+# Third Party
+import geopandas as gpd
+import networkx as nx
+import pandas as pd
 
 
 def remove_deadends(gdf: Union[gpd.GeoDataFrame, pd.DataFrame]):

@@ -2,19 +2,22 @@
 # pylint: disable=all
 # Built-Ins
 
+# Built-Ins
+import os
+import pathlib
+import warnings
+from functools import reduce
+
 # Third Party
 import geopandas as gpd
 import pandas as pd
-import warnings
-from functools import reduce
-import pathlib
-import os
 
 # Local Imports
+from caf.space import ZoneTranslation, ZoningTranslationInputs
+
 # pylint: disable=import-error,wrong-import-position
 # Local imports here
-from caf.space.inputs import ZoneSystemInfo, TransZoneSystemInfo
-from caf.space import ZoneTranslation, ZoningTranslationInputs
+from caf.space.inputs import TransZoneSystemInfo, ZoneSystemInfo
 
 # pylint: enable=import-error,wrong-import-position
 
@@ -161,6 +164,7 @@ if __name__ == "__main__":
 
     checks = check_nesting(target_zoning=normits, ref_zoning=[noham, norms, luti])
 
+    # Third Party
     from shapely.geometry import Polygon
 
     normits = gpd.read_file(r"E:\shapefiles\normits_v1.shp")
