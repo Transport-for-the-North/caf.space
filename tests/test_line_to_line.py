@@ -33,7 +33,7 @@ def test_geodatafile_raises_for_missing_columns_in_gpkg(tmp_path: Path):
     [
         ([12.0], "greater than target length"),
         ([0.0], "zero overlap length"),
-        ([float('nan')], "invalid overlap length values"),
+        ([float("nan")], "invalid overlap length values"),
     ],
 )
 def test_warn_on_quality_issues(overlap_values, error_pattern):

@@ -6,21 +6,21 @@ import functools
 import logging
 import pathlib
 import warnings
-from typing import Annotated, Literal, Sequence, Union
+from typing import Annotated, Sequence, Union
 
 # Third Party
-import caf.toolkit as ctk
 import geopandas as gpd
 import numpy as np
 import pandas as pd
 import pydantic
 import shapely
-from caf.toolkit.config_base import BaseConfig
 from pydantic.dataclasses import dataclass
 
 # Local Imports
 import caf.space as cspace
+import caf.toolkit as ctk
 from caf.space import inputs
+from caf.toolkit.config_base import BaseConfig
 
 # # # CONSTANTS # # #
 
@@ -38,6 +38,8 @@ _CONFIG = pathlib.Path("line_to_line.yml")
 
 @dataclass
 class ConvergenceValues:
+    """Convergence metrics between a target and reference geometry."""
+
     rmse: float
     crow_fly_length: float
     full_length: float
@@ -46,6 +48,8 @@ class ConvergenceValues:
 
 @dataclass
 class LinkInfo:
+    """Metadata and lazy-loaded geospatial data for one network link dataset."""
+
     identifier: Union[str, list[str]]
     file: inputs.GeoDataFile
     name: str
@@ -69,10 +73,12 @@ class LinkInfo:
 
     @property
     def list_ident(self):
+        """Identifier columns as a list."""
         return [self.identifier] if isinstance(self.identifier, str) else self.identifier
 
 
 def _check_filename(value: str | None, *, suffixes: tuple[str, ...]) -> str | None:
+    """Validate optional output filename suffixes."""
     if value is None:
         return value
 
@@ -83,6 +89,8 @@ def _check_filename(value: str | None, *, suffixes: tuple[str, ...]) -> str | No
 
 
 class Line2LineConf(BaseConfig):
+    """Configuration model for line-to-line correspondence processing."""
+
     model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
 
     target: LinkInfo | list[LinkInfo]
@@ -161,8 +169,8 @@ def rmse(line_1: shapely.LineString, line_2: shapely.LineString, sections: int =
             )
         )
     points = np.array(points)
-    rmse = np.sqrt((points**2).sum()) / sections
-    return rmse
+    score = np.sqrt((points**2).sum()) / sections
+    return score
 
 
 def project_line(longer, shorter_start, shorter_end):
@@ -174,8 +182,7 @@ def project_line(longer, shorter_start, shorter_end):
     # if this is the end of the line, there is only one entry
     if len(lines) == 1:
         return lines[0]
-    else:
-        return lines[-1]
+    return lines[-1]
 
 
 def preprocess(link_info: LinkInfo, buffer_dist=50, crs="EPSG:27700"):
@@ -415,6 +422,7 @@ def _group_merge(
 
 
 def main(conf: Line2LineConf):
+    """Run the line-to-line workflow for one config object."""
     LOG.debug("Running %s with parameters:\n%s", _NAME, conf.to_yaml())
     ref_processed = preprocess(conf.reference)
     ref_processed.index.name = "id_ref"
