@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Module for some miscellaneous functions used elsewhere."""
+
 # Built-Ins
 from pathlib import Path
 
@@ -140,16 +141,19 @@ def line_to_points(line_gdf, id_col):
 
 
 def calc_gradient(a: shapely.Point, b: shapely.Point):
+    """Calculate the gradient between two 3D points."""
     run = np.sqrt((a.y - b.y) ** 2 + (a.x - b.x) ** 2)
     rise = a.z - b.z
     return rise / run
 
 
 def calc_midpoint(a: shapely.Point, b: shapely.Point):
+    """Calculate the midpoint between two 3D points."""
     return shapely.Point([a.x / 2 + b.x / 2, a.y / 2 + b.y / 2, a.z / 2 + b.z / 2])
 
 
 def line_gradients(line):
+    """Calculate midpoint gradients for each segment in a line."""
     points = line.coords
     grads = []
     for idx in range(len(points) - 1):
@@ -162,6 +166,7 @@ def line_gradients(line):
 
 
 def gradients_alt(points):
+    """Alternative midpoint/gradient calculation from exploded point rows."""
     a = points.iloc[:-1]
     b = points.iloc[1:]
     a.columns = ["a_id", "a_geom"]
@@ -182,6 +187,7 @@ def gradients_alt(points):
 
 
 def grad_points_gdf(gdf):
-    grad_list = gdf.geometry.apply(lambda x: line_gradients(x)).explode().to_list()
+    """Build a GeoDataFrame of midpoint gradients for all input lines."""
+    grad_list = gdf.geometry.apply(line_gradients).explode().to_list()
     grad_frame = gpd.GeoDataFrame(grad_list, columns=["geometry", "gradient"])
     return grad_frame

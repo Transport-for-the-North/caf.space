@@ -6,7 +6,7 @@ import functools
 import logging
 import pathlib
 import warnings
-from typing import Annotated, Literal, Sequence, Union
+from typing import Annotated, Sequence
 
 # Third Party
 import caf.toolkit as ctk
@@ -38,6 +38,8 @@ _CONFIG = pathlib.Path("line_to_line.yml")
 
 @dataclass
 class ConvergenceValues:
+    """Convergence metrics between a target and reference geometry."""
+
     rmse: float
     crow_fly_length: float
     full_length: float
@@ -46,7 +48,9 @@ class ConvergenceValues:
 
 @dataclass
 class LinkInfo:
-    identifier: Union[str, list[str]]
+    """Metadata and lazy-loaded geospatial data for one network link dataset."""
+
+    identifier: str | list[str]
     file: inputs.GeoDataFile
     name: str
 
@@ -69,10 +73,12 @@ class LinkInfo:
 
     @property
     def list_ident(self):
+        """Identifier columns as a list."""
         return [self.identifier] if isinstance(self.identifier, str) else self.identifier
 
 
 def _check_filename(value: str | None, *, suffixes: tuple[str, ...]) -> str | None:
+    """Validate optional output filename suffixes."""
     if value is None:
         return value
 
@@ -83,6 +89,8 @@ def _check_filename(value: str | None, *, suffixes: tuple[str, ...]) -> str | No
 
 
 class Line2LineConf(BaseConfig):
+    """Configuration model for line-to-line correspondence processing."""
+
     model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
 
     target: LinkInfo | list[LinkInfo]
@@ -161,8 +169,8 @@ def rmse(line_1: shapely.LineString, line_2: shapely.LineString, sections: int =
             )
         )
     points = np.array(points)
-    rmse = np.sqrt((points**2).sum()) / sections
-    return rmse
+    score = np.sqrt((points**2).sum()) / sections
+    return score
 
 
 def project_line(longer, shorter_start, shorter_end):
@@ -174,8 +182,7 @@ def project_line(longer, shorter_start, shorter_end):
     # if this is the end of the line, there is only one entry
     if len(lines) == 1:
         return lines[0]
-    else:
-        return lines[-1]
+    return lines[-1]
 
 
 def preprocess(link_info: LinkInfo, buffer_dist=50, crs="EPSG:27700"):
@@ -415,6 +422,7 @@ def _group_merge(
 
 
 def main(conf: Line2LineConf):
+    """Run the line-to-line workflow for one config object."""
     LOG.debug("Running %s with parameters:\n%s", _NAME, conf.to_yaml())
     ref_processed = preprocess(conf.reference)
     ref_processed.index.name = "id_ref"
@@ -435,6 +443,7 @@ def main(conf: Line2LineConf):
             angle_threshold=conf.angle_threshold,
         )
         results = _filter_results(results)
+        _warn_on_quality_issues(results, target.name)
 
         out_path = conf.output_folder / f"{target.name}-{conf.reference.name}.csv"
         results.to_csv(out_path)
@@ -566,6 +575,50 @@ def _filter_results(results: pd.DataFrame) -> pd.DataFrame:
     return results.drop(index=drop_indices)
 
 
+def _warn_on_quality_issues(results: pd.DataFrame, target_name: str) -> None:
+    """Warn about quality issues that should be checked in correspondence outputs."""
+    lengths = results.groupby(level="id_targ").agg(
+        {"length_targ": "first", "overlap_length": lambda values: values.sum(min_count=1)}
+    )
+    if len(lengths) == 0:
+        warnings.warn(
+            f"No correspondence rows produced for target {target_name}. Check outputs manually.",
+            RuntimeWarning,
+            stacklevel=3,
+        )
+        return
+
+    overlap_exceeds = lengths["overlap_length"] > lengths["length_targ"]
+    if overlap_exceeds.any():
+        count = overlap_exceeds.sum()
+        warnings.warn(
+            f"{count:,} links in {target_name} have overlap length greater than target length. "
+            "Check correspondence outputs for duplicate or poor matches.",
+            RuntimeWarning,
+            stacklevel=3,
+        )
+
+    overlap_zero = lengths["overlap_length"] == 0
+    if overlap_zero.any():
+        count = overlap_zero.sum()
+        warnings.warn(
+            f"{count:,} links in {target_name} have zero overlap length. "
+            "Check correspondence outputs for missed matches.",
+            RuntimeWarning,
+            stacklevel=3,
+        )
+
+    overlap_invalid = lengths["overlap_length"].isna() | (lengths["overlap_length"] < 0)
+    if overlap_invalid.any():
+        count = overlap_invalid.sum()
+        warnings.warn(
+            f"{count:,} links in {target_name} have invalid overlap length values "
+            "(negative or NaN). Check correspondence outputs and input geometries.",
+            RuntimeWarning,
+            stacklevel=3,
+        )
+
+
 def _length_stats(
     results: pd.DataFrame,
     target_id: str,
@@ -575,8 +628,11 @@ def _length_stats(
 ) -> str:
     """Summary of comparison between reference overlap and target link length."""
     lengths = results.groupby(level=target_id).agg(
-        {target_length_col: "first", overlap_col: "sum"}
+        {target_length_col: "first", overlap_col: lambda values: values.sum(min_count=1)}
     )
+    if len(lengths) == 0:
+        return "No correspondence results to summarise."
+
     stats: dict[str, int] = {
         "Overlap > Target": (lengths[overlap_col] > lengths[target_length_col]).sum(),
         "Overlap < Target": (lengths[overlap_col] < lengths[target_length_col]).sum(),
@@ -597,7 +653,7 @@ def _length_stats(
     )
 
 
-def _run() -> None:
+def _create_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         _NAME,
         description=__doc__,
@@ -609,6 +665,11 @@ def _run() -> None:
         default=_CONFIG,
         help="path to line to line YAML config file",
     )
+    return parser
+
+
+def _run() -> None:
+    parser = _create_parser()
 
     args = parser.parse_args()
     config_path: pathlib.Path = args.config

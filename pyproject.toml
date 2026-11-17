@@ -51,7 +51,9 @@ target-version = ['py311']
 
 [tool.pylint.messages_control]
 disable = [
-    "line-too-long",    # Compatibility with black
+    "line-too-long",      # Compatibility with black
+    "wrong-import-order", # Compatibility with isort
+    "ungrouped-imports",  # Compatibility with isort
     "too-many-lines",
     "use-dict-literal",
     "use-list-literal",

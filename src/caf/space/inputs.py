@@ -46,6 +46,22 @@ class GeoDataFile:
     columns: list[str] | None = None
     index_cols: list[str] | str | None = None
 
+    def _check_columns_exist(self, columns: list[str] | None) -> None:
+        """Validate requested columns exist in the source file schema."""
+        if columns is None:
+            return
+
+        with fiona.open(self.path, layer=self.layer) as source:
+            schema_columns = set(source.schema["properties"].keys())
+
+        missing = [column for column in columns if column not in schema_columns]
+        if missing:
+            layer = "default layer" if self.layer is None else f"layer {self.layer!r}"
+            raise ValueError(
+                f"Column(s) {missing} not found in {layer} of {self.path}. "
+                f"Available columns are: {sorted(schema_columns)}"
+            )
+
     def read(self, **kwargs) -> gpd.GeoDataFrame:
         """Read data from files using :func:`gpd.read_file`.
 
@@ -65,6 +81,9 @@ class GeoDataFile:
             if "columns" in kwargs:
                 warnings.warn("columns provided twice, using combination", UserWarning)
                 columns.extend(i for i in kwargs.pop("columns") if i not in columns)
+            columns = list(dict.fromkeys(columns))
+
+        self._check_columns_exist(columns)
 
         data = gpd.read_file(
             self.path, layer=self.layer, engine=engine, columns=columns, **kwargs
