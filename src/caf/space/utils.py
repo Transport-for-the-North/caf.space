@@ -2,6 +2,7 @@
 """Module for some miscellaneous functions used elsewhere."""
 
 # Built-Ins
+import warnings
 from pathlib import Path
 
 # Third Party
@@ -191,3 +192,11 @@ def grad_points_gdf(gdf):
     grad_list = gdf.geometry.apply(line_gradients).explode().to_list()
     grad_frame = gpd.GeoDataFrame(grad_list, columns=["geometry", "gradient"])
     return grad_frame
+
+
+def set_crs(gdf: gpd.GeoDataFrame, name: str) -> gpd.GeoDataFrame:
+    """Set crs of gdf if missing."""
+    if gdf.crs is None:
+        warnings.warn(f"Zone {name} has no CRS, setting crs to EPSG:27700.", stacklevel=2)
+        gdf = gdf.set_crs("EPSG:27700")
+    return gdf
