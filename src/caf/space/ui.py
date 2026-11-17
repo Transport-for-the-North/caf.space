@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 "User interface for caf.space."
+
 # Built-Ins
 import logging
 import sys
