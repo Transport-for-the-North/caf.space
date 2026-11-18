@@ -5,12 +5,14 @@ CAF.space provides a command-line interface (CLI) for the zone correspondence fu
 The below details the basic usage and arguments for running from the command line.
 
 .. seealso::
-    :ref:`graphical user interface` for information on parameters.
+
+    - :ref:`graphical user interface` for information on parameters.
+    - :doc:`line_to_line` for the line correspondence CLI workflow.
 
 .. argparse::
-    :module: caf.space.inputs
+    :module: caf.space.line_to_line
     :func: _create_parser
-    :prog: caf.space
+    :prog: caf.space.line_to_line
 
 Config
 ------
