@@ -6,7 +6,8 @@ import functools
 import logging
 import pathlib
 import warnings
-from typing import Annotated, Sequence
+from collections.abc import Sequence
+from typing import Annotated
 
 # Third Party
 import caf.toolkit as ctk
@@ -15,6 +16,7 @@ import numpy as np
 import pandas as pd
 import pydantic
 import shapely
+import shapely.ops
 from caf.toolkit.config_base import BaseConfig
 from pydantic.dataclasses import dataclass
 
@@ -72,7 +74,7 @@ class LinkInfo:
         self._gdf = value
 
     @property
-    def list_ident(self):
+    def list_ident(self) -> list[str]:
         """Identifier columns as a list."""
         return [self.identifier] if isinstance(self.identifier, str) else self.identifier
 
@@ -134,7 +136,7 @@ class Line2LineConf(BaseConfig):
 # # # FUNCTIONS # # #
 
 
-def calc_angle(line):
+def calc_angle(line: shapely.LineString) -> float:
     """Calculate the angle of a line in degrees."""
     start = shapely.get_point(line, 0)
     end = shapely.get_point(line, -1)
@@ -143,7 +145,9 @@ def calc_angle(line):
     return np.mod(np.arctan2(y, x) * (180 / np.pi), 360)
 
 
-def relative_angle(feat_1, feat_2):
+def relative_angle(
+    feat_1: shapely.LineString | float, feat_2: shapely.LineString | float
+) -> float:
     """Calculate the relative angle between two features."""
     if isinstance(feat_1, shapely.LineString):
         angle_1 = calc_angle(feat_1)
@@ -159,7 +163,7 @@ def relative_angle(feat_1, feat_2):
     return angle
 
 
-def rmse(line_1: shapely.LineString, line_2: shapely.LineString, sections: int = 10):
+def rmse(line_1: shapely.LineString, line_2: shapely.LineString, sections: int = 10) -> float:
     """Calculate the root mean square distance between two lines."""
     points = []
     for seg in range(sections + 1):
@@ -173,7 +177,9 @@ def rmse(line_1: shapely.LineString, line_2: shapely.LineString, sections: int =
     return score
 
 
-def project_line(longer, shorter_start, shorter_end):
+def project_line(
+    longer: shapely.LineString, shorter_start: shapely.Point, shorter_end: shapely.Point
+) -> shapely.LineString:
     """Project a line onto another line, returning the last segment."""
     start = longer.interpolate(longer.project(shorter_start))
     end = longer.interpolate(longer.project(shorter_end))
@@ -185,7 +191,9 @@ def project_line(longer, shorter_start, shorter_end):
     return lines[-1]
 
 
-def preprocess(link_info: LinkInfo, buffer_dist=50, crs="EPSG:27700"):
+def preprocess(
+    link_info: LinkInfo, buffer_dist: int = 50, crs: str = "EPSG:27700"
+) -> gpd.GeoDataFrame:
     """
     Preprocess a link.
 
@@ -269,7 +277,7 @@ def _set_id_column(
 
 def _check_geom_type(
     data: gpd.GeoDataFrame, valid_types: Sequence[str], *, error: bool = True
-):
+) -> None:
     if data.geom_type.isin(valid_types).all():
         return
 
@@ -285,9 +293,11 @@ def _check_geom_type(
     warnings.warn(message, RuntimeWarning, stacklevel=3)
 
 
-def init_join(targ, ref, angle_threshold=60):
+def init_join(
+    targ: gpd.GeoDataFrame, ref: gpd.GeoDataFrame, angle_threshold: int = 60
+) -> pd.Series:
     """
-    Initial join between target and reference links.
+    Initialise join between target and reference links.
 
     This will join all links in ref within the buffer of targ, and filter for the
     relative angle between them to be less than the angle_threshold.
@@ -312,7 +322,9 @@ def init_join(targ, ref, angle_threshold=60):
     return joined.loc[mask, "id_ref"]
 
 
-def find_con(longer, shorter, longer_suffix: str = "", shorter_suffix: str = ""):
+def find_con(
+    longer: pd.Series, shorter: pd.Series, longer_suffix: str = "", shorter_suffix: str = ""
+) -> pd.Series:
     """Find convergence between two links."""
     line = project_line(
         longer[f"geometry{longer_suffix}"],
@@ -421,7 +433,7 @@ def _group_merge(
     return merge_group
 
 
-def main(conf: Line2LineConf):
+def main(conf: Line2LineConf) -> None:
     """Run the line-to-line workflow for one config object."""
     LOG.debug("Running %s with parameters:\n%s", _NAME, conf.to_yaml())
     ref_processed = preprocess(conf.reference)

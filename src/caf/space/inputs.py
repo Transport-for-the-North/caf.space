@@ -8,28 +8,24 @@ ultimately used as input parameters for the ZoneTranslation class.
 """
 
 ##### IMPORTS #####
+
 from __future__ import annotations
 
 # Built-Ins
 import argparse
 import datetime
-
-# Standard imports
 import logging
 import os
 import warnings
 from pathlib import Path
-from typing import Optional
+from typing import Self
 
 # Third Party
-# Third party imports
 import fiona
 import geopandas as gpd
 import pandas as pd
 from caf.toolkit import BaseConfig
 from pydantic import dataclasses, field_validator, model_validator
-
-# Local imports
 
 ##### CONSTANTS #####
 LOG = logging.getLogger(__name__)
@@ -115,7 +111,7 @@ class ZoneSystemInfo(BaseConfig):
     id_col: str
 
     @model_validator(mode="after")
-    def _id_col_in_file(self):
+    def _id_col_in_file(self) -> Self:
         with fiona.collection(self.shapefile) as source:
             schema = source.schema
             if self.id_col not in schema["properties"].keys():
@@ -142,7 +138,7 @@ class TransZoneSystemInfo(ZoneSystemInfo):
         to True in the main config class or it will be effectively ignored.
     """
 
-    point_shapefile: Optional[Path] = None
+    point_shapefile: Path | None = None
 
 
 class LowerZoneSystemInfo(ZoneSystemInfo):
@@ -172,9 +168,9 @@ class LowerZoneSystemInfo(ZoneSystemInfo):
         should consider whether your weighting data is appropriate.
     """
 
-    weight_data: Optional[Path] = None
+    weight_data: Path | None = None
     data_col: str
-    weight_id_col: Optional[str] = None
+    weight_id_col: str | None = None
     weight_data_year: int
 
     def _lower_to_higher(self) -> TransZoneSystemInfo:
@@ -186,13 +182,13 @@ class LowerZoneSystemInfo(ZoneSystemInfo):
         )
 
     @field_validator("weight_data")
-    def _weight_data_exists(cls, v):
+    def _weight_data_exists(cls, v: Path) -> Path:
         if os.path.isfile(v) is False:
             raise FileNotFoundError(f"The weight data path provided for {v} does not exist.")
         return v
 
     @model_validator(mode="after")
-    def _valid_data_col(self):
+    def _valid_data_col(self) -> Self:
         if (weight := self.weight_data) is not None:
             cols = pd.read_csv(weight, nrows=1).columns
             for v in [self.data_col, self.weight_id_col]:
@@ -249,7 +245,7 @@ class SpaceArguments:
         parsed_args = parser.parse_args()
         return SpaceArguments(parsed_args.config, parsed_args.mode, parsed_args.out_path)
 
-    def validate(self):
+    def validate(self) -> None:
         """Raise error for invalid input."""
         if self.config_path:
             if not self.config_path.is_file():
@@ -316,9 +312,9 @@ class ZoningTranslationInputs(BaseConfig):
 
     zone_1: TransZoneSystemInfo
     zone_2: TransZoneSystemInfo | None = None
-    lower_zoning: Optional[LowerZoneSystemInfo] = None
+    lower_zoning: LowerZoneSystemInfo | None = None
     cache_path: Path = Path(CACHE_PATH)
-    method: Optional[str] = None
+    method: str | None = None
     sliver_tolerance: float = 0.98
     rounding: bool = True
     filter_slivers: bool = True
@@ -331,7 +327,7 @@ class ZoningTranslationInputs(BaseConfig):
         self.cache_path.mkdir(exist_ok=True, parents=True)
 
     @classmethod
-    def write_example_space(cls, out_path: Path):
+    def write_example_space(cls, out_path: Path) -> None:
         """
         Write out an example config file.
 

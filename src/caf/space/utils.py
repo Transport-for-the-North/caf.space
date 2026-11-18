@@ -22,7 +22,9 @@ from scipy.spatial import cKDTree
 
 
 # # # FUNCTIONS # # #
-def generate_points(point_folder: Path, points_name: str, zones_path: Path, join_col: str):
+def generate_points(
+    point_folder: Path, points_name: str, zones_path: Path, join_col: str
+) -> None:
     """
     Generate a point shapefile from a polygon shapefile and list of point IDs.
 
@@ -67,7 +69,7 @@ def find_point_matches(
     id_col_2: str,
     name_1: str,
     name_2: str,
-):
+) -> pd.DataFrame:
     """
     Find corresponding point features between two geodataframe.
 
@@ -102,7 +104,7 @@ def find_point_matches(
 
 def points_update(
     points: gpd.GeoDataFrame, matches: pd.DataFrame, id_col: str, matches_id: str
-):
+) -> gpd.GeoDataFrame:
     """
     Remove matching points from point shapefile.
 
@@ -125,7 +127,7 @@ def points_update(
     return points.reset_index()
 
 
-def line_to_points(line_gdf, id_col):
+def line_to_points(line_gdf: gpd.GeoDataFrame, id_col: str) -> gpd.GeoDataFrame:
     """
     Decompose a line geodataframe into points.
 
@@ -141,19 +143,19 @@ def line_to_points(line_gdf, id_col):
     return gpd.GeoDataFrame(points[id_col], geometry=points["point_geom"])
 
 
-def calc_gradient(a: shapely.Point, b: shapely.Point):
+def calc_gradient(a: shapely.Point, b: shapely.Point) -> float:
     """Calculate the gradient between two 3D points."""
     run = np.sqrt((a.y - b.y) ** 2 + (a.x - b.x) ** 2)
     rise = a.z - b.z
     return rise / run
 
 
-def calc_midpoint(a: shapely.Point, b: shapely.Point):
+def calc_midpoint(a: shapely.Point, b: shapely.Point) -> shapely.Point:
     """Calculate the midpoint between two 3D points."""
     return shapely.Point([a.x / 2 + b.x / 2, a.y / 2 + b.y / 2, a.z / 2 + b.z / 2])
 
 
-def line_gradients(line):
+def line_gradients(line: shapely.LineString) -> list[tuple[shapely.Point, float]]:
     """Calculate midpoint gradients for each segment in a line."""
     points = line.coords
     grads = []
@@ -166,7 +168,7 @@ def line_gradients(line):
     return grads
 
 
-def gradients_alt(points):
+def gradients_alt(points: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     """Alternative midpoint/gradient calculation from exploded point rows."""
     a = points.iloc[:-1]
     b = points.iloc[1:]
@@ -187,7 +189,7 @@ def gradients_alt(points):
     return gpd.GeoDataFrame(df[["gradient", "geometry"]])
 
 
-def grad_points_gdf(gdf):
+def grad_points_gdf(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     """Build a GeoDataFrame of midpoint gradients for all input lines."""
     grad_list = gdf.geometry.apply(line_gradients).explode().to_list()
     grad_frame = gpd.GeoDataFrame(grad_list, columns=["geometry", "gradient"])
