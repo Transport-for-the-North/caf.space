@@ -22,7 +22,6 @@ from typing import Optional, Union
 
 # Third Party
 import fiona
-import geopandas as gpd
 import pandas as pd
 from caf.toolkit import BaseConfig
 from pydantic import field_validator, model_validator
@@ -68,6 +67,8 @@ class ZoneSystemInfo(BaseConfig):
 
 
 class LineInfo(BaseConfig):
+    """Input data for line features in line-to-zone translation."""
+
     name: str
     id_cols: list[str]
     shapefile: Path

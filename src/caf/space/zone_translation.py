@@ -227,7 +227,10 @@ class ZoneTranslation:
             matches.set_index(weighted_translation.index.names, inplace=True)
             weighted_translation = pd.concat([weighted_translation, matches])
         self._post_processing(zones, weighted_translation, out_path)
-        out_name = f"{self.names[0]}_to_{self.names[1]}_{self.method}_{self.lower_zoning.weight_data_year}"
+        out_name = (
+            f"{self.names[0]}_to_{self.names[1]}_"
+            f"{self.method}_{self.lower_zoning.weight_data_year}"
+        )
         weighted_translation.to_csv(out_path / f"{out_name}.csv", index=False)
         self.params.save_yaml(out_path / f"{out_name}.yml")
         return weighted_translation
@@ -360,9 +363,7 @@ class ZoneTranslation:
         if len(missing_zones_2) > 0:
             warnings.warn(f"Missing Zones from 2 : {len(missing_zones_2)}", stacklevel=2)
         log_file = out_path / "missing_zones_log.xlsx"
-        with pd.ExcelWriter(
-            log_file, engine="openpyxl"
-        ) as writer:  # pylint: disable=abstract-class-instantiated
+        with pd.ExcelWriter(log_file, engine="openpyxl") as writer:  # pylint: disable=abstract-class-instantiated
             missing_zones_1.to_excel(
                 writer,
                 sheet_name=f"{self.names[0]}_missing",
@@ -394,8 +395,7 @@ class ZoneTranslation:
             self.logger.info("Split factors add up to 1 for %s", self.names[0])
         else:
             self.logger.warning(
-                "Split factors DO NOT add up to 1 for %s. CHECK "
-                "TRANSLATION IS ACCURATE\n%s",
+                "Split factors DO NOT add up to 1 for %s. CHECK TRANSLATION IS ACCURATE\n%s",
                 self.names[0],
                 under_1_zones_1,
             )

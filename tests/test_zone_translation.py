@@ -11,6 +11,7 @@ from pathlib import Path
 import geopandas as gpd
 import pandas as pd
 import pytest
+from shapely.geometry import LineString
 
 # Local Imports
 # pylint: disable=import-error, wrong-import-position
@@ -93,7 +94,18 @@ def fixture_expected_points() -> pd.DataFrame:
     output = pd.DataFrame(
         {
             "zone_1_id": ["A", "A", "A", "A", "B", "B", "B", "C", "C", "C"],
-            "zone_2_id": ["W", "X", "Y", "Z", "X", "Z", "true_point_2", "Y", "Z", "pseudo_point"],
+            "zone_2_id": [
+                "W",
+                "X",
+                "Y",
+                "Z",
+                "X",
+                "Z",
+                "true_point_2",
+                "Y",
+                "Z",
+                "pseudo_point",
+            ],
             "zone_1_to_zone_2": [
                 0.529, 0.176, 0.235, 0.059, 0.526, 0.263, 0.211, 0.269, 0.5, 0.231
             ],
@@ -285,3 +297,47 @@ class TestZoneTranslation:
         centroids = zone_translation.ZoneTranslation(weighted_config).weighted_centroids()
         rounded = centroids.round(2)
         pd.testing.assert_frame_equal(rounded, expected_centroids)
+
+
+@pytest.fixture(name="line_spatial_config", scope="class")
+def fixture_line_spatial_config(zone_2_shape: Path, paths: dict, main_dir: Path):
+    line_shape = gpd.GeoDataFrame(
+        data=pd.DataFrame({"A": [1, 1, 2], "B": [2, 3, 4]}),
+        geometry=[
+            LineString([(0, 6), (8, 6)]),
+            LineString([(0, 2), (8, 2)]),
+            LineString([(1, 1), (2, 7)]),
+        ],
+        crs="EPSG:27700",
+    )
+    line_path = main_dir / "line_spatial.shp"
+    line_shape.to_file(line_path)
+
+    return inputs.ZoningTranslationInputs(
+        zone_1=inputs.LineInfo(name="line", shapefile=line_path, id_cols=["A", "B"]),
+        zone_2=inputs.TransZoneSystemInfo(
+            name="zone_2", shapefile=zone_2_shape, id_col="zone_2_id"
+        ),
+        output_path=paths["output"],
+        cache_path=paths["cache"],
+        tolerance=0.99,
+        rounding=True,
+    )
+
+
+@pytest.fixture(name="line_spatial_trans", scope="class")
+def fixture_line_spatial_trans(line_spatial_config) -> pd.DataFrame:
+    return zone_translation.ZoneTranslation(line_spatial_config).spatial_translation()
+
+
+def test_line_spatial_translation(line_spatial_trans):
+    expected = pd.DataFrame(
+        data={
+            "A": [1, 1, 1, 1, 2, 2],
+            "B": [2, 2, 3, 3, 4, 4],
+            "zone_2_id": ["W", "X", "Y", "Z", "W", "Y"],
+            "factor": [0.375, 0.625, 0.375, 0.625, 0.5, 0.5],
+        }
+    ).set_index(["A", "B", "zone_2_id"])
+    output = line_spatial_trans.sort_index()
+    pd.testing.assert_frame_equal(output, expected.sort_index(), atol=1e-9)

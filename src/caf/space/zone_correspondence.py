@@ -5,10 +5,10 @@ Also checks on various things for translations (rounding, slithers).
 """
 
 # Built-Ins
+from dataclasses import dataclass
 import logging
 import warnings
 from typing import Tuple, Union
-from dataclasses import dataclass
 
 # Third Party
 import geopandas as gpd
@@ -60,10 +60,10 @@ def read_zone_shapefiles(
         zone = gpd.read_file(feature.shapefile)
         if zone.crs is None:
             warnings.warn(f"Zone {feature.name} has no CRS, setting crs to EPSG:27700.")
-            zone.set_crs = "EPSG:27700"
-        elif zone.crs != "EPSG:27700":
+            zone = zone.set_crs("EPSG:27700")
+        elif zone.crs.to_string() != "EPSG:27700":
             warnings.warn(f"Zone {feature.name} has CRS {zone.crs}. Setting to EPSG:27700.")
-            zone.geometry = zone.geometry.to_crs("EPSG:27700")
+            zone = zone.to_crs("EPSG:27700")
         zone = zone.dropna(axis=1, how="all")
         LOG.info(
             "Count of %s features: %s",
@@ -322,7 +322,17 @@ def round_zone_correspondence(
         "2 onto zone 1 will be equally distributed between each of zone 2 zones"
     )
     if "factor" in zone_corr_no_slithers.columns:
-        zone = [i for i in zone_names if "net" not in i][0]
+        zone_id_cols = [
+            col[:-3]
+            for col in zone_corr_no_slithers.reset_index().columns
+            if col.endswith("_id")
+        ]
+        if len(zone_id_cols) != 1:
+            raise ValueError(
+                "Line-to-zone correspondence must include exactly one "
+                "zone id column ending in '_id'."
+            )
+        zone = zone_id_cols[0]
         zone_corr_rounded = rounding_correction(
             zone_corr_no_slithers.copy(), from_zone_name="line", to_zone_name=zone
         )
@@ -446,12 +456,7 @@ def missing_zones_check(
 def line_to_zone_trans(
     line: gpd.GeoDataFrame, zone: gpd.GeoDataFrame, line_ids: list[str], zone_id_col: str
 ):
-    """
-    Summary
-    -------
-    Function to translate lines to zones. The function takes a line shapefile
-    and a zone shapefile and returns a dataframe with the line ids and the
-    zone ids that they fall within.
+    """Translate lines to zones using line length overlap.
 
     Parameters
     ----------
