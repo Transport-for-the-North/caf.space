@@ -105,12 +105,25 @@ class ZoneTranslation:
             Dataframe containing spatial zone translation between zone 1 and zone 2.
         """
         zones = zone_correspondence.read_zone_shapefiles(self.zone_1, self.zone_2)
-        spatial_correspondence = zone_correspondence.spatial_zone_correspondence(
-            zones, self.zone_1, self.zone_2, keep_geom=return_gdf
-        )
-        final_zone_corr = self._slithers_and_rounding(
-            spatial_correspondence, return_gdf=return_gdf
-        )
+        if zones[self.zone_1.name].geo_type == "line":
+            corr = zone_correspondence.line_to_zone_trans(
+                line=zones[self.zone_1.name].feature,
+                zone=zones[self.zone_2.name].feature,
+                line_ids=["A", "B"],
+                zone_id_col=f"{self.zone_2.name}_id",
+            )
+        elif zones[self.zone_2.name].geo_type == "line":
+            corr = zone_correspondence.line_to_zone_trans(
+                line=zones[self.zone_2.name].feature,
+                zone=zones[self.zone_1.name].feature,
+                line_ids=["A", "B"],
+                zone_id_col=f"{self.zone_1.name}_id",
+            )
+        else:
+            corr = zone_correspondence.spatial_zone_correspondence(
+                zones, self.zone_1, self.zone_2, keep_geom=return_gdf
+            )
+        final_zone_corr = self._slithers_and_rounding(corr, return_gdf=return_gdf)
         if return_gdf:
             return final_zone_corr
         # Save correspondence output
@@ -211,9 +224,13 @@ class ZoneTranslation:
         out_path.mkdir(exist_ok=True, parents=False)
         if "matches" in locals():
             matches[fill_columns] = 1
+            matches.set_index(weighted_translation.index.names, inplace=True)
             weighted_translation = pd.concat([weighted_translation, matches])
         self._post_processing(zones, weighted_translation, out_path)
-        out_name = f"{self.names[0]}_to_{self.names[1]}_{self.method}_{self.lower_zoning.weight_data_year}"
+        out_name = (
+            f"{self.names[0]}_to_{self.names[1]}_"
+            f"{self.method}_{self.lower_zoning.weight_data_year}"
+        )
         weighted_translation.to_csv(out_path / f"{out_name}.csv", index=False)
         self.params.save_yaml(out_path / f"{out_name}.yml")
         return weighted_translation
@@ -298,13 +315,14 @@ class ZoneTranslation:
                     spatial_correspondence_no_slithers, self.names
                 )
                 if return_gdf:
+                    id_cols = [f"{self.zone_1.name}_id", f"{self.zone_2.name}_id"]
+                    if all(col in final_zone_corr.columns for col in id_cols):
+                        final_zone_corr = final_zone_corr.set_index(id_cols)
+                    index_names = list(final_zone_corr.index.names)
                     final_zone_corr = gpd.GeoDataFrame(
-                        data=final_zone_corr.set_index(
-                            [f"{self.zone_1.name}_id", f"{self.zone_2.name}_id"]
-                        ),
-                        geometry=spatial_correspondence_no_slithers.set_index(
-                            [f"{self.zone_1.name}_id", f"{self.zone_2.name}_id"]
-                        ).geometry,
+                        data=final_zone_corr,
+                        geometry=spatial_correspondence_no_slithers.set_index(index_names)
+                        .geometry.reindex(final_zone_corr.index),
                     )
             else:
                 final_zone_corr = spatial_correspondence_no_slithers
@@ -345,9 +363,7 @@ class ZoneTranslation:
         if len(missing_zones_2) > 0:
             warnings.warn(f"Missing Zones from 2 : {len(missing_zones_2)}", stacklevel=2)
         log_file = out_path / "missing_zones_log.xlsx"
-        with pd.ExcelWriter(
-            log_file, engine="openpyxl"
-        ) as writer:  # pylint: disable=abstract-class-instantiated
+        with pd.ExcelWriter(log_file, engine="openpyxl") as writer:  # pylint: disable=abstract-class-instantiated
             missing_zones_1.to_excel(
                 writer,
                 sheet_name=f"{self.names[0]}_missing",
@@ -362,30 +378,34 @@ class ZoneTranslation:
             "List of missing zones can be found in log file found here: %s",
             log_file,
         )
-        column_list = list(zone_translation.columns)
+        if (zones[self.names[0]].geo_type == "line") or (
+            zones[self.names[1]].geo_type == "line"
+        ):
+            summary_table_1 = zone_translation.groupby(level=["A", "B"]).sum()
+            summary_table_2 = None
+        else:
+            summary_table_1 = zone_translation.groupby(level=f"{self.names[0]}_id").sum()
+            summary_table_2 = zone_translation.groupby(level=f"{self.names[1]}_id").sum()
 
-        summary_table_1 = zone_translation.groupby(column_list[0])[column_list[2]].sum()
-        summary_table_2 = zone_translation.groupby(column_list[1])[column_list[3]].sum()
+        under_1_zones_1 = summary_table_1[summary_table_1 < 0.999999].dropna()
+        if summary_table_2 is not None:
+            under_1_zones_2 = summary_table_2[summary_table_2 < 0.999999].dropna()
 
-        under_1_zones_1 = summary_table_1[summary_table_1 < 0.999999]
-        under_1_zones_2 = summary_table_2[summary_table_2 < 0.999999]
-
-        if len(pd.unique(zone_translation[column_list[0]])) == sum(summary_table_1):
-            self.logger.info("Split factors add up to 1 for %s", column_list[0])
+        if len(under_1_zones_1) == 0:
+            self.logger.info("Split factors add up to 1 for %s", self.names[0])
         else:
             self.logger.warning(
-                "Split factors DO NOT add up to 1 for %s. CHECK "
-                "TRANSLATION IS ACCURATE\n%s",
-                column_list[0],
+                "Split factors DO NOT add up to 1 for %s. CHECK TRANSLATION IS ACCURATE\n%s",
+                self.names[0],
                 under_1_zones_1,
             )
-
-        if len(pd.unique(zone_translation[column_list[1]])) == sum(summary_table_2):
-            self.logger.info("Split factors add up to 1 for %s", column_list[1])
-        else:
-            self.logger.warning(
-                "Split factors DO NOT add up to 1 for %s. CHECK "
-                "TRANSLATION IS ACCURATE\n%s",
-                column_list[1],
-                under_1_zones_2,
-            )
+        if summary_table_2 is not None:
+            if len(under_1_zones_2) == 0:
+                self.logger.info("Split factors add up to 1 for %s", self.names[1])
+            else:
+                self.logger.warning(
+                    "Split factors DO NOT add up to 1 for %s. CHECK "
+                    "TRANSLATION IS ACCURATE\n%s",
+                    self.names[1],
+                    under_1_zones_2,
+                )

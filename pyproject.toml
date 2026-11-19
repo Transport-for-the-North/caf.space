@@ -8,16 +8,16 @@ dynamic = ["version", "dependencies", "optional-dependencies"]
 description = "Easily generate translations between zoning systems"
 readme = "README.md"
 license = {"file"= "LICENSE"}
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 authors = [
     { name = "Transport for the North" },
 ]
 classifiers = [
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 
 [project.urls]
@@ -33,6 +33,11 @@ dependencies = { "file" = "requirements.txt" }
 dev = { "file" = "requirements_dev.txt" }
 docs = { "file" = "docs/requirements.txt" }
 
+# Dynamic versioning for editable installs
+[tool.setuptools.cmdclass]
+build_py = "versioningit.cmdclass.build_py"
+sdist = "versioningit.cmdclass.sdist"
+
 # Packaging options
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -44,28 +49,49 @@ where = ["src"]
 "caf.space" = "caf.space.__main__:main"
 
 # Linters
-[tool.black]
+[tool.ruff]
 line-length = 95
-target-version = ['py311']
+target-version = "py311"
+extend-exclude = ["conf.py", "_version.py"]
 
-[tool.pylint.messages_control]
-disable = [
-    "line-too-long",    # Compatibility with black
-    "too-many-lines",
-    "use-dict-literal",
-    "use-list-literal",
-    "import-error",
-    "too-few-public-methods",
-    "abstract-class-instantiated",
-    "protected-access"
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle
+    "W",    # pycodestyle warnings
+    "F",    # Pyflakes
 ]
+ignore = [
+    "F541", # f-string without placeholders (legacy examples)
+]
+
+[tool.ruff.lint.extend-per-file-ignores]
+"__init__.py" = ["F401"] # allow unused imports
+
+[tool.ruff.format]
+docstring-code-format = true
 
 # Pylint settings
 [tool.pylint.basic]
-good-names = ["df", "fn", "ca", "tp", "to", "x", "i", "f", "q"]
+good-names = ["df", "fn", "ca", "tp", "x", "i"]
 
 [tool.pylint.main]
+source-roots = ["src"]
 ignore = ["__init__.py", "_version.py", "inputs.py", "conf.py", "_run.py"]
+
+[tool.pylint.messages_control]
+disable = [
+    "line-too-long",         # Handled by ruff
+    "too-many-lines",
+    "use-dict-literal",
+    "use-list-literal",
+    "wrong-import-position", # Compatibility with ruff
+    "wrong-import-order",    # Handled by ruff
+    "ungrouped-imports",     # Handled by ruff
+    "import-error",
+    "too-few-public-methods",
+    "abstract-class-instantiated",
+    "protected-access",
+]
 
 [tool.pylint.design]
 max-args = 10
@@ -74,15 +100,9 @@ max-statements = 100
 
 [tool.mypy]
 packages = ["caf.space"]
+namespace_packages = true
 ignore_missing_imports = true
 allow_redefinition = true
-
-[tool.pydocstyle]
-convention = "numpy"
-match = '(?!_test)(?!test_)(?!__init__)(?!ui)(?!itn_filter|comp_zone).*\.py'
-add-ignore = [
-    "D202",    # Temporary compatibility with black
-]
 
 # Tests
 [tool.pytest.ini_options]
@@ -105,16 +125,4 @@ build-file = "caf/space/_version.py"
 [tool.versioningit.format]
 distance = "{base_version}+{distance}.{vcs}{rev}"
 dirty = "{base_version}+{distance}.{vcs}{rev}.dirty"
-distance-dirty = "{base_version}+{distance}.{vcs}{rev}.dirty"#
-
-[tool.isort]
-profile = "black"
-src_paths = ["src", "tests"]
-
-skip = ["__init__.py", "_version.py"]
-skip_glob = [".*"]
-
-# Section commenting
-import_heading_stdlib = "Built-Ins"
-import_heading_thirdparty = "Third Party"
-import_heading_firstparty = "Local Imports"
+distance-dirty = "{base_version}+{distance}.{vcs}{rev}.dirty"

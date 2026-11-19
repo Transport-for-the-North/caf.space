@@ -8,30 +8,23 @@ ultimately used as input parameters for the ZoneTranslation class.
 """
 
 ##### IMPORTS #####
+
 from __future__ import annotations
 
 # Built-Ins
 import argparse
 import dataclasses
 import datetime
-
-# Standard imports
-# pylint: disable=import-error
 import logging
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 # Third Party
 import fiona
 import pandas as pd
-
-# Third party imports
 from caf.toolkit import BaseConfig
 from pydantic import field_validator, model_validator
-
-# pylint: enable=import-error
-# Local imports
 
 ##### CONSTANTS #####
 LOG = logging.getLogger(__name__)
@@ -71,6 +64,14 @@ class ZoneSystemInfo(BaseConfig):
                     f"{schema['properties'].keys()}."
                 )
         return self
+
+
+class LineInfo(BaseConfig):
+    """Input data for line features in line-to-zone translation."""
+
+    name: str
+    id_cols: list[str]
+    shapefile: Path
 
 
 class TransZoneSystemInfo(ZoneSystemInfo):
@@ -260,7 +261,7 @@ class ZoningTranslationInputs(BaseConfig):
         automatically and shouldn't be included in the config yaml file.
     """
 
-    zone_1: TransZoneSystemInfo
+    zone_1: Union[TransZoneSystemInfo, LineInfo]
     zone_2: TransZoneSystemInfo | None = None
     lower_zoning: Optional[LowerZoneSystemInfo] = None
     cache_path: Path = Path(CACHE_PATH)
