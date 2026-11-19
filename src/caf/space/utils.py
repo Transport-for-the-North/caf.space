@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Module for some miscellaneous functions used elsewhere."""
+
 # Built-Ins
+import warnings
 from pathlib import Path
 
 # Third Party
@@ -120,3 +122,11 @@ def points_update(
     points.set_index(id_col, inplace=True)
     points.drop(list(matches[matches_id]), axis=0, inplace=True)
     return points.reset_index()
+
+
+def set_crs(gdf: gpd.GeoDataFrame, name: str) -> gpd.GeoDataFrame:
+    """Set crs of gdf if missing."""
+    if gdf.crs is None:
+        warnings.warn(f"Zone {name} has no CRS, setting crs to EPSG:27700.", stacklevel=2)
+        gdf = gdf.set_crs("EPSG:27700")
+    return gdf

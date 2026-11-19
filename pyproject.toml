@@ -79,7 +79,7 @@ allow_redefinition = true
 
 [tool.pydocstyle]
 convention = "numpy"
-match = '(?!_test)(?!test_)(?!__init__)(?!ui).*\.py'
+match = '(?!_test)(?!test_)(?!__init__)(?!ui)(?!itn_filter|comp_zone).*\.py'
 add-ignore = [
     "D202",    # Temporary compatibility with black
 ]

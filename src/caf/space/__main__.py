@@ -40,11 +40,18 @@ def main():
                 trans.spatial_translation().to_csv(
                     args.out_path / f"{config.zone_1.name}_{config.zone_2.name}_spatial.csv"
                 )
-            else:
+            elif args.mode == "weighted":
                 trans.weighted_translation().to_csv(
                     args.out_path
                     / f"{config.zone_1.name}_{config.zone_2.name}_{config.method}.csv"
                 )
+            elif args.mode == "centroid":
+                trans.weighted_centroids().to_csv(
+                    args.out_path
+                    / f"{config.zone_1.name}_{config.lower_zoning.name}_{config.method}.csv",
+                )
+            else:
+                raise ValueError(f"invalid mode: {args.mode}")
 
 
 if __name__ == "__main__":

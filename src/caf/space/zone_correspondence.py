@@ -90,6 +90,7 @@ def spatial_zone_correspondence(
     zones: dict,
     zone_1: inputs.TransZoneSystemInfo,
     zone_2: inputs.TransZoneSystemInfo,
+    keep_geom: bool = False,
 ):
     """
     Find the spatial zone correspondence.
@@ -125,6 +126,9 @@ def spatial_zone_correspondence(
         f"{zone_1.name}_id",
         f"{zone_2.name}_id",
     ]
+
+    if keep_geom:
+        column_list.append("geometry")
 
     # create geodataframe with spatial adjusted factors
     spatial_correspondence = zone_overlay.loc[:, column_list]
